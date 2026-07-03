@@ -1,8 +1,7 @@
 # Routine Tracker
 
 AuDHD-friendly routine tracker with conversational check-off. Type (or speak)
-*"took my meds and drank water"* and the right boxes get ticked. See `handoff.md`
-for the full design rationale and architecture.
+*"took my meds and drank water"* and the right boxes get ticked.
 
 ## Stack
 
@@ -63,4 +62,4 @@ are applied immediately (undoable — every batch is recorded in `ai_actions`);
 
 No streaks. Blanks are neutral, skips are deliberate and guilt-free. A daily
 energy check-in (low/medium/high) filters tasks by tier, so a low-energy day
-shows only the core minimum — and completing it counts. See `handoff.md`.
+shows only the core minimum — and completing it counts.

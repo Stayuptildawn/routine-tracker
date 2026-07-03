@@ -5,3 +5,8 @@ dev-dist/
 .env.local
 *.local
 .DS_Store
+
+# personal source material - never commit
+private/
+*.xlsx
+handoff.md
