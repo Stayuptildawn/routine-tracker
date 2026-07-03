@@ -15,7 +15,7 @@ type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect'
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'now', label: 'Now', icon: '☀️' },
   { id: 'week', label: 'Week', icon: '📅' },
-  { id: 'gym', label: 'Gym', icon: '🏋️' },
+  { id: 'gym', label: 'Workout', icon: '🏋️' },
   { id: 'history', label: 'AI Log', icon: '🤖' },
   { id: 'reflect', label: 'Reflect', icon: '🌱' },
 ]

@@ -459,6 +459,94 @@ h2 {
   outline-offset: -1.5px;
 }
 
+/* --- routine editing --- */
+.routine-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.routine-header h2 {
+  margin: 0;
+}
+
+.rename-row {
+  display: flex;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.rename-row input {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.rename-row .save {
+  background: var(--accent);
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+}
+
+.edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.edit-task-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.edit-task-row input {
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.edit-task-row select {
+  padding: 0.45rem 0.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.danger {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  padding: 0.5rem 0.7rem;
+}
+
+.danger:hover {
+  color: #c96a6a;
+}
+
+.delete-routine {
+  align-self: flex-start;
+  margin-top: 0.4rem;
+  font-size: 0.88rem;
+}
+
+.add-routine {
+  margin-top: 1rem;
+}
+
 .add-task {
   display: flex;
   gap: 0.4rem;

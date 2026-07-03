@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
-import type { Routine, TaskLog } from '../lib/types'
+import type { Routine, Task, TaskLog, Tier } from '../lib/types'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const TIERS: Tier[] = ['core', 'standard', 'bonus']
 
 /** Dates (yyyy-mm-dd) for Monday..Sunday of the current week. */
 function currentWeekDates(): string[] {
@@ -27,8 +28,12 @@ const STATUS_GLYPH: Record<string, string> = {
 export default function Week() {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<TaskLog[]>([])
+  const [editing, setEditing] = useState<string | null>(null)
+  const [nameDraft, setNameDraft] = useState('')
   const [newTaskFor, setNewTaskFor] = useState<string | null>(null)
   const [newLabel, setNewLabel] = useState('')
+  const [newRoutine, setNewRoutine] = useState('')
+  const [addingRoutine, setAddingRoutine] = useState(false)
   const weekDates = currentWeekDates()
   const today = localDate()
 
@@ -54,9 +59,46 @@ export default function Week() {
   async function addTask(routineId: string) {
     const label = newLabel.trim()
     if (!label) return
-    await supabase.from('tasks').insert({ routine_id: routineId, label })
+    const routine = routines.find((r) => r.id === routineId)
+    const maxOrder = Math.max(0, ...(routine?.tasks ?? []).map((t) => t.sort_order ?? 0))
+    await supabase.from('tasks').insert({ routine_id: routineId, label, sort_order: maxOrder + 1 })
     setNewLabel('')
     setNewTaskFor(null)
+    load()
+  }
+
+  async function addRoutine() {
+    const name = newRoutine.trim()
+    if (!name) return
+    const maxOrder = Math.max(0, ...routines.map((r) => r.sort_order ?? 0))
+    await supabase.from('routines').insert({ name, sort_order: maxOrder + 1 })
+    setNewRoutine('')
+    setAddingRoutine(false)
+    load()
+  }
+
+  async function renameRoutine(id: string) {
+    const name = nameDraft.trim()
+    if (name) await supabase.from('routines').update({ name }).eq('id', id)
+    setEditing(null)
+    load()
+  }
+
+  async function deleteRoutine(routine: Routine) {
+    if (!window.confirm(`Delete "${routine.name}" and all its tasks and history?`)) return
+    await supabase.from('routines').delete().eq('id', routine.id)
+    setEditing(null)
+    load()
+  }
+
+  async function updateTask(taskId: string, patch: Partial<Pick<Task, 'label' | 'tier'>>) {
+    await supabase.from('tasks').update(patch).eq('id', taskId)
+    load()
+  }
+
+  async function deleteTask(task: Task) {
+    if (!window.confirm(`Delete task "${task.label}"?`)) return
+    await supabase.from('tasks').delete().eq('id', task.id)
     load()
   }
 
@@ -64,27 +106,98 @@ export default function Week() {
     <div className="week">
       <h1>This week</h1>
       <p className="gentle">A record, not a scorecard. Blanks are neutral.</p>
-      {routines
-        .filter((r) => (r.tasks ?? []).length > 0)
-        .map((routine) => (
+      {routines.map((routine) => {
+        const tasks = (routine.tasks ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        const isEditing = editing === routine.id
+        return (
           <section key={routine.id} className="week-routine">
-            <h2>{routine.name}</h2>
-            <div className="week-grid-wrap">
-              <table className="week-grid">
-                <thead>
-                  <tr>
-                    <th></th>
-                    {DAY_NAMES.map((d, i) => (
-                      <th key={d} className={weekDates[i] === today ? 'today' : ''}>
-                        {d}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(routine.tasks ?? [])
-                    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-                    .map((task) => (
+            <div className="routine-header">
+              {isEditing ? (
+                <div className="rename-row">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && renameRoutine(routine.id)}
+                    autoFocus
+                  />
+                  <button className="save" onClick={() => renameRoutine(routine.id)}>
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <h2>{routine.name}</h2>
+              )}
+              <button
+                className="link"
+                onClick={() => {
+                  if (isEditing) {
+                    setEditing(null)
+                  } else {
+                    setEditing(routine.id)
+                    setNameDraft(routine.name)
+                  }
+                }}
+              >
+                {isEditing ? 'Done' : 'Edit'}
+              </button>
+            </div>
+
+            {isEditing ? (
+              <div className="edit-panel">
+                {tasks.map((task) => (
+                  <div key={task.id} className="edit-task-row">
+                    <input
+                      defaultValue={task.label}
+                      onBlur={(e) => {
+                        const label = e.target.value.trim()
+                        if (label && label !== task.label) updateTask(task.id, { label })
+                      }}
+                    />
+                    <select
+                      value={task.tier}
+                      onChange={(e) => updateTask(task.id, { tier: e.target.value as Tier })}
+                      title="core = shown even on low-energy days"
+                    >
+                      {TIERS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    <button className="danger" onClick={() => deleteTask(task)}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <div className="add-task">
+                  <input
+                    value={newTaskFor === routine.id ? newLabel : ''}
+                    onFocus={() => setNewTaskFor(routine.id)}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addTask(routine.id)}
+                    placeholder="New task label"
+                  />
+                  <button onClick={() => addTask(routine.id)}>Add</button>
+                </div>
+                <button className="danger delete-routine" onClick={() => deleteRoutine(routine)}>
+                  Delete this routine
+                </button>
+              </div>
+            ) : tasks.length > 0 ? (
+              <div className="week-grid-wrap">
+                <table className="week-grid">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      {DAY_NAMES.map((d, i) => (
+                        <th key={d} className={weekDates[i] === today ? 'today' : ''}>
+                          {d}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map((task) => (
                       <tr key={task.id}>
                         <td className="task-name">
                           {task.label}
@@ -104,30 +217,35 @@ export default function Week() {
                         })}
                       </tr>
                     ))}
-                </tbody>
-              </table>
-            </div>
-            {newTaskFor === routine.id ? (
-              <div className="add-task">
-                <input
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTask(routine.id)}
-                  placeholder="New task label"
-                  autoFocus
-                />
-                <button onClick={() => addTask(routine.id)}>Add</button>
-                <button className="link" onClick={() => setNewTaskFor(null)}>
-                  Cancel
-                </button>
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <button className="link" onClick={() => setNewTaskFor(routine.id)}>
-                + Add task
-              </button>
+              <p className="gentle">No daily tasks — used as a reminder category.</p>
             )}
           </section>
-        ))}
+        )
+      })}
+
+      {addingRoutine ? (
+        <div className="add-task add-routine">
+          <input
+            value={newRoutine}
+            onChange={(e) => setNewRoutine(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addRoutine()}
+            placeholder="New routine name"
+            autoFocus
+          />
+          <button onClick={addRoutine}>Add</button>
+          <button className="link" onClick={() => setAddingRoutine(false)}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button className="link add-routine" onClick={() => setAddingRoutine(true)}>
+          + Add routine
+        </button>
+      )}
     </div>
   )
 }

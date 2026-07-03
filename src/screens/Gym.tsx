@@ -26,7 +26,9 @@ export default function Gym() {
     <div className="gym">
       <h1>Workout log</h1>
       <p className="gentle">
-        Log from the Now tab: <em>“bench 60kg 3x8, felt easy”</em>
+        This is your exercise logbook — sets, weights, reps. Log from the Now tab:{' '}
+        <em>“bench 60kg 3x8, felt easy”</em>. (Checking off Gym routine tasks like “Gym
+        session” lives in Now and Week — this page is for what you actually lifted.)
       </p>
       {[...byDate.entries()].map(([date, entries]) => (
         <section key={date} className="gym-day">
