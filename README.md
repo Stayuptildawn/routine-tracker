@@ -1,71 +1,75 @@
 # Routine Tracker
 
-An AuDHD-friendly routine tracker with conversational check-off. Type (or speak)
-*"took my meds and drank water"* and the right boxes get ticked. Self-hosted,
-free to run, no subscription.
+An AuDHD-friendly routine tracker I built for myself. You just type (or say)
+*"took my meds and drank water"* and it ticks the right boxes for you.
+Self-hosted and free to run, no subscription.
 
-## Why this exists
+## Why I built this
 
-I built this because the alternatives kept failing me in two opposite ways:
+I was managing my routines with Google Docs, and honestly it was painful. It
+was unresponsive on my phone, and every small update meant scrolling around a
+big table hunting for the right cell. That is way too much work for just being
+spontaneous, and it demands exactly the kind of focused effort that routines
+are supposed to remove from your day.
 
-- **The good apps are paywalled.** Nearly every ADHD-friendly planner locks its
-  useful features behind a subscription — typically [$3–12/month](https://habi.app/insights/best-adhd-planner-apps/),
-  with free tiers that [shrink over time](https://mutra.app/resources/best/best-free-adhd-planner-apps/)
-  as features migrate behind the paywall. Paying a recurring fee to manage a
-  condition that already costs you money is the
-  ["ADHD tax"](https://affine.pro/blog/best-adhd-planner-apps) on top of the ADHD tax.
-- **The free tool was a spreadsheet.** I ran my routines from Google Docs. It
-  was unresponsive on a phone, and updating it demanded exactly the kind of
-  deliberate, structured effort that routines are supposed to *remove*. Nothing
-  about a spreadsheet works when you just want to be spontaneous — you're
-  scrolling, zooming, and hunting cells at the moment your executive function
-  is at its lowest.
+The apps made for this are mostly behind a paywall. The good ADHD planners
+charge around [$3 to $12 per month](https://habi.app/insights/best-adhd-planner-apps/),
+and the free tiers [keep shrinking](https://mutra.app/resources/best/best-free-adhd-planner-apps/)
+as features quietly move behind the subscription. Paying a monthly fee to
+manage a condition that already costs you money (people call it the
+["ADHD tax"](https://affine.pro/blog/best-adhd-planner-apps)) didn't sit right
+with me.
 
-The research on abandoned trackers says the same thing from both directions:
-[if setup or daily use takes too long, ADHD brains abandon the tool before it
-delivers any value](https://kabitapp.com/blog/habit-tracker-adhd), and
-feature-rich dashboards become
-["productive procrastination" — analyzing completion trends instead of doing the habits](https://www.mindfulsuite.com/reviews/best-habit-tracker-apps).
-The best tracker is [the one that takes less time to use than the habit takes to do](https://routinebase.com/best-habit-tracker-apps/).
+By the way, the research agrees with both complaints. If a tracker takes too
+long to set up or use, ADHD brains
+[abandon it before it delivers any value](https://kabitapp.com/blog/habit-tracker-adhd),
+and the feature-heavy ones turn into
+["productive procrastination"](https://www.mindfulsuite.com/reviews/best-habit-tracker-apps),
+you spend 20 minutes looking at completion charts instead of doing the habits.
+The best tracker is
+[the one that takes less time to use than the habit itself](https://routinebase.com/best-habit-tracker-apps/).
 
-So the design goal here is a single text box: say what you did in plain words,
+So the whole idea here is one text box. You write what you did in plain words
 and the AI files it. No hunting through lists, no forms, no fee.
 
 ## What it does
 
-- **Conversational check-off** — one message box handles everything:
-  *"did morning routine except shower"* checks off the routine and marks the
-  shower skipped; *"bench 60kg 3x8, felt easy"* logs a workout;
-  *"remind me to email the lawyer"* files a categorized reminder;
-  *"low energy today"* switches the whole day to minimum mode. Voice input included.
-- **Energy-aware routines** — tasks have tiers (core / standard / bonus). A
-  low-energy day shows only the core minimum, and completing it still counts.
-- **No streaks, no shame** — skips render neutral, blanks stay blank, and a
-  weekly reflection view shows patterns instead of pass/fail.
-- **Trust rails for the AI** — confident actions apply instantly with one-tap
-  undo; uncertain ones become "Did you mean…?" chips; every AI action is
-  auditable and reversible in a history log.
-- **Workout logbook** — sets, weights, reps, and notes, parsed from plain text.
-- **Fully editable** — add, rename, and delete routines and tasks; set each
-  task's tier and scheduled weekdays.
-- **Installable PWA** — home-screen app with offline capture (messages queue
-  and send when you're back online), synced across devices in realtime.
+- **Conversational check-off.** One message box handles everything. *"did
+  morning routine except shower"* checks off the whole routine and marks the
+  shower as skipped. *"bench 60kg 3x8, felt easy"* goes into the workout
+  logbook. *"remind me to email the lawyer"* becomes a categorized reminder,
+  and *"low energy today"* switches the whole day to minimum mode. Voice input
+  works too.
+- **Energy-aware routines.** Tasks have tiers (core / standard / bonus). On a
+  low-energy day you only see the core minimum, and completing that still
+  counts as a full win.
+- **No streaks, no shame.** Skips show up neutral, blanks stay blank, and the
+  weekly view shows patterns instead of pass/fail.
+- **The AI is careful.** Confident actions apply instantly with a one-tap
+  undo, uncertain ones come back as "Did you mean...?" chips, and every AI
+  action is logged and reversible. Nothing happens silently.
+- **Workout logbook.** Sets, weights, reps and notes, parsed from plain text.
+- **Fully editable.** Add, rename and delete routines and tasks, set each
+  task's tier and which weekdays it appears.
+- **Installable PWA.** Works as a home-screen app, messages you write offline
+  are queued and sent when you're back online, and everything syncs across
+  devices in realtime.
 
 ## Design
 
-The UI follows its own bedtime advice — *dim lights, no screens*: a warm,
-low-blue "lamplight" palette, one amber accent, sage for done. Type is
-Atkinson Hyperlegible (designed by the Braille Institute for legibility) with
-Bitter for headings. No red X anywhere. Calm skeletons, visible keyboard
-focus, `prefers-reduced-motion` respected.
+The UI follows its own bedtime advice (dim lights, no screens): a warm,
+low-blue "lamplight" palette, one amber accent, sage green for done. The body
+font is Atkinson Hyperlegible, which was designed by the Braille Institute for
+maximum legibility. There is no red X anywhere in the app!
 
 ## Stack
 
 React + Vite + TypeScript · Supabase (Postgres, Auth, Realtime, Edge Functions) ·
 Gemini Flash-Lite · GitHub Pages · PWA
 
-Running cost: effectively zero. Supabase free tier + Gemini free tier cover
-personal use; even paid, ~100 AI messages/day costs well under $1/month.
+Running cost is effectively zero. The Supabase and Gemini free tiers cover
+personal use, and even on paid pricing, ~100 AI messages a day would cost well
+under $1/month.
 
 ## Setup
 
@@ -86,7 +90,7 @@ supabase secrets set GEMINI_API_KEY=<your-gemini-api-key>   # aistudio.google.co
 supabase functions deploy interpret-message
 ```
 
-Keep the Gemini project unbilled to stay on the free tier.
+Mind that you should keep the Gemini project unbilled to stay on the free tier.
 
 ### 3. Local dev
 
@@ -96,25 +100,29 @@ npm install
 npm run dev
 ```
 
-On first sign-in the app seeds a starter set of routines
-(`src/lib/seedData.ts` — edit them there or in the app).
+On your first sign-in the app seeds a starter set of routines
+(`src/lib/seedData.ts`, you can edit them there or in the app).
 
 ### 4. Deploy (GitHub Pages)
 
 1. Create a GitHub repo and push.
 2. Repo **Settings > Pages**: set Source to "GitHub Actions".
 3. Repo **Settings > Secrets and variables > Actions**: add `VITE_SUPABASE_URL`
-   and `VITE_SUPABASE_API_KEY` as repository secrets.
-4. Push to `main` — `.github/workflows/deploy.yml` builds and publishes.
+   and `VITE_SUPABASE_API_KEY` as repository secrets (just the values, nothing else!).
+4. Push to `main` and `.github/workflows/deploy.yml` builds and publishes it.
 5. Supabase **Authentication > URL Configuration**: add your Pages URL
    (`https://<user>.github.io/<repo>/`) as a redirect URL.
 
+Also, once your own account exists, I recommend turning off "Allow new users
+to sign up" in the Supabase Auth settings, so strangers can't use your AI quota.
+
 ## How the AI input works
 
-`supabase/functions/interpret-message` receives your text plus today's date/weekday,
-loads today's scheduled tasks, and asks Gemini for a structured actions array
-(check-offs, workout sets, reminders, energy level). Actions with confidence ≥ 0.9
-are applied immediately (undoable — every batch is recorded in `ai_actions`);
-0.6–0.9 come back as one-tap confirm chips; below that, nothing happens silently.
-Task candidates are injected straight into the prompt — at personal scale that
-beats embeddings for both accuracy and cost.
+The `interpret-message` Edge Function receives your text plus today's date and
+weekday, loads today's scheduled tasks, and asks Gemini for a structured list
+of actions (check-offs, workout sets, reminders, energy level). Actions with
+confidence ≥ 0.9 are applied immediately (still undoable, every batch is
+recorded in `ai_actions`), the 0.6–0.9 ones come back as one-tap confirm
+chips, and below that nothing happens at all. The day's tasks are injected
+straight into the prompt as candidates, which at personal scale works better
+than embeddings and costs basically nothing.
