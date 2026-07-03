@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-/** Tolerate common paste mistakes in env values: whitespace, quotes, missing scheme. */
+/** Tolerate common paste mistakes in env values: whitespace, quotes, missing
+ * scheme, or the whole "NAME = value" line pasted into the value field. */
 function clean(value: string | undefined): string | undefined {
-  const s = value?.trim().replace(/^["']|["']$/g, '')
+  const s = value
+    ?.trim()
+    .replace(/^[A-Z][A-Z0-9_]*\s*=\s*/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim()
   return s || undefined
 }
 
