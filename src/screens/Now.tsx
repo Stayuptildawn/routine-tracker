@@ -141,6 +141,15 @@ export default function Now() {
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     }))
     .filter((s) => s.tasks.length > 0)
+    .map((s) => {
+      const doneCount = s.tasks.filter((t) => {
+        const status = logs.get(t.id)?.status
+        return status === 'done' || status === 'skipped' || status === 'partial'
+      }).length
+      return { ...s, doneCount, complete: doneCount === s.tasks.length }
+    })
+    // finished routines get out of the way (stable sort keeps their order)
+    .sort((a, b) => Number(a.complete) - Number(b.complete))
 
   return (
     <div className="now">
@@ -210,12 +219,7 @@ export default function Now() {
         <Skeleton cards={3} />
       ) : (
         <div className="routine-list">
-          {sections.map(({ routine, tasks }) => {
-            const doneCount = tasks.filter((t) => {
-              const s = logs.get(t.id)?.status
-              return s === 'done' || s === 'skipped' || s === 'partial'
-            }).length
-            const allHandled = doneCount === tasks.length
+          {sections.map(({ routine, tasks, doneCount, complete: allHandled }) => {
             return (
               <section key={routine.id} className={allHandled ? 'routine complete' : 'routine'}>
                 <div className="rail" aria-hidden="true">
