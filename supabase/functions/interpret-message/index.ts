@@ -14,7 +14,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite'
+// Cheapest first; fallbacks cover per-model overload (503) and quota (429).
+const GEMINI_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']
 const APPLY_THRESHOLD = 0.9
 const SUGGEST_THRESHOLD = 0.6
 
@@ -43,7 +44,7 @@ const responseSchema = {
           level: { type: 'STRING', enum: ['low', 'medium', 'high'] },
           notes: { type: 'STRING' },
         },
-        required: ['type'],
+        required: ['type', 'confidence'],
       },
     },
   },
@@ -111,19 +112,29 @@ Rules:
 
 User message: "${text}"`
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0 },
-        }),
-      },
-    )
-    if (!geminiRes.ok) return json({ error: `Gemini error: ${await geminiRes.text()}` }, 502)
-    const gemini = await geminiRes.json()
+    let gemini: { candidates?: { content?: { parts?: { text?: string }[] } }[] } | null = null
+    let lastError = ''
+    for (const model of GEMINI_MODELS) {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0 },
+          }),
+        },
+      )
+      if (geminiRes.ok) {
+        gemini = await geminiRes.json()
+        break
+      }
+      lastError = `${model}: ${await geminiRes.text()}`
+      // overload / quota are per-model - try the next one; anything else is fatal
+      if (geminiRes.status !== 503 && geminiRes.status !== 429) break
+    }
+    if (!gemini) return json({ error: `Gemini error: ${lastError}` }, 502)
     const parsed = JSON.parse(gemini.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"actions":[]}')
 
     const candidateById = new Map(candidates.map((c) => [c.id, c]))
