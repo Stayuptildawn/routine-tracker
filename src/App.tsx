@@ -48,6 +48,7 @@ async function seedIfEmpty() {
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
+  const [seeding, setSeeding] = useState(true)
   const [tab, setTab] = useState<Tab>('now')
 
   useEffect(() => {
@@ -61,11 +62,20 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return
-    seedIfEmpty()
+    let cancelled = false
+    setSeeding(true)
+    // block first render until seeding finishes, or a fresh account
+    // briefly sees "Nothing scheduled" instead of its routines
+    seedIfEmpty().finally(() => {
+      if (!cancelled) setSeeding(false)
+    })
     flushMessageQueue()
     const onOnline = () => flushMessageQueue()
     window.addEventListener('online', onOnline)
-    return () => window.removeEventListener('online', onOnline)
+    return () => {
+      cancelled = true
+      window.removeEventListener('online', onOnline)
+    }
   }, [session])
 
   if (!configured)
@@ -76,6 +86,7 @@ export default function App() {
     )
   if (!ready) return <div className="center-note">Loading…</div>
   if (!session) return <Auth />
+  if (seeding) return <div className="center-note">Setting up your routines…</div>
 
   return (
     <div className="app">
