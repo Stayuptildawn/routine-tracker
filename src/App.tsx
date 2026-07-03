@@ -1,0 +1,103 @@
+import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { supabase, configured } from './lib/supabase'
+import { SEED_ROUTINES } from './lib/seedData'
+import { flushMessageQueue } from './lib/actions'
+import Auth from './screens/Auth'
+import Now from './screens/Now'
+import Week from './screens/Week'
+import Gym from './screens/Gym'
+import History from './screens/History'
+import Reflect from './screens/Reflect'
+
+type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect'
+
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'now', label: 'Now', icon: '☀️' },
+  { id: 'week', label: 'Week', icon: '📅' },
+  { id: 'gym', label: 'Gym', icon: '🏋️' },
+  { id: 'history', label: 'AI Log', icon: '🤖' },
+  { id: 'reflect', label: 'Reflect', icon: '🌱' },
+]
+
+/** Import the spreadsheet routines on first login. */
+async function seedIfEmpty() {
+  const { count } = await supabase.from('routines').select('id', { count: 'exact', head: true })
+  if (count && count > 0) return
+  for (const [i, seed] of SEED_ROUTINES.entries()) {
+    const { data: routine, error } = await supabase
+      .from('routines')
+      .insert({ name: seed.name, category: seed.category, sort_order: i })
+      .select('id')
+      .single()
+    if (error || !routine) continue
+    if (seed.tasks.length > 0) {
+      await supabase.from('tasks').insert(
+        seed.tasks.map((t, j) => ({
+          routine_id: routine.id,
+          label: t.label,
+          sort_order: j,
+          tier: t.tier,
+          scheduled_days: t.days ?? [1, 2, 3, 4, 5, 6, 7],
+        })),
+      )
+    }
+  }
+}
+
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [ready, setReady] = useState(false)
+  const [tab, setTab] = useState<Tab>('now')
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setReady(true)
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!session) return
+    seedIfEmpty()
+    flushMessageQueue()
+    const onOnline = () => flushMessageQueue()
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [session])
+
+  if (!configured)
+    return (
+      <div className="center-note">
+        Missing Supabase credentials — copy .env.example to .env and fill it in (see README).
+      </div>
+    )
+  if (!ready) return <div className="center-note">Loading…</div>
+  if (!session) return <Auth />
+
+  return (
+    <div className="app">
+      <main className="content">
+        {tab === 'now' && <Now />}
+        {tab === 'week' && <Week />}
+        {tab === 'gym' && <Gym />}
+        {tab === 'history' && <History />}
+        {tab === 'reflect' && <Reflect />}
+      </main>
+      <nav className="tabbar">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={tab === t.id ? 'tab active' : 'tab'}
+            onClick={() => setTab(t.id)}
+          >
+            <span className="tab-icon">{t.icon}</span>
+            <span className="tab-label">{t.label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  )
+}
