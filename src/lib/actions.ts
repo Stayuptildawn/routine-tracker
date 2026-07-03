@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { localDate, isoWeekday } from './types'
-import type { AppliedAction, InterpretResponse, LogStatus } from './types'
+import type { AppliedAction, InterpretResponse, LogStatus, ReminderStatus } from './types'
 
 const QUEUE_KEY = 'pending_messages'
 
@@ -55,6 +55,29 @@ export async function setTaskStatus(taskId: string, status: LogStatus, via: 'man
   if (error) throw error
 }
 
+/** Mark a reminder done or dismissed (or back to auto to restore it). */
+export async function setReminderStatus(id: string, status: ReminderStatus) {
+  const { error } = await supabase
+    .from('reminders')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/** Move a reminder to a different category (routineId null = "Other"). */
+export async function reassignReminder(id: string, category: string, routineId: string | null) {
+  const { error } = await supabase
+    .from('reminders')
+    .update({
+      final_category: category,
+      routine_id: routineId,
+      status: 'reassigned',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
 /** Revert an entire AI action batch, then mark it undone. */
 export async function undoAiAction(aiActionId: string, actions: AppliedAction[]) {
   for (const a of actions) {
@@ -82,7 +105,7 @@ export function describeAction(a: AppliedAction): string {
       return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}`
     }
     case 'create_reminder':
-      return `🔔 ${a.text} → ${a.category}`
+      return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
     case 'set_energy':
       return `🔋 Energy: ${a.level}`
   }

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
-import type { Energy, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
-import { interpretMessage, setTaskStatus, describeAction, undoAiAction } from '../lib/actions'
+import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
+import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
+import { describeDue, pendingOrder } from './Reminders'
 import Skeleton from '../components/Skeleton'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
@@ -16,9 +17,10 @@ interface UndoState {
   response: InterpretResponse
 }
 
-export default function Now() {
+export default function Now({ onOpenReminders }: { onOpenReminders: () => void }) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<Map<string, TaskLog>>(new Map())
+  const [reminders, setReminders] = useState<Reminder[]>([])
   const [energy, setEnergy] = useState<Energy | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [message, setMessage] = useState('')
@@ -32,17 +34,19 @@ export default function Now() {
   const weekday = isoWeekday()
 
   const load = useCallback(async () => {
-    const [routinesRes, logsRes, stateRes] = await Promise.all([
+    const [routinesRes, logsRes, stateRes, remindersRes] = await Promise.all([
       supabase
         .from('routines')
         .select('id, name, category, sort_order, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
         .order('sort_order'),
       supabase.from('task_logs').select('*').eq('date', today),
       supabase.from('daily_state').select('energy').eq('date', today).maybeSingle(),
+      supabase.from('reminders').select('*').in('status', ['auto', 'reassigned']),
     ])
     setRoutines((routinesRes.data as Routine[]) ?? [])
     setLogs(new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l])))
     setEnergy((stateRes.data?.energy as Energy) ?? null)
+    setReminders(((remindersRes.data as Reminder[]) ?? []).sort(pendingOrder))
     setLoaded(true)
   }, [today])
 
@@ -52,6 +56,7 @@ export default function Now() {
       .channel('now-view')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_logs' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_state' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, load)
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -61,6 +66,11 @@ export default function Now() {
   async function pickEnergy(level: Energy) {
     setEnergy(level)
     await supabase.from('daily_state').upsert({ date: today, energy: level }, { onConflict: 'user_id,date' })
+  }
+
+  async function clearReminder(r: Reminder) {
+    setReminders((prev) => prev.filter((x) => x.id !== r.id))
+    await setReminderStatus(r.id, 'done')
   }
 
   async function tapStatus(task: Task, status: 'done' | 'skipped') {
@@ -265,6 +275,39 @@ export default function Now() {
 
       {loaded && sections.length === 0 && (
         <p className="gentle">Nothing scheduled right now. That’s allowed.</p>
+      )}
+
+      {loaded && reminders.length > 0 && (
+        <section className="routine reminders-card">
+          <h2>
+            Reminders
+            <span className="routine-progress">{reminders.length}</span>
+          </h2>
+          {reminders.slice(0, 4).map((r) => {
+            const due = r.due_date ? describeDue(r.due_date, today) : null
+            return (
+              <div key={r.id} className="task">
+                <span className="task-label">
+                  {r.raw_text}
+                  {due && (
+                    <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
+                      {due.overdue ? '⏳ ' : '📆 '}
+                      {due.label}
+                    </span>
+                  )}
+                </span>
+                <div className="task-buttons">
+                  <button className="do" onClick={() => clearReminder(r)}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+          <button className="link see-all" onClick={onOpenReminders}>
+            {reminders.length > 4 ? `See all ${reminders.length} →` : 'See all →'}
+          </button>
+        </section>
       )}
 
       {undo && (

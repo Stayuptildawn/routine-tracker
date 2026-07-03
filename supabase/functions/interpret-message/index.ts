@@ -41,6 +41,7 @@ const responseSchema = {
           },
           reminder_text: { type: 'STRING' },
           category: { type: 'STRING' },
+          due_date: { type: 'STRING' },
           level: { type: 'STRING', enum: ['low', 'medium', 'high'] },
           notes: { type: 'STRING' },
         },
@@ -107,6 +108,8 @@ Rules:
   three entries of {kg:60, reps:8}), plus notes if any commentary.
 - create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
   reminder_text and pick the best category. Set confidence for the category choice.
+  If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
+  yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - If nothing actionable, return an empty actions array. Never invent task_ids.
 
@@ -174,12 +177,13 @@ User message: "${text}"`
         const reminderText = action.reminder_text ?? text
         const category = action.category ?? 'Other'
         const routineId = routineByName.get(category.toLowerCase()) ?? null
+        const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
         const { data: row, error } = await supabase
           .from('reminders')
-          .insert({ raw_text: reminderText, ai_category: category, final_category: category, ai_confidence: confidence, routine_id: routineId })
+          .insert({ raw_text: reminderText, ai_category: category, final_category: category, ai_confidence: confidence, routine_id: routineId, due_date: dueDate })
           .select('id')
           .single()
-        if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category })
+        if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate })
       } else if (action.type === 'set_energy') {
         if (!action.level) continue
         const { error } = await supabase

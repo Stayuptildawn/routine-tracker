@@ -973,6 +973,100 @@ select {
   color: var(--good);
 }
 
+/* ---------- reminders ---------- */
+.reminders .back {
+  padding-left: 0;
+  margin-bottom: var(--sp-2);
+}
+
+.reminder-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  margin-top: var(--sp-3);
+  box-shadow: var(--shadow);
+}
+
+.reminder {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.reminder.cleared {
+  opacity: 0.55;
+}
+
+.reminder-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-text {
+  display: block;
+}
+
+.reminder-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.cat-pill {
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  border: 1px solid transparent;
+}
+
+.cat-pill:hover {
+  border-color: var(--neutral);
+  color: var(--text);
+}
+
+/* overdue is a gentle amber nudge, never an alarm */
+.due-pill {
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.due-pill.overdue {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.task-label .due-pill {
+  margin-left: var(--sp-2);
+}
+
+.reminder .task-buttons {
+  padding-top: 2px;
+}
+
+.cleared-section {
+  margin-top: var(--sp-4);
+}
+
+.reminders-card .see-all {
+  padding-left: 0;
+  margin-top: var(--sp-2);
+}
+
 /* ---------- reflect ---------- */
 .reflect-bars {
   display: flex;

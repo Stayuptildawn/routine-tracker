@@ -9,8 +9,10 @@ import Week from './screens/Week'
 import Gym from './screens/Gym'
 import History from './screens/History'
 import Reflect from './screens/Reflect'
+import Reminders from './screens/Reminders'
 
-type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect'
+// 'reminders' is a sub-view of Now (reached via "See all"), not a sixth tab
+type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect' | 'reminders'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'now', label: 'Now', icon: '☀️' },
@@ -91,7 +93,8 @@ export default function App() {
   return (
     <div className="app">
       <main className="content">
-        {tab === 'now' && <Now />}
+        {tab === 'now' && <Now onOpenReminders={() => setTab('reminders')} />}
+        {tab === 'reminders' && <Reminders onBack={() => setTab('now')} />}
         {tab === 'week' && <Week />}
         {tab === 'gym' && <Gym />}
         {tab === 'history' && <History />}
@@ -101,7 +104,7 @@ export default function App() {
         {TABS.map((t) => (
           <button
             key={t.id}
-            className={tab === t.id ? 'tab active' : 'tab'}
+            className={tab === t.id || (tab === 'reminders' && t.id === 'now') ? 'tab active' : 'tab'}
             onClick={() => setTab(t.id)}
           >
             <span className="tab-icon">{t.icon}</span>

@@ -39,6 +39,21 @@ export interface WorkoutLog {
   notes: string | null
 }
 
+export type ReminderStatus = 'auto' | 'reassigned' | 'dismissed' | 'done'
+
+export interface Reminder {
+  id: string
+  raw_text: string
+  ai_category: string | null
+  ai_confidence: number | null
+  final_category: string | null
+  routine_id: string | null
+  status: ReminderStatus
+  due_date?: string | null // yyyy-mm-dd; absent until the 0002 migration runs
+  created_at: string
+  updated_at: string
+}
+
 export interface AppliedAction {
   type: 'check_task' | 'log_workout' | 'create_reminder' | 'set_energy'
   task_id?: string
@@ -51,6 +66,7 @@ export interface AppliedAction {
   reminder_id?: string
   text?: string
   category?: string
+  due_date?: string | null
   level?: Energy
 }
 
