@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
+import Skeleton from '../components/Skeleton'
 
 interface DayStat {
   date: string
@@ -11,6 +12,7 @@ interface DayStat {
 
 export default function Reflect() {
   const [days, setDays] = useState<DayStat[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const from = new Date()
@@ -34,6 +36,7 @@ export default function Reflect() {
           })
         }
         setDays(stats)
+        setLoaded(true)
       })
   }, [])
 
@@ -47,7 +50,8 @@ export default function Reflect() {
       <p className="gentle">
         Patterns, not judgment. No streaks here — a quiet day is information, not failure.
       </p>
-      <div className="reflect-bars">
+      {!loaded && <Skeleton cards={1} />}
+      <div className="reflect-bars" style={loaded ? undefined : { display: 'none' }}>
         {days.map((d) => (
           <div key={d.date} className="reflect-day">
             <div className="bar-wrap">
@@ -58,7 +62,7 @@ export default function Reflect() {
           </div>
         ))}
       </div>
-      {totalDone > 0 ? (
+      {!loaded ? null : totalDone > 0 ? (
         <div className="reflect-notes">
           <p>
             You completed <strong>{totalDone}</strong> tasks this week.

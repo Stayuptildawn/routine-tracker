@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { WorkoutLog } from '../lib/types'
+import Skeleton from '../components/Skeleton'
 
 export default function Gym() {
   const [logs, setLogs] = useState<WorkoutLog[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     supabase
@@ -12,7 +14,10 @@ export default function Gym() {
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(200)
-      .then(({ data }) => setLogs((data as WorkoutLog[]) ?? []))
+      .then(({ data }) => {
+        setLogs((data as WorkoutLog[]) ?? [])
+        setLoaded(true)
+      })
   }, [])
 
   const byDate = new Map<string, WorkoutLog[]>()
@@ -44,7 +49,8 @@ export default function Gym() {
           ))}
         </section>
       ))}
-      {logs.length === 0 && <p className="gentle">No sessions logged yet.</p>}
+      {!loaded && <Skeleton cards={2} />}
+      {loaded && logs.length === 0 && <p className="gentle">No sessions logged yet.</p>}
     </div>
   )
 }

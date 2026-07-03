@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
 import { interpretMessage, setTaskStatus, describeAction, undoAiAction } from '../lib/actions'
+import Skeleton from '../components/Skeleton'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
   low: ['core'],
@@ -19,6 +20,7 @@ export default function Now() {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<Map<string, TaskLog>>(new Map())
   const [energy, setEnergy] = useState<Energy | null>(null)
+  const [loaded, setLoaded] = useState(false)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -41,6 +43,7 @@ export default function Now() {
     setRoutines((routinesRes.data as Routine[]) ?? [])
     setLogs(new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l])))
     setEnergy((stateRes.data?.energy as Energy) ?? null)
+    setLoaded(true)
   }, [today])
 
   useEffect(() => {
@@ -141,6 +144,9 @@ export default function Now() {
 
   return (
     <div className="now">
+      <p className="eyebrow">
+        {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+      </p>
       <div className="composer">
         <textarea
           value={message}
@@ -200,48 +206,60 @@ export default function Now() {
         <p className="gentle">Low-energy mode: only the essentials. Doing these counts as a full win.</p>
       )}
 
-      {sections.map(({ routine, tasks }) => {
-        const doneCount = tasks.filter((t) => {
-          const s = logs.get(t.id)?.status
-          return s === 'done' || s === 'skipped' || s === 'partial'
-        }).length
-        const allHandled = doneCount === tasks.length
-        return (
-          <section key={routine.id} className={allHandled ? 'routine complete' : 'routine'}>
-            <h2>
-              {routine.name}
-              <span className="routine-progress">
-                {allHandled ? ' ✓' : ` ${doneCount}/${tasks.length}`}
-              </span>
-            </h2>
-            {!allHandled &&
-              tasks.map((task) => {
-                const status = logs.get(task.id)?.status ?? 'pending'
-                return (
-                  <div key={task.id} className={`task ${status}`}>
-                    <span className="task-label">{task.label}</span>
-                    <div className="task-buttons">
-                      <button
-                        className={status === 'done' ? 'do active' : 'do'}
-                        onClick={() => tapStatus(task, 'done')}
-                      >
-                        Done
-                      </button>
-                      <button
-                        className={status === 'skipped' ? 'skip active' : 'skip'}
-                        onClick={() => tapStatus(task, 'skipped')}
-                      >
-                        Skip
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-          </section>
-        )
-      })}
+      {!loaded ? (
+        <Skeleton cards={3} />
+      ) : (
+        <div className="routine-list">
+          {sections.map(({ routine, tasks }) => {
+            const doneCount = tasks.filter((t) => {
+              const s = logs.get(t.id)?.status
+              return s === 'done' || s === 'skipped' || s === 'partial'
+            }).length
+            const allHandled = doneCount === tasks.length
+            return (
+              <section key={routine.id} className={allHandled ? 'routine complete' : 'routine'}>
+                <div className="rail" aria-hidden="true">
+                  <div
+                    className="rail-fill"
+                    style={{ height: `${(doneCount / tasks.length) * 100}%` }}
+                  />
+                </div>
+                <h2>
+                  {routine.name}
+                  <span className="routine-progress">
+                    {allHandled ? ' ✓' : ` ${doneCount}/${tasks.length}`}
+                  </span>
+                </h2>
+                {!allHandled &&
+                  tasks.map((task) => {
+                    const status = logs.get(task.id)?.status ?? 'pending'
+                    return (
+                      <div key={task.id} className={`task ${status}`}>
+                        <span className="task-label">{task.label}</span>
+                        <div className="task-buttons">
+                          <button
+                            className={status === 'done' ? 'do active' : 'do'}
+                            onClick={() => tapStatus(task, 'done')}
+                          >
+                            Done
+                          </button>
+                          <button
+                            className={status === 'skipped' ? 'skip active' : 'skip'}
+                            onClick={() => tapStatus(task, 'skipped')}
+                          >
+                            Skip
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </section>
+            )
+          })}
+        </div>
+      )}
 
-      {sections.length === 0 && (
+      {loaded && sections.length === 0 && (
         <p className="gentle">Nothing scheduled right now. That’s allowed.</p>
       )}
 

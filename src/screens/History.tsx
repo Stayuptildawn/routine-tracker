@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { describeAction, undoAiAction } from '../lib/actions'
 import type { AiAction } from '../lib/types'
+import Skeleton from '../components/Skeleton'
 
 const STATUS_LABEL: Record<AiAction['status'], string> = {
   applied: 'AI-sorted',
@@ -11,6 +12,7 @@ const STATUS_LABEL: Record<AiAction['status'], string> = {
 
 export default function History() {
   const [items, setItems] = useState<AiAction[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -19,6 +21,7 @@ export default function History() {
       .order('created_at', { ascending: false })
       .limit(100)
     setItems((data as AiAction[]) ?? [])
+    setLoaded(true)
   }, [])
 
   useEffect(() => {
@@ -53,7 +56,10 @@ export default function History() {
           </div>
         </div>
       ))}
-      {items.length === 0 && <p className="gentle">No AI actions yet — try the message box on the Now tab.</p>}
+      {!loaded && <Skeleton cards={3} />}
+      {loaded && items.length === 0 && (
+        <p className="gentle">No AI actions yet — try the message box on the Now tab.</p>
+      )}
     </div>
   )
 }

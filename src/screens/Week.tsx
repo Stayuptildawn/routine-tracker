@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { Routine, Task, TaskLog, Tier } from '../lib/types'
+import Skeleton from '../components/Skeleton'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIERS: Tier[] = ['core', 'standard', 'bonus']
@@ -28,6 +29,7 @@ const STATUS_GLYPH: Record<string, string> = {
 export default function Week() {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<TaskLog[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [nameDraft, setNameDraft] = useState('')
   const [newTaskFor, setNewTaskFor] = useState<string | null>(null)
@@ -47,6 +49,7 @@ export default function Week() {
     ])
     setRoutines((routinesRes.data as Routine[]) ?? [])
     setLogs((logsRes.data as TaskLog[]) ?? [])
+    setLoaded(true)
   }, [])
 
   useEffect(() => {
@@ -114,6 +117,7 @@ export default function Week() {
     <div className="week">
       <h1>This week</h1>
       <p className="gentle">A record, not a scorecard. Blanks are neutral.</p>
+      {!loaded && <Skeleton cards={4} />}
       {routines.map((routine) => {
         const tasks = (routine.tasks ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         const isEditing = editing === routine.id
