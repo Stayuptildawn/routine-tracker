@@ -91,9 +91,17 @@ export default function Week() {
     load()
   }
 
-  async function updateTask(taskId: string, patch: Partial<Pick<Task, 'label' | 'tier'>>) {
+  async function updateTask(taskId: string, patch: Partial<Pick<Task, 'label' | 'tier' | 'scheduled_days'>>) {
     await supabase.from('tasks').update(patch).eq('id', taskId)
     load()
+  }
+
+  function toggleDay(task: Task, day: number) {
+    const days = task.scheduled_days.includes(day)
+      ? task.scheduled_days.filter((d) => d !== day)
+      : [...task.scheduled_days, day].sort((a, b) => a - b)
+    if (days.length === 0) return // a task needs at least one day
+    updateTask(task.id, { scheduled_days: days })
   }
 
   async function deleteTask(task: Task) {
@@ -145,28 +153,42 @@ export default function Week() {
             {isEditing ? (
               <div className="edit-panel">
                 {tasks.map((task) => (
-                  <div key={task.id} className="edit-task-row">
-                    <input
-                      defaultValue={task.label}
-                      onBlur={(e) => {
-                        const label = e.target.value.trim()
-                        if (label && label !== task.label) updateTask(task.id, { label })
-                      }}
-                    />
-                    <select
-                      value={task.tier}
-                      onChange={(e) => updateTask(task.id, { tier: e.target.value as Tier })}
-                      title="core = shown even on low-energy days"
-                    >
-                      {TIERS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
+                  <div key={task.id} className="edit-task">
+                    <div className="edit-task-row">
+                      <input
+                        defaultValue={task.label}
+                        onBlur={(e) => {
+                          const label = e.target.value.trim()
+                          if (label && label !== task.label) updateTask(task.id, { label })
+                        }}
+                      />
+                      <select
+                        value={task.tier}
+                        onChange={(e) => updateTask(task.id, { tier: e.target.value as Tier })}
+                        title="core = shown even on low-energy days"
+                      >
+                        {TIERS.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                      <button className="danger" onClick={() => deleteTask(task)}>
+                        ✕
+                      </button>
+                    </div>
+                    <div className="day-picker">
+                      {DAY_NAMES.map((d, i) => (
+                        <button
+                          key={d}
+                          className={task.scheduled_days.includes(i + 1) ? 'day on' : 'day'}
+                          onClick={() => toggleDay(task, i + 1)}
+                          title={task.scheduled_days.includes(i + 1) ? `scheduled ${d}` : `not scheduled ${d}`}
+                        >
+                          {d.slice(0, 2)}
+                        </button>
                       ))}
-                    </select>
-                    <button className="danger" onClick={() => deleteTask(task)}>
-                      ✕
-                    </button>
+                    </div>
                   </div>
                 ))}
                 <div className="add-task">

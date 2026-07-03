@@ -501,10 +501,39 @@ h2 {
   margin-top: 0.6rem;
 }
 
+.edit-task {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+}
+
 .edit-task-row {
   display: flex;
   gap: 0.4rem;
   align-items: center;
+}
+
+.day-picker {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.day-picker .day {
+  flex: 1;
+  max-width: 2.6rem;
+  padding: 0.32rem 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 0.74rem;
+}
+
+.day-picker .day.on {
+  background: var(--accent-soft);
+  color: var(--text);
+  outline: 1.5px solid var(--accent);
 }
 
 .edit-task-row input {
