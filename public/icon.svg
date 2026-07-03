@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#16161e"/>
-  <path d="M28 52 L44 68 L74 34" fill="none" stroke="#7aa2f7" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- a miniature routine card: amber progress rail, sage check -->
+  <rect width="100" height="100" rx="22" fill="#1a1714"/>
+  <rect x="14" y="22" width="7" height="56" rx="3.5" fill="#372f27"/>
+  <rect x="14" y="22" width="7" height="38" rx="3.5" fill="#e0a458"/>
+  <path d="M40 52 L53 65 L80 35" fill="none" stroke="#a8b98a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
