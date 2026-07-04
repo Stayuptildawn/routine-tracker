@@ -76,8 +76,18 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
   async function tapStatus(task: Task, status: 'done' | 'skipped') {
     const current = logs.get(task.id)?.status
     const next = current === status ? 'pending' : status // tap again to un-set
-    await setTaskStatus(task.id, next)
-    load()
+    // optimistic: the tap lands instantly, online or not
+    setLogs((prev) => {
+      const map = new Map(prev)
+      const existing = prev.get(task.id)
+      map.set(task.id, {
+        ...(existing ?? { id: '', task_id: task.id, date: today, completed_via: 'manual', notes: null }),
+        status: next,
+      })
+      return map
+    })
+    // when queued offline, keep the optimistic state - a reload would revert it
+    if ((await setTaskStatus(task.id, next)) === 'saved') load()
   }
 
   async function send() {

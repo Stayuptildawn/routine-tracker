@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
-import type { Routine, Task, TaskLog, Tier } from '../lib/types'
+import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
+import { setTaskStatus } from '../lib/actions'
 import Skeleton from '../components/Skeleton'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -24,6 +25,14 @@ const STATUS_GLYPH: Record<string, string> = {
   partial: '◐',
   skipped: '–', // deliberately neutral, never a red X
   pending: '',
+}
+
+// tap a past cell to fix the record: blank → done → skipped → blank
+const NEXT_STATUS: Record<string, LogStatus> = {
+  pending: 'done',
+  done: 'skipped',
+  partial: 'skipped',
+  skipped: 'pending',
 }
 
 export default function Week() {
@@ -58,6 +67,21 @@ export default function Week() {
 
   const logFor = (taskId: string, date: string) =>
     logs.find((l) => l.task_id === taskId && l.date === date)
+
+  async function cycleCell(task: Task, date: string) {
+    const next = NEXT_STATUS[logFor(task.id, date)?.status ?? 'pending']
+    // optimistic: show the change instantly, and keep it if the tap gets
+    // queued offline (a reload would revert it)
+    setLogs((prev) => {
+      const existing = prev.find((l) => l.task_id === task.id && l.date === date)
+      if (existing) return prev.map((l) => (l === existing ? { ...l, status: next } : l))
+      return [
+        ...prev,
+        { id: '', task_id: task.id, date, status: next, completed_via: 'manual', notes: null },
+      ]
+    })
+    if ((await setTaskStatus(task.id, next, 'manual', date)) === 'saved') load()
+  }
 
   async function addTask(routineId: string) {
     const label = newLabel.trim()
@@ -232,10 +256,25 @@ export default function Week() {
                         {weekDates.map((date, i) => {
                           const scheduled = task.scheduled_days.includes(i + 1)
                           const status = logFor(task.id, date)?.status ?? 'pending'
+                          const tappable = scheduled && date <= today
                           return (
                             <td
                               key={date}
-                              className={`cell ${status} ${scheduled ? '' : 'unscheduled'} ${date === today ? 'today' : ''}`}
+                              className={`cell ${status} ${scheduled ? '' : 'unscheduled'} ${date === today ? 'today' : ''} ${tappable ? 'tappable' : ''}`}
+                              role={tappable ? 'button' : undefined}
+                              tabIndex={tappable ? 0 : undefined}
+                              title={tappable ? `${task.label} — tap to edit ${DAY_NAMES[i]}` : undefined}
+                              onClick={tappable ? () => cycleCell(task, date) : undefined}
+                              onKeyDown={
+                                tappable
+                                  ? (e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        cycleCell(task, date)
+                                      }
+                                    }
+                                  : undefined
+                              }
                             >
                               {scheduled ? STATUS_GLYPH[status] : ''}
                             </td>

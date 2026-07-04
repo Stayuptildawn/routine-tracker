@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, configured } from './lib/supabase'
 import { SEED_ROUTINES } from './lib/seedData'
-import { flushMessageQueue } from './lib/actions'
+import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import Auth from './screens/Auth'
 import Now from './screens/Now'
 import Week from './screens/Week'
@@ -72,7 +72,11 @@ export default function App() {
       if (!cancelled) setSeeding(false)
     })
     flushMessageQueue()
-    const onOnline = () => flushMessageQueue()
+    flushTapQueue()
+    const onOnline = () => {
+      flushMessageQueue()
+      flushTapQueue()
+    }
     window.addEventListener('online', onOnline)
     return () => {
       cancelled = true

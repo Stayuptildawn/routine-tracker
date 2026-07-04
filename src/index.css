@@ -738,6 +738,22 @@ select {
   outline-offset: -1.5px;
 }
 
+/* past + today cells can be tapped to fix the record */
+.week-grid .cell.tappable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.week-grid .cell.tappable:hover {
+  outline: 1.5px solid var(--neutral);
+  outline-offset: -1.5px;
+}
+
+.week-grid .cell.tappable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 /* ---------- routine editing ---------- */
 .routine-header {
   display: flex;
