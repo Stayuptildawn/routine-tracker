@@ -1,19 +1,19 @@
-// weekly-reflection: Sunday evening, two gentle sentences about the week.
-// Triggered by pg_cron -> net.http_post (see private setup notes); deploy
-// with verify_jwt OFF - authenticated by the x-cron-secret header instead.
+// weekly-reflection: Sunday evening, two specific sentences about the week.
+// Triggered by pg_cron -> net.http_post; deploy with verify_jwt OFF -
+// authenticated by the x-cron-secret header instead.
 //
 // Runs with the service role: every query scopes by user_id explicitly.
-// Single-user by design (reflects for every auth user, which is one).
 //
-// Prompt guardrails matter more than the data here: patterns + permission,
-// never scorekeeping. Forbidden words are enforced in the prompt AND checked
-// after - a reflection that shames is worse than no reflection.
+// The bar for the text: it must name a real routine/task and use a real
+// number or comparison. Generic coach-speak is banned in the prompt AND
+// checked after - a vague reflection is worse than none.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { GEMINI_MODELS } from '../_shared/interpret.ts'
 import { userNow, addDays } from '../_shared/localtime.ts'
 
-const FORBIDDEN = /\b(failed|failure|missed|only|just|should|behind|lazy|slipped)\b/i
+const FORBIDDEN =
+  /\b(failed|failure|missed|only|just|should|behind|lazy|slipped)\b|great job|keep it up|well done|good work|stay(ing)? consistent|consistency/i
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -41,6 +41,8 @@ async function askGemini(prompt: string): Promise<string | null> {
   return null
 }
 
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
 Deno.serve(async (req) => {
   if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
     return new Response('forbidden', { status: 403 })
@@ -50,7 +52,10 @@ Deno.serve(async (req) => {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const { date, weekday } = userNow()
     const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
+    const prevStart = addDays(weekStart, -7)
     const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    const prevDates = Array.from({ length: 7 }, (_, i) => addDays(prevStart, i))
+    const allDates = [...prevDates, ...weekDates]
 
     const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 10 })
     const results: Record<string, string> = {}
@@ -60,53 +65,102 @@ Deno.serve(async (req) => {
         .from('routines')
         .select('id, name, tasks(id, label, tier, scheduled_days)')
         .eq('user_id', user.id)
-      const tasks = (routines ?? []).flatMap((r) => r.tasks ?? [])
+      const tasks = (routines ?? []).flatMap((r) => (r.tasks ?? []).map((t) => ({ ...t, routine: r.name })))
       if (tasks.length === 0) continue
       const taskById = new Map(tasks.map((t) => [t.id, t]))
 
-      const [{ data: logs }, { data: states }] = await Promise.all([
-        supabase.from('task_logs').select('task_id, date, status').in('task_id', [...taskById.keys()]).in('date', weekDates),
-        supabase.from('daily_state').select('date, energy').eq('user_id', user.id).in('date', weekDates),
-      ])
-      const energyByDate = new Map((states ?? []).map((s) => [s.date, s.energy]))
+      const [{ data: logs }, { data: states }, { data: sessions }, { data: cardio }, { data: checkins }, { data: reminders }] =
+        await Promise.all([
+          supabase.from('task_logs').select('task_id, date, status').in('task_id', [...taskById.keys()]).in('date', allDates),
+          supabase.from('daily_state').select('date, energy').eq('user_id', user.id).in('date', weekDates),
+          supabase
+            .from('planned_sessions')
+            .select('split_day, completed_at, week_number')
+            .eq('user_id', user.id)
+            .gte('completed_at', weekStart + 'T00:00:00'),
+          supabase.from('cardio_logs').select('kind, minutes, distance_km, date').eq('user_id', user.id).gte('date', weekStart),
+          supabase.from('recovery_checkins').select('muscle_group, amount').eq('user_id', user.id).gte('created_at', weekStart + 'T00:00:00'),
+          supabase.from('reminders').select('status, created_at, updated_at').eq('user_id', user.id).gte('updated_at', weekStart + 'T00:00:00'),
+        ])
 
-      // per-day summary + per-task done counts, compact enough to prompt with
-      const dayLines = weekDates.map((d, i) => {
-        const wd = i + 1
-        const scheduled = tasks.filter((t) => t.scheduled_days?.includes(wd)).length
-        const dayLogs = (logs ?? []).filter((l) => l.date === d)
-        const done = dayLogs.filter((l) => l.status === 'done' || l.status === 'partial').length
-        const skipped = dayLogs.filter((l) => l.status === 'skipped').length
-        return `${d} (${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}): ${done}/${scheduled} done, ${skipped} deliberately skipped, energy: ${energyByDate.get(d) ?? 'not set'}`
-      })
-      const doneCount = new Map<string, number>()
-      for (const l of logs ?? []) {
-        if (l.status === 'done' || l.status === 'partial') {
-          const label = taskById.get(l.task_id)?.label ?? '?'
-          doneCount.set(label, (doneCount.get(label) ?? 0) + 1)
+      // per-routine: done/scheduled this week vs last, plus which days landed
+      const routineLines: string[] = []
+      for (const r of routines ?? []) {
+        const rTasks = (r.tasks ?? [])
+        if (rTasks.length === 0) continue
+        const stat = (dates: string[]) => {
+          let scheduled = 0
+          let done = 0
+          const daysHit = new Set<string>()
+          dates.forEach((d, i) => {
+            for (const t of rTasks) {
+              if (!t.scheduled_days?.includes(i + 1)) continue
+              scheduled++
+              const log = (logs ?? []).find((l) => l.task_id === t.id && l.date === d)
+              if (log && (log.status === 'done' || log.status === 'partial')) {
+                done++
+                daysHit.add(DAY_NAMES[i])
+              }
+            }
+          })
+          return { scheduled, done, daysHit }
         }
+        const now = stat(weekDates)
+        const prev = stat(prevDates)
+        if (now.scheduled === 0) continue
+        routineLines.push(
+          `- ${r.name}: ${now.done}/${now.scheduled} this week (last week ${prev.done}/${prev.scheduled}); days with completions: ${[...now.daysHit].join(' ') || 'none'}`,
+        )
       }
-      const topTasks = [...doneCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+
+      const energyLine = weekDates
+        .map((d, i) => {
+          const e = (states ?? []).find((s) => s.date === d)?.energy
+          return e ? `${DAY_NAMES[i]}=${e}` : null
+        })
+        .filter(Boolean)
+        .join(', ')
+
+      const doneSessions = (sessions ?? []).filter((s) => s.completed_at)
+      const cardioKm = (cardio ?? []).reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
+      const cardioMin = (cardio ?? []).reduce((n, c) => n + Number(c.minutes ?? 0), 0)
+      const flags = (checkins ?? []).filter((c) => c.amount === 'over_the_line').map((c) => c.muscle_group)
+      const remindersDone = (reminders ?? []).filter((r) => r.status === 'done').length
 
       const prompt = `You write a tiny weekly reflection for someone with AuDHD who tracks daily routines.
-Their week (${weekStart} to ${weekDates[6]}):
-${dayLines.join('\n')}
-Tasks that happened most: ${topTasks.map(([l, n]) => `${l} (${n}x)`).join(', ') || 'none logged'}
+Week ${weekStart} to ${weekDates[6]}. Their data:
+
+Routines (done/scheduled, with last week for comparison):
+${routineLines.join('\n') || 'nothing scheduled'}
+
+Energy check-ins: ${energyLine || 'none set'}
+Training: ${doneSessions.length} session(s) finished (${doneSessions.map((s) => s.split_day).join(', ') || 'none'})
+Cardio: ${cardioKm > 0 ? `${Math.round(cardioKm * 10) / 10} km` : ''}${cardioMin > 0 ? ` ${Math.round(cardioMin)} min total` : ''}${cardioKm + cardioMin === 0 ? 'none logged' : ''}
+Recovery flags ("too much" answers): ${flags.join(', ') || 'none'}
+Reminders completed: ${remindersDone}
 
 Write EXACTLY two sentences:
-1. One real pattern you can see in the data, stated warmly and specifically.
-2. One small permission-based suggestion, phrased as a question starting with "Want to".
+1. One specific, true pattern from the data above. It MUST name at least one real
+   routine, task or session by name AND use a real number, weekday or
+   week-over-week change. Prefer the most interesting contrast (improvement,
+   an energy-completion link, a routine that works on some days and not others).
+2. One small experiment for next week, phrased as a question starting with
+   "Want to", directly connected to the pattern in sentence 1.
 
-Hard rules: never use the words failed, missed, only, just, should, behind, lazy.
-Never count or mention what didn't happen. Skips are deliberate self-management,
-mention them positively if at all. No exclamation marks, no emoji, no preamble -
-reply with the two sentences and nothing else.`
+Hard rules: never use the words failed, missed, only, just, should, behind,
+lazy. No generic praise (no "great job", "keep it up", "well done",
+"consistency"). Never count or dwell on what didn't happen - frame around
+what did. Skips are deliberate self-management. No exclamation marks, no
+emoji, no preamble - reply with the two sentences and nothing else.
+
+Example of the expected quality: "Bedtime Routine landed 6 of 7 nights and
+both low-energy days still closed out every core task. Want to try giving
+Study Time the same 9am slot where 4 of its 5 completions happened?"`
 
       let body = await askGemini(prompt)
       if (!body) continue
       if (FORBIDDEN.test(body)) {
-        // one retry with the violation pointed out, then give up quietly
-        body = await askGemini(prompt + `\n\nYour previous draft broke the word rules. Rewrite it without those words.`)
+        body = await askGemini(prompt + `\n\nYour previous draft broke the rules (generic or banned wording). Rewrite it: specific names and numbers, no filler.`)
         if (!body || FORBIDDEN.test(body)) continue
       }
 
