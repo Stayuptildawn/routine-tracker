@@ -1,0 +1,102 @@
+// send-nudges: pg_cron every 15 minutes. A routine whose anchor_time falls in
+// the last 15-minute window, with core tasks still pending today, gets ONE
+// web push - and never a second one that day (nudges_sent ledger).
+//
+// Copy rule: an invitation, never an accusation. "X is ready when you are."
+// The words "missed", "late", "still" and counts of undone things are banned.
+//
+// Deploy with verify_jwt OFF; authenticated by x-cron-secret like
+// weekly-reflection. Service role: all queries scope by ids we own.
+//
+// Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:you@x),
+// CRON_SECRET, USER_TIMEZONE.
+
+import { createClient } from 'npm:@supabase/supabase-js@2'
+import webpush from 'npm:web-push@3'
+import { userNow } from '../_shared/localtime.ts'
+
+const WINDOW_MIN = 15 // must match the cron cadence
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+Deno.serve(async (req) => {
+  if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
+    return new Response('forbidden', { status: 403 })
+  }
+
+  try {
+    webpush.setVapidDetails(
+      Deno.env.get('VAPID_SUBJECT')!,
+      Deno.env.get('VAPID_PUBLIC_KEY')!,
+      Deno.env.get('VAPID_PRIVATE_KEY')!,
+    )
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    const { date, weekday, minutes } = userNow()
+
+    const { data: routines } = await supabase
+      .from('routines')
+      .select('id, name, user_id, anchor_time, tasks(id, tier, scheduled_days)')
+      .not('anchor_time', 'is', null)
+
+    let sent = 0
+    for (const routine of routines ?? []) {
+      const [h, m] = (routine.anchor_time as string).split(':').map(Number)
+      const anchorMin = h * 60 + m
+      // fire in the window just after the anchor; one cron tick wide
+      if (minutes < anchorMin || minutes >= anchorMin + WINDOW_MIN) continue
+
+      const coreToday = (routine.tasks ?? []).filter(
+        (t) => t.tier === 'core' && t.scheduled_days?.includes(weekday),
+      )
+      if (coreToday.length === 0) continue
+
+      const { data: logs } = await supabase
+        .from('task_logs')
+        .select('task_id, status')
+        .eq('date', date)
+        .in('task_id', coreToday.map((t) => t.id))
+      const handled = new Set((logs ?? []).filter((l) => l.status !== 'pending').map((l) => l.task_id))
+      if (coreToday.every((t) => handled.has(t.id))) continue // already done - no nudge
+
+      // dedupe: first insert wins, a second run the same day gets a conflict
+      const { error: dupe } = await supabase.from('nudges_sent').insert({ routine_id: routine.id, date })
+      if (dupe) continue
+
+      const { data: subs } = await supabase
+        .from('push_subscriptions')
+        .select('endpoint, p256dh, auth')
+        .eq('user_id', routine.user_id)
+
+      const payload = JSON.stringify({
+        title: 'Routine Tracker',
+        body: `${routine.name} is ready when you are.`,
+        tag: `nudge-${routine.id}`, // replaces, never stacks
+      })
+
+      for (const sub of subs ?? []) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            payload,
+          )
+          sent++
+        } catch (err: unknown) {
+          const status = (err as { statusCode?: number }).statusCode
+          if (status === 404 || status === 410) {
+            // subscription expired or revoked - clean it up
+            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+          } else {
+            console.error('push failed:', status, err)
+          }
+        }
+      }
+    }
+
+    return json({ date, minutes, sent })
+  } catch (err) {
+    console.error('send-nudges error:', err)
+    return json({ error: String(err) }, 500)
+  }
+})

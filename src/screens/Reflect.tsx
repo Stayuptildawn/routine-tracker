@@ -10,9 +10,25 @@ interface DayStat {
   skipped: number
 }
 
+interface Reflection {
+  week_start: string
+  body: string
+}
+
 export default function Reflect() {
   const [days, setDays] = useState<DayStat[]>([])
+  const [reflection, setReflection] = useState<Reflection | null>(null)
   const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('reflections')
+      .select('week_start, body')
+      .order('week_start', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setReflection(data as Reflection | null))
+  }, [])
 
   useEffect(() => {
     const from = new Date()
@@ -50,6 +66,18 @@ export default function Reflect() {
       <p className="gentle">
         Patterns, not judgment. No streaks here — a quiet day is information, not failure.
       </p>
+      {reflection && (
+        <div className="reflection-card">
+          <p className="eyebrow">
+            Noticed, week of{' '}
+            {new Date(reflection.week_start + 'T00:00:00').toLocaleDateString(undefined, {
+              day: 'numeric',
+              month: 'long',
+            })}
+          </p>
+          <p className="reflection-body">{reflection.body}</p>
+        </div>
+      )}
       {!loaded && <Skeleton cards={1} />}
       <div className="reflect-bars" style={loaded ? undefined : { display: 'none' }}>
         {days.map((d) => (

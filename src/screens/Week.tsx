@@ -52,7 +52,7 @@ export default function Week() {
     const [routinesRes, logsRes] = await Promise.all([
       supabase
         .from('routines')
-        .select('id, name, category, sort_order, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
+        .select('id, name, category, sort_order, anchor_time, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
         .order('sort_order'),
       supabase.from('task_logs').select('*').in('date', currentWeekDates()),
     ])
@@ -108,6 +108,11 @@ export default function Week() {
     const name = nameDraft.trim()
     if (name) await supabase.from('routines').update({ name }).eq('id', id)
     setEditing(null)
+    load()
+  }
+
+  async function setAnchor(routineId: string, value: string) {
+    await supabase.from('routines').update({ anchor_time: value || null }).eq('id', routineId)
     load()
   }
 
@@ -180,6 +185,23 @@ export default function Week() {
 
             {isEditing ? (
               <div className="edit-panel">
+                <div className="anchor-row">
+                  <label htmlFor={`anchor-${routine.id}`}>Anchor time</label>
+                  <input
+                    id={`anchor-${routine.id}`}
+                    type="time"
+                    value={routine.anchor_time?.slice(0, 5) ?? ''}
+                    onChange={(e) => setAnchor(routine.id, e.target.value)}
+                    title="Roughly when this routine happens - sorts the Now view and times nudges"
+                  />
+                  {routine.anchor_time ? (
+                    <button className="link" onClick={() => setAnchor(routine.id, '')}>
+                      clear
+                    </button>
+                  ) : (
+                    <span className="gentle anchor-hint">optional — “around when?”</span>
+                  )}
+                </div>
                 {tasks.map((task) => (
                   <div key={task.id} className="edit-task">
                     <div className="edit-task-row">

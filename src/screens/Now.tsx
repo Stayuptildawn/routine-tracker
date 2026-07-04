@@ -6,6 +6,7 @@ import { interpretMessage, setTaskStatus, setReminderStatus, suggestNext, descri
 import type { NextSuggestion } from '../lib/actions'
 import { describeDue, pendingOrder } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
+import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 
@@ -18,6 +19,15 @@ const TIER_BY_ENERGY: Record<Energy, string[]> = {
 interface UndoState {
   aiActionId: string
   response: InterpretResponse
+}
+
+// an anchored routine "activates" within this many minutes of its anchor_time
+const ANCHOR_WINDOW = 120
+
+function fmtEta(diff: number): string {
+  const abs = Math.abs(diff)
+  const t = abs >= 60 ? `${Math.floor(abs / 60)}h ${String(abs % 60).padStart(2, '0')}m` : `${abs} min`
+  return diff > 0 ? `in ${t}` : diff < 0 ? `${t} ago` : 'now'
 }
 
 export default function Now({ onOpenReminders }: { onOpenReminders: () => void }) {
@@ -36,15 +46,27 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
   const [next, setNext] = useState<NextSuggestion | null>(null)
   const [nextBusy, setNextBusy] = useState(false)
   const [listening, setListening] = useState(false)
+  const [nudges, setNudges] = useState<'unknown' | 'on' | 'off' | 'unsupported'>('unknown')
+  const [nowMin, setNowMin] = useState(() => new Date().getHours() * 60 + new Date().getMinutes())
   const recognitionRef = useRef<{ stop: () => void } | null>(null)
   const today = localDate()
   const weekday = isoWeekday()
+
+  // minute tick keeps anchor sort + countdown ring honest (time blindness aid)
+  useEffect(() => {
+    const t = setInterval(() => setNowMin(new Date().getHours() * 60 + new Date().getMinutes()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    getNudgeState().then(setNudges)
+  }, [])
 
   const load = useCallback(async () => {
     const [routinesRes, logsRes, stateRes, remindersRes] = await Promise.all([
       supabase
         .from('routines')
-        .select('id, name, category, sort_order, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
+        .select('id, name, category, sort_order, anchor_time, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
         .order('sort_order'),
       supabase.from('task_logs').select('*').eq('date', today),
       supabase.from('daily_state').select('energy').eq('date', today).maybeSingle(),
@@ -196,10 +218,25 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
         const status = logs.get(t.id)?.status
         return status === 'done' || status === 'skipped' || status === 'partial'
       }).length
-      return { ...s, doneCount, complete: doneCount === s.tasks.length }
+      // signed minutes until (+) / since (-) the anchor, if any
+      let anchorDiff: number | null = null
+      if (s.routine.anchor_time) {
+        const [h, m] = s.routine.anchor_time.split(':').map(Number)
+        anchorDiff = h * 60 + m - nowMin
+      }
+      return { ...s, doneCount, complete: doneCount === s.tasks.length, anchorDiff }
     })
-    // finished routines get out of the way (stable sort keeps their order)
-    .sort((a, b) => Number(a.complete) - Number(b.complete))
+    // finished routines sink; anchored routines near their time float up;
+    // everything else keeps sort_order (stable sort)
+    .sort((a, b) => {
+      if (a.complete !== b.complete) return Number(a.complete) - Number(b.complete)
+      const near = (d: number | null) => (d !== null && Math.abs(d) <= ANCHOR_WINDOW ? Math.abs(d) : Infinity)
+      return near(a.anchorDiff) - near(b.anchorDiff)
+    })
+
+  const activeAnchorId = sections.find(
+    (s) => !s.complete && s.anchorDiff !== null && Math.abs(s.anchorDiff) <= ANCHOR_WINDOW,
+  )?.routine.id
 
   return (
     <div className="now">
@@ -288,7 +325,9 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
         <Skeleton cards={3} />
       ) : (
         <div className="routine-list">
-          {sections.map(({ routine, tasks, doneCount, complete: allHandled }) => {
+          {sections.map(({ routine, tasks, doneCount, complete: allHandled, anchorDiff }) => {
+            const showRing = routine.id === activeAnchorId && anchorDiff !== null
+            const ringPct = showRing ? Math.round(((ANCHOR_WINDOW - Math.min(Math.abs(anchorDiff), ANCHOR_WINDOW)) / ANCHOR_WINDOW) * 100) : 0
             return (
               <section key={routine.id} className={allHandled ? 'routine complete' : 'routine'}>
                 <div className="rail" aria-hidden="true">
@@ -302,6 +341,16 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
                   <span className="routine-progress">
                     {allHandled ? ' ✓' : ` ${doneCount}/${tasks.length}`}
                   </span>
+                  {showRing && (
+                    <span className="anchor-chip" title={`anchored around ${routine.anchor_time?.slice(0, 5)}`}>
+                      <span
+                        className="anchor-ring"
+                        style={{ background: `conic-gradient(var(--accent) ${ringPct}%, var(--surface-3) 0)` }}
+                        aria-hidden="true"
+                      />
+                      {fmtEta(anchorDiff!)}
+                    </span>
+                  )}
                   {!allHandled && (
                     <button
                       className="start-btn"
@@ -376,6 +425,37 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
             {reminders.length > 4 ? `See all ${reminders.length} →` : 'See all →'}
           </button>
         </section>
+      )}
+
+      {loaded && (nudges === 'on' || nudges === 'off') && (
+        <p className="gentle nudge-row">
+          {nudges === 'on' ? (
+            <>
+              🔔 Nudges on
+              <button
+                className="link"
+                onClick={async () => {
+                  await disableNudges()
+                  setNudges('off')
+                }}
+              >
+                turn off
+              </button>
+            </>
+          ) : (
+            <button
+              className="link"
+              onClick={async () => {
+                const result = await enableNudges()
+                if (result === 'on') setNudges('on')
+                else if (result === 'denied')
+                  setNotice('Notifications are blocked for this site — enable them in browser settings first.')
+              }}
+            >
+              🔔 Enable gentle nudges
+            </button>
+          )}
+        </p>
       )}
 
       {playing &&

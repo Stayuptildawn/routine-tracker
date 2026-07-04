@@ -7,6 +7,7 @@ export interface Routine {
   name: string
   category: string | null
   sort_order: number | null
+  anchor_time?: string | null // "HH:MM:SS"; absent until the 0005 migration runs
   tasks: Task[]
 }
 

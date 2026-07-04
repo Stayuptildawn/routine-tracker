@@ -659,6 +659,84 @@ select {
   font-weight: 700;
 }
 
+/* ---------- time anchors ---------- */
+.anchor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* conic ring fills as the anchor approaches; full = it's time */
+.anchor-ring {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  display: inline-block;
+  position: relative;
+}
+
+.anchor-ring::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+}
+
+.anchor-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.anchor-row input[type='time'] {
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.anchor-hint {
+  margin: 0;
+}
+
+/* ---------- nudges ---------- */
+.nudge-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-top: var(--sp-5);
+}
+
+/* ---------- reflection card ---------- */
+.reflection-card {
+  background: var(--surface);
+  border: 1px solid var(--accent-soft);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  margin-top: var(--sp-3);
+  box-shadow: var(--shadow);
+}
+
+.reflection-card .eyebrow {
+  margin-bottom: var(--sp-1);
+}
+
+.reflection-body {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+}
+
 /* ---------- routine player: one thing at a time ---------- */
 .player {
   position: fixed;
