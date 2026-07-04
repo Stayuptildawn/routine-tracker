@@ -22,6 +22,11 @@
   --good: #5f7d46;
   --good-soft: #e2e8d2;
   --neutral: #97907f;
+  /* cardio kinds - muted, distinct, same warmth family */
+  --cardio-run: #c98a3d;
+  --cardio-walk: #5f7d46;
+  --cardio-cycle: #5f7d9e;
+  --cardio-swim: #4f8f8b;
 
   /* type */
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
@@ -72,6 +77,10 @@
     --good: #a8b98a;
     --good-soft: #2c3323;
     --neutral: #6e675c;
+    --cardio-run: #e0a458;
+    --cardio-walk: #a8b98a;
+    --cardio-cycle: #8fa9c9;
+    --cardio-swim: #7fb5b0;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.2);
   }
 }
@@ -91,6 +100,10 @@
   --good: #a8b98a;
   --good-soft: #2c3323;
   --neutral: #6e675c;
+  --cardio-run: #e0a458;
+  --cardio-walk: #a8b98a;
+  --cardio-cycle: #8fa9c9;
+  --cardio-swim: #7fb5b0;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
@@ -1246,15 +1259,65 @@ select {
   height: 56px;
 }
 
-.run-bar {
-  background: var(--good);
-  opacity: 0.7;
+/* stacked by kind, bottom-up */
+.run-stack {
+  width: 58%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  overflow: hidden;
 }
 
-.run-bar.now {
-  background: var(--accent);
-  opacity: 1;
+.run-stack.now {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
 }
+
+.run-seg {
+  width: 100%;
+  min-height: 2px;
+}
+
+.run-seg.run { background: var(--cardio-run); }
+.run-seg.walk { background: var(--cardio-walk); }
+.run-seg.cycle { background: var(--cardio-cycle); }
+.run-seg.swim { background: var(--cardio-swim); }
+.run-seg.other { background: var(--neutral); }
+
+.bar-day.now-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.run-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin: var(--sp-1) 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.run-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.run-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  display: inline-block;
+}
+
+.run-dot.run { background: var(--cardio-run); }
+.run-dot.walk { background: var(--cardio-walk); }
+.run-dot.cycle { background: var(--cardio-cycle); }
+.run-dot.swim { background: var(--cardio-swim); }
+.run-dot.other { background: var(--neutral); }
 
 .run-stats {
   margin: var(--sp-1) 0 var(--sp-2);

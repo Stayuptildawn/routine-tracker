@@ -264,13 +264,6 @@ export default function Gym() {
     }
   }
 
-  // week-start date for block week i (0-based), same short format as the cardio chart
-  const blockWeekDate = (i: number) => {
-    if (!block) return ''
-    const d = new Date(block.start_date + 'T00:00:00')
-    d.setDate(d.getDate() + i * 7)
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'numeric' })
-  }
 
   const byDate = new Map<string, WorkoutLog[]>()
   for (const log of logs) {
@@ -373,19 +366,27 @@ export default function Gym() {
         const thisWeek = cardio.filter((c) => mondayOf(c.date) === thisMonday)
         const weekKm = thisWeek.reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
         const weekMin = thisWeek.reduce((n, c) => n + Number(c.minutes ?? 0), 0)
-        // last 8 weeks of distance, oldest first
-        const weeks: { label: string; km: number; now: boolean }[] = []
+        // last 8 Monday-to-Sunday weeks, numbered 1..8 (8 = this week),
+        // each bar stacked by activity kind
+        const KIND_ORDER = ['run', 'walk', 'cycle', 'swim', 'other']
+        const weeks: { num: number; kinds: Map<string, number>; total: number; now: boolean }[] = []
         for (let i = 7; i >= 0; i--) {
           const d = new Date(thisMonday + 'T00:00:00')
           d.setDate(d.getDate() - i * 7)
           const monday = localDate(d)
-          weeks.push({
-            label: d.toLocaleDateString(undefined, { day: 'numeric', month: 'numeric' }),
-            km: cardio.filter((c) => mondayOf(c.date) === monday).reduce((n, c) => n + Number(c.distance_km ?? 0), 0),
-            now: monday === thisMonday,
-          })
+          const kinds = new Map<string, number>()
+          for (const c of cardio) {
+            if (mondayOf(c.date) !== monday) continue
+            const km = Number(c.distance_km ?? 0)
+            if (!km) continue
+            const kind = KIND_ORDER.includes(c.kind) ? c.kind : 'other'
+            kinds.set(kind, (kinds.get(kind) ?? 0) + km)
+          }
+          const total = [...kinds.values()].reduce((a, b) => a + b, 0)
+          weeks.push({ num: 8 - i, kinds, total, now: monday === thisMonday })
         }
-        const maxKm = Math.max(1, ...weeks.map((w) => w.km))
+        const maxKm = Math.max(1, ...weeks.map((w) => w.total))
+        const presentKinds = KIND_ORDER.filter((k) => weeks.some((w) => w.kinds.has(k)))
         const runs = cardio.filter((c) => Number(c.distance_km ?? 0) >= 1 && c.minutes)
         const longest = runs.length ? Math.max(...runs.map((c) => Number(c.distance_km))) : null
         const paces = runs.filter((c) => Number(c.distance_km) >= 2).map((c) => Number(c.minutes) / Number(c.distance_km))
@@ -430,18 +431,38 @@ export default function Gym() {
               </button>
             </div>
 
-            {weeks.some((w) => w.km > 0) && (
-              <div className="run-weeks">
-                {weeks.map((w) => (
-                  <div key={w.label} className="reflect-day" title={`week of ${w.label}: ${Math.round(w.km * 10) / 10} km`}>
-                    <div className="bar-wrap run-bar-wrap">
-                      <div className={w.now ? 'bar run-bar now' : 'bar run-bar'} style={{ height: `${(w.km / maxKm) * 100}%` }} />
+            {weeks.some((w) => w.total > 0) && (
+              <>
+                <div className="run-weeks">
+                  {weeks.map((w) => (
+                    <div
+                      key={w.num}
+                      className="reflect-day"
+                      title={`week ${w.num}: ${[...w.kinds.entries()].map(([k, v]) => `${k} ${Math.round(v * 10) / 10}km`).join(', ') || 'nothing'}`}
+                    >
+                      <div className="bar-wrap run-bar-wrap">
+                        <div className={w.now ? 'run-stack now' : 'run-stack'}>
+                          {KIND_ORDER.filter((k) => w.kinds.has(k)).map((k) => (
+                            <div key={k} className={`run-seg ${k}`} style={{ height: `${(w.kinds.get(k)! / maxKm) * 100}%` }} />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="bar-count">{w.total > 0 ? Math.round(w.total * 10) / 10 : ''}</span>
+                      <span className={w.now ? 'bar-day now-label' : 'bar-day'}>{w.num}</span>
                     </div>
-                    <span className="bar-count">{w.km > 0 ? Math.round(w.km * 10) / 10 : ''}</span>
-                    <span className="bar-day">{w.label}</span>
+                  ))}
+                </div>
+                {presentKinds.length > 1 && (
+                  <div className="run-legend">
+                    {presentKinds.map((k) => (
+                      <span key={k} className="run-legend-item">
+                        <span className={`run-dot ${k}`} />
+                        {k}
+                      </span>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
 
             {(longest || bestPace) && (
@@ -572,14 +593,14 @@ export default function Gym() {
                   <span className="volume-label">{mg}</span>
                   <div className="volume-bars">
                     {weeks.map((n, i) => (
-                      <div key={i} className="volume-col" title={`week ${i + 1} (${blockWeekDate(i)}): ${n}`}>
+                      <div key={i} className="volume-col" title={`week ${i + 1}: ${n} sets`}>
                         <div className="volume-bar-wrap">
                           <div
                             className={i + 1 === currentWeek ? 'volume-bar now' : i + 1 > currentWeek ? 'volume-bar future' : 'volume-bar'}
                             style={{ height: `${(n / max) * 100}%` }}
                           />
                         </div>
-                        <span className={i + 1 === currentWeek ? 'volume-date now' : 'volume-date'}>{blockWeekDate(i)}</span>
+                        <span className={i + 1 === currentWeek ? 'volume-date now' : 'volume-date'}>{i + 1}</span>
                       </div>
                     ))}
                   </div>
