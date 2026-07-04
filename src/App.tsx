@@ -47,11 +47,25 @@ async function seedIfEmpty() {
   }
 }
 
+type Theme = 'auto' | 'light' | 'dark'
+const THEME_LABEL: Record<Theme, string> = { auto: '🌗 Auto', light: '☀️ Light', dark: '🌙 Dark' }
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
   const [seeding, setSeeding] = useState(true)
   const [tab, setTab] = useState<Tab>('now')
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
+
+  useEffect(() => {
+    if (theme === 'auto') {
+      delete document.documentElement.dataset.theme
+      localStorage.removeItem('theme')
+    } else {
+      document.documentElement.dataset.theme = theme
+      localStorage.setItem('theme', theme)
+    }
+  }, [theme])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -115,6 +129,13 @@ export default function App() {
             <span className="tab-label">{t.label}</span>
           </button>
         ))}
+        <button
+          className="theme-toggle"
+          onClick={() => setTheme(theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto')}
+          title="Theme: follows system by default"
+        >
+          {THEME_LABEL[theme]}
+        </button>
       </nav>
     </div>
   )

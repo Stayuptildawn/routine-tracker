@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
+import { exportTaskLogs, exportWorkoutLogs } from '../lib/csv'
 import Skeleton from '../components/Skeleton'
 
 interface DayStat {
@@ -106,6 +107,16 @@ export default function Reflect() {
       ) : (
         <p className="gentle">Nothing logged yet this week. Whenever you’re ready.</p>
       )}
+
+      <p className="gentle export-row">
+        Your data is yours:
+        <button className="link" onClick={() => exportTaskLogs()}>
+          ⬇ tasks CSV
+        </button>
+        <button className="link" onClick={() => exportWorkoutLogs()}>
+          ⬇ workouts CSV
+        </button>
+      </p>
     </div>
   )
 }

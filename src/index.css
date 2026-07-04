@@ -52,8 +52,11 @@
   --shadow: 0 1px 2px rgba(50, 44, 36, 0.06), 0 4px 16px rgba(50, 44, 36, 0.05);
 }
 
+/* dark palette applies via system preference OR the manual toggle;
+   keep the two dark blocks identical (and the light override below in
+   sync with :root) when touching tokens */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     /* palette — lamplight (dark) */
     --bg: #1a1714;
     --surface: #221e1a;
@@ -71,6 +74,24 @@
     --neutral: #6e675c;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.2);
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #1a1714;
+  --surface: #221e1a;
+  --surface-2: #2c2721;
+  --surface-3: #372f27;
+  --border: #3a332b;
+  --text: #e9e3da;
+  --text-dim: #9c9285;
+  --accent: #e0a458;
+  --accent-strong: #e0a458;
+  --accent-soft: #3d3122;
+  --on-accent: #241a0d;
+  --good: #a8b98a;
+  --good-soft: #2c3323;
+  --neutral: #6e675c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* ---------- base ---------- */
@@ -247,6 +268,26 @@ select {
   font-weight: 700;
 }
 
+.theme-toggle {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  padding: var(--sp-2);
+  white-space: nowrap;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+@media (min-width: 900px) {
+  .theme-toggle {
+    margin-top: auto; /* sits at the bottom of the left rail */
+  }
+}
+
 @media (min-width: 900px) {
   .app {
     flex-direction: row;
@@ -405,6 +446,7 @@ select {
   border-radius: var(--r-sm);
   font-size: var(--fs-sm);
   color: var(--text-dim);
+  white-space: pre-line; /* query answers can be multi-line */
 }
 
 /* ---------- suggestion chips ---------- */
@@ -434,9 +476,34 @@ select {
   border-color: var(--accent);
 }
 
+.chip.active {
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
 .chip.dismiss {
   background: var(--surface-2);
   color: var(--text-dim);
+}
+
+.plan-card .plan-chips {
+  margin: 0 0 var(--sp-2);
+}
+
+.plan-cardio {
+  margin: var(--sp-2) 0 0;
+}
+
+.export-row,
+.ai-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
+}
+
+.ai-stats {
+  display: block;
 }
 
 .chip.dismiss:hover {

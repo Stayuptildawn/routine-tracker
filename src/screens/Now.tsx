@@ -133,9 +133,12 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
       } else {
         setMessage('')
         setSuggestions(result.suggestions)
+        if (result.answers && result.answers.length > 0) {
+          setNotice(result.answers.join('\n'))
+        }
         if (result.applied.length > 0 && result.ai_action_id) {
           setUndo({ aiActionId: result.ai_action_id, response: result })
-        } else if (result.applied.length === 0 && result.suggestions.length === 0) {
+        } else if (result.applied.length === 0 && result.suggestions.length === 0 && !result.answers?.length) {
           setNotice('Nothing matched — try naming the task, or add it as a reminder.')
         }
         load()

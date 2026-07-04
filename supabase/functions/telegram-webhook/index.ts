@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
       await reply(chatId, 'Something went wrong on my end — try again in a minute.')
     } else {
       const lines = result.applied.map(describeApplied)
+      lines.push(...(result.answers ?? []))
       if (result.suggestions.length > 0) {
         const maybes = result.suggestions
           .map((s) => `${s.status === 'skipped' ? '⏭' : '✓'} ${s.label}`)

@@ -18,7 +18,10 @@ const responseSchema = {
       items: {
         type: 'OBJECT',
         properties: {
-          type: { type: 'STRING', enum: ['check_task', 'log_workout', 'create_reminder', 'set_energy'] },
+          type: {
+            type: 'STRING',
+            enum: ['check_task', 'log_workout', 'create_reminder', 'set_energy', 'query_last_done', 'query_last_workout'],
+          },
           task_id: { type: 'STRING' },
           status: { type: 'STRING', enum: ['done', 'partial', 'skipped'] },
           confidence: { type: 'NUMBER' },
@@ -47,7 +50,13 @@ export interface InterpretResult {
   ai_action_id: string | null
   applied: Record<string, any>[]
   suggestions: Record<string, any>[]
+  answers: string[] // read-only question replies; no DB writes, no undo entry
   error?: string
+}
+
+function daysAgo(date: string, today: string): string {
+  const diff = Math.round((new Date(today + 'T00:00:00Z').getTime() - new Date(date + 'T00:00:00Z').getTime()) / 86400000)
+  return diff === 0 ? 'today' : diff === 1 ? 'yesterday' : `${diff} days ago (${date})`
 }
 
 /** Parse free text into actions and apply them for the given user. */
@@ -73,8 +82,10 @@ export async function interpretAndApply(
   const logByTask = new Map((logs ?? []).map((l: any) => [l.task_id, l.status]))
 
   const candidates: { id: string; label: string; routine: string; status: string }[] = []
+  const allTasks: { id: string; label: string }[] = []
   for (const r of routines ?? []) {
     for (const t of r.tasks ?? []) {
+      allTasks.push({ id: t.id, label: t.label })
       if (!t.scheduled_days?.includes(weekday)) continue
       candidates.push({ id: t.id, label: t.label, routine: r.name, status: (logByTask.get(t.id) as string) ?? 'pending' })
     }
@@ -89,6 +100,9 @@ ${candidates.map((c) => `- task_id=${c.id} | ${c.routine} | ${c.label} | current
 
 Routine categories for reminders: ${categories}, Other
 
+All tasks, any day (ONLY for query_last_done questions):
+${allTasks.map((t) => `- task_id=${t.id} | ${t.label}`).join('\n')}
+
 Rules:
 - check_task: match mentions of completed activities to task_ids above (fuzzy match is expected,
   e.g. "meds" matches a medication task). status "done" unless the user says partial/skipped.
@@ -101,6 +115,10 @@ Rules:
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
   yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
+- query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
+  Match against the all-tasks list; nothing is written, an answer comes back.
+- query_last_workout: questions about lifting history ("what did I bench last time?") ->
+  put the exercise name in exercise.
 - If nothing actionable, return an empty actions array. Never invent task_ids.
 
 User message: "${text}"`
@@ -127,13 +145,36 @@ User message: "${text}"`
     // overload / quota are per-model - try the next one; anything else is fatal
     if (geminiRes.status !== 503 && geminiRes.status !== 429) break
   }
-  if (!gemini) return { ai_action_id: null, applied: [], suggestions: [], error: `Gemini error: ${lastError}` }
+  if (!gemini) return { ai_action_id: null, applied: [], suggestions: [], answers: [], error: `Gemini error: ${lastError}` }
   const parsed = JSON.parse(gemini.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"actions":[]}')
 
   const candidateById = new Map(candidates.map((c) => [c.id, c]))
+  const taskById = new Map(allTasks.map((t) => [t.id, t]))
   const routineByName = new Map((routines ?? []).map((r: any) => [r.name.toLowerCase(), r.id]))
   const applied: Record<string, any>[] = []
   const suggestions: Record<string, any>[] = []
+  const answers: string[] = []
+
+  // periodization context, fetched lazily on the first log_workout
+  let planContext: { plans: any[]; week: number | null } | null = null
+  async function getPlanContext() {
+    if (planContext) return planContext
+    const [{ data: plans }, { data: first }] = await Promise.all([
+      supabase.from('workout_plans').select('split_day, exercise, schemes').eq('user_id', userId),
+      supabase
+        .from('workout_logs')
+        .select('date')
+        .eq('user_id', userId)
+        .order('date', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ])
+    const week = first
+      ? Math.floor((new Date(date + 'T00:00:00Z').getTime() - new Date(first.date + 'T00:00:00Z').getTime()) / (7 * 86400000)) + 1
+      : null
+    planContext = { plans: plans ?? [], week }
+    return planContext
+  }
 
   for (const action of parsed.actions ?? []) {
     const confidence = typeof action.confidence === 'number' ? action.confidence : 1
@@ -157,9 +198,25 @@ User message: "${text}"`
       if (!error) applied.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, log_id: log.id })
     } else if (action.type === 'log_workout') {
       if (!action.exercise) continue
+      // infer split_day + target_scheme from the plan, week from the first log
+      const { plans, week } = await getPlanContext()
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const plan = plans.find(
+        (p) => norm(p.exercise).includes(norm(action.exercise)) || norm(action.exercise).includes(norm(p.exercise)),
+      )
+      const phase = week === null ? null : week <= 2 ? '1-2' : week <= 4 ? '3-4' : week <= 6 ? '5-6' : null
       const { data: row, error } = await supabase
         .from('workout_logs')
-        .insert({ user_id: userId, date, exercise: action.exercise, sets: action.sets ?? null, notes: action.notes ?? null })
+        .insert({
+          user_id: userId,
+          date,
+          exercise: action.exercise,
+          sets: action.sets ?? null,
+          notes: action.notes ?? null,
+          week_number: week,
+          split_day: plan?.split_day ?? null,
+          target_scheme: (phase && plan?.schemes?.[phase]) ?? null,
+        })
         .select('id')
         .single()
       if (!error) applied.push({ type: 'log_workout', workout_log_id: row.id, exercise: action.exercise, sets: action.sets ?? null })
@@ -188,6 +245,34 @@ User message: "${text}"`
         .from('daily_state')
         .upsert({ user_id: userId, date, energy: action.level }, { onConflict: 'user_id,date' })
       if (!error) applied.push({ type: 'set_energy', level: action.level })
+    } else if (action.type === 'query_last_done') {
+      const task = taskById.get(action.task_id)
+      if (!task) continue
+      const { data: last } = await supabase
+        .from('task_logs')
+        .select('date, status')
+        .eq('task_id', task.id)
+        .in('status', ['done', 'partial'])
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      answers.push(last ? `${task.label}: last done ${daysAgo(last.date, date)}.` : `${task.label}: no record of it yet.`)
+    } else if (action.type === 'query_last_workout') {
+      if (!action.exercise) continue
+      const { data: last } = await supabase
+        .from('workout_logs')
+        .select('date, exercise, sets, notes')
+        .eq('user_id', userId)
+        .ilike('exercise', `%${action.exercise}%`)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (!last) {
+        answers.push(`${action.exercise}: nothing logged yet.`)
+      } else {
+        const sets = last.sets?.map((s: { kg: number; reps: number }) => `${s.kg}kg×${s.reps}`).join(', ')
+        answers.push(`${last.exercise}, ${daysAgo(last.date, date)}${sets ? `: ${sets}` : ''}.`)
+      }
     }
   }
 
@@ -201,7 +286,7 @@ User message: "${text}"`
     aiActionId = row?.id ?? null
   }
 
-  return { ai_action_id: aiActionId, applied, suggestions }
+  return { ai_action_id: aiActionId, applied, suggestions, answers }
 }
 
 /** One line of plain text per applied action - for chat replies. */

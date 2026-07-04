@@ -6,6 +6,14 @@
     <meta name="theme-color" content="#1a1714" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <title>Routine Tracker</title>
+    <script>
+      // apply the manual theme before first paint - avoids a flash when the
+      // choice differs from the system preference
+      try {
+        var t = localStorage.getItem('theme')
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

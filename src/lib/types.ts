@@ -83,7 +83,20 @@ export interface InterpretResponse {
   ai_action_id: string | null
   applied: AppliedAction[]
   suggestions: Suggestion[]
+  answers?: string[] // read-only question replies
   error?: string
+}
+
+export interface WorkoutPlan {
+  id: string
+  block: number
+  split_day: string
+  sort_order: number | null
+  exercise: string
+  type: string | null
+  safety_note: string | null
+  schemes: Record<string, string> | null // {"1-2": "4 x 8-10", ...}
+  cardio: string | null
 }
 
 export interface AiAction {
