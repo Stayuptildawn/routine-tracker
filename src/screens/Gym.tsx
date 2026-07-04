@@ -62,6 +62,15 @@ export default function Gym() {
   const [editingPlan, setEditingPlan] = useState(false)
   const [run, setRun] = useState({ kind: 'run', km: '', min: '' })
   const [loggingRun, setLoggingRun] = useState(false)
+  const [view, setView] = useState<'strength' | 'cardio'>(
+    () => (localStorage.getItem('gym-view') as 'strength' | 'cardio') ?? 'strength',
+  )
+  const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; notes: string } | null>(null)
+
+  function pickView(v: 'strength' | 'cardio') {
+    setView(v)
+    localStorage.setItem('gym-view', v)
+  }
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [starting, setStarting] = useState(false)
   const [split, setSplit] = useState<string | null>(null)
@@ -177,8 +186,27 @@ export default function Gym() {
     }
   }
 
+  async function saveCardio() {
+    if (!editCardio) return
+    const km = parseFloat(editCardio.km)
+    const min = parseFloat(editCardio.min)
+    await supabase
+      .from('cardio_logs')
+      .update({
+        kind: editCardio.kind,
+        distance_km: Number.isFinite(km) ? km : null,
+        minutes: Number.isFinite(min) ? min : null,
+        notes: editCardio.notes.trim() || null,
+      })
+      .eq('id', editCardio.id)
+    setEditCardio(null)
+    load()
+  }
+
   async function deleteCardio(id: string) {
+    if (!window.confirm('Remove this cardio entry?')) return
     await supabase.from('cardio_logs').delete().eq('id', id)
+    setEditCardio(null)
     load()
   }
 
@@ -234,25 +262,6 @@ export default function Gym() {
       arr[wk - 1]++
       volume.set(s.muscle_group, arr)
     }
-    // cardio joins the picture as minutes per week
-    const cardioWeeks = Array(block.total_weeks).fill(0)
-    let anyCardio = false
-    for (const c of cardio) {
-      const wk = c.session_id
-        ? weekBySession.get(c.session_id)
-        : Math.floor((new Date(c.date + 'T00:00:00').getTime() - new Date(block.start_date + 'T00:00:00').getTime()) / (7 * 86400000)) + 1
-      if (!wk || wk < 1 || wk > block.total_weeks || !c.minutes) continue
-      cardioWeeks[wk - 1] += Number(c.minutes)
-      anyCardio = true
-    }
-    if (anyCardio) volume.set('Cardio (min)', cardioWeeks)
-  }
-
-  const cardioByDate = new Map<string, CardioLog[]>()
-  for (const c of cardio) {
-    const list = cardioByDate.get(c.date) ?? []
-    list.push(c)
-    cardioByDate.set(c.date, list)
   }
 
   const byDate = new Map<string, WorkoutLog[]>()
@@ -270,14 +279,23 @@ export default function Gym() {
 
   return (
     <div className="gym">
-      <h1>Workout log</h1>
-      <p className="gentle">
-        This is your exercise logbook — sets, weights, reps. Log from the Now tab:{' '}
-        <em>“bench 60kg 3x8, felt easy”</em>. (Checking off Gym routine tasks like “Gym
-        session” lives in Now and Week — this page is for what you actually lifted.)
-      </p>
+      <h1>Workout</h1>
+      <div className="energy-row seg-row">
+        <button className={view === 'strength' ? 'energy-btn active' : 'energy-btn'} onClick={() => pickView('strength')}>
+          🏋️ Strength
+        </button>
+        <button className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'} onClick={() => pickView('cardio')}>
+          🏃 Cardio
+        </button>
+      </div>
+      {view === 'strength' && (
+        <p className="gentle">
+          Sets, weights, reps — logged in a session, or from the Now tab:{' '}
+          <em>“bench 60kg 3x8, felt easy”</em>.
+        </p>
+      )}
 
-      {block && sessions.length > 0 && (() => {
+      {view === 'strength' && block && sessions.length > 0 && (() => {
         const blockWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
         const upNext = sessions.find((s) => !s.completed_at)
         const weeks = Array.from({ length: block.total_weeks }, (_, i) => i + 1)
@@ -336,13 +354,13 @@ export default function Gym() {
         )
       })()}
 
-      {loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
+      {view === 'strength' && loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
         <button className="start-session lone" onClick={() => beginBlock(planBlock)} disabled={starting}>
           {starting ? 'Generating…' : `▶ Start Block ${planBlock} (6 weeks from the plan)`}
         </button>
       )}
 
-      {loaded && (() => {
+      {view === 'cardio' && loaded && (() => {
         const thisMonday = mondayOf(localDate())
         const thisWeek = cardio.filter((c) => mondayOf(c.date) === thisMonday)
         const weekKm = thisWeek.reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
@@ -426,8 +444,55 @@ export default function Gym() {
               </p>
             )}
 
-            {cardio.slice(0, 5).map((c) => {
+            {cardio.slice(0, 12).map((c) => {
               const pace = fmtPace(Number(c.minutes), Number(c.distance_km))
+              if (editCardio?.id === c.id) {
+                return (
+                  <div key={c.id} className="edit-task cardio-edit">
+                    <div className="edit-task-row">
+                      <select value={editCardio.kind} onChange={(e) => setEditCardio({ ...editCardio, kind: e.target.value })}>
+                        {CARDIO_KINDS.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="km"
+                        value={editCardio.km}
+                        onChange={(e) => setEditCardio({ ...editCardio, km: e.target.value })}
+                      />
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        placeholder="min"
+                        value={editCardio.min}
+                        onChange={(e) => setEditCardio({ ...editCardio, min: e.target.value })}
+                      />
+                    </div>
+                    <div className="edit-task-row">
+                      <input
+                        placeholder="notes"
+                        value={editCardio.notes}
+                        onChange={(e) => setEditCardio({ ...editCardio, notes: e.target.value })}
+                      />
+                    </div>
+                    <div className="edit-task-row">
+                      <button className="save" onClick={saveCardio}>
+                        Save
+                      </button>
+                      <button className="link" onClick={() => setEditCardio(null)}>
+                        Cancel
+                      </button>
+                      <button className="danger" onClick={() => deleteCardio(c.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
               return (
                 <div key={c.id} className="gym-entry run-entry">
                   <span className="gym-exercise">
@@ -439,8 +504,19 @@ export default function Gym() {
                     {c.minutes ? `${c.minutes} min` : ''}
                     {pace ? ` · ${pace}` : ''}
                   </span>
-                  <button className="danger run-delete" title="Remove this entry" onClick={() => deleteCardio(c.id)}>
-                    ✕
+                  <button
+                    className="link run-edit"
+                    onClick={() =>
+                      setEditCardio({
+                        id: c.id,
+                        kind: c.kind,
+                        km: c.distance_km != null ? String(c.distance_km) : '',
+                        min: c.minutes != null ? String(c.minutes) : '',
+                        notes: c.notes ?? '',
+                      })
+                    }
+                  >
+                    edit
                   </button>
                   {c.notes && <span className="gym-notes">{c.notes}</span>}
                 </div>
@@ -455,7 +531,7 @@ export default function Gym() {
         )
       })()}
 
-      {overLine.map((mg) => (
+      {view === 'strength' && overLine.map((mg) => (
         <div key={mg} className="notice vol-suggestion">
           {mg} has said “over the line” a couple of times lately — want one set fewer next week? (Edit the plan
           below; the current week stays as planned.)
@@ -471,7 +547,7 @@ export default function Gym() {
         </div>
       ))}
 
-      {block && volume.size > 0 && (
+      {view === 'strength' && block && volume.size > 0 && (
         <section className="gym-day volume-card">
           <h2>
             Volume picture
@@ -504,7 +580,7 @@ export default function Gym() {
         </section>
       )}
 
-      {plans.length > 0 && (
+      {view === 'strength' && plans.length > 0 && (
         <section className="gym-day plan-card">
           <div className="routine-header">
             <h2>
@@ -626,39 +702,23 @@ export default function Gym() {
         </section>
       )}
 
-      {[...new Set([...byDate.keys(), ...cardioByDate.keys()])]
-        .sort()
-        .reverse()
-        .map((date) => {
-          const entries = byDate.get(date) ?? []
-          const cardioEntries = cardioByDate.get(date) ?? []
-          return (
-            <section key={date} className="gym-day">
-              <h2>{date}{entries[0]?.split_day ? ` — ${entries[0].split_day}` : ''}</h2>
-              {entries.map((log) => (
-                <div key={log.id} className="gym-entry">
-                  <span className="gym-exercise">{log.exercise}</span>
-                  <span className="gym-sets">
-                    {log.sets?.map((s) => `${s.kg}kg×${s.reps}`).join('  ') ?? ''}
-                  </span>
-                  {log.notes && <span className="gym-notes">{log.notes}</span>}
-                </div>
-              ))}
-              {cardioEntries.map((c) => (
-                <div key={c.id} className="gym-entry">
-                  <span className="gym-exercise">🏃 {c.kind}</span>
-                  <span className="gym-sets">
-                    {c.distance_km ? `${c.distance_km}km ` : ''}
-                    {c.minutes ? `${c.minutes} min` : ''}
-                  </span>
-                  {c.notes && <span className="gym-notes">{c.notes}</span>}
-                </div>
-              ))}
-            </section>
-          )
-        })}
+      {view === 'strength' &&
+        [...byDate.entries()].map(([date, entries]) => (
+          <section key={date} className="gym-day">
+            <h2>{date}{entries[0]?.split_day ? ` — ${entries[0].split_day}` : ''}</h2>
+            {entries.map((log) => (
+              <div key={log.id} className="gym-entry">
+                <span className="gym-exercise">{log.exercise}</span>
+                <span className="gym-sets">
+                  {log.sets?.map((s) => `${s.kg}kg×${s.reps}`).join('  ') ?? ''}
+                </span>
+                {log.notes && <span className="gym-notes">{log.notes}</span>}
+              </div>
+            ))}
+          </section>
+        ))}
       {!loaded && <Skeleton cards={2} />}
-      {loaded && logs.length === 0 && <p className="gentle">No sessions logged yet.</p>}
+      {view === 'strength' && loaded && logs.length === 0 && <p className="gentle">No freeform lifts logged yet.</p>}
 
       {active && (
         <Session

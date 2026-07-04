@@ -1164,6 +1164,32 @@ select {
   background: transparent;
 }
 
+/* ---------- workout tab: strength | cardio ---------- */
+.seg-row {
+  margin: 0 0 var(--sp-3);
+}
+
+.run-edit {
+  margin-left: auto;
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
+.cardio-edit {
+  margin-top: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  border-bottom: none;
+}
+
+.cardio-edit .save {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  padding: var(--sp-2) var(--sp-3);
+  font-weight: 700;
+}
+
 /* ---------- running card ---------- */
 .run-log-row {
   display: flex;
