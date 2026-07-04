@@ -67,9 +67,9 @@ and the AI files it. No hunting through lists, no forms, no fee.
 
 **A full training module.**
 
-- Your program lives as **training blocks** (mine: 6-week PPL, then
-  Upper/Lower, rep-wave periodization, neck-safe execution cues on every
-  exercise). One tap generates all sessions and sets for a block.
+- Your program lives as **training blocks** (6-week PPL then Upper/Lower,
+  rep-wave periodization, an injury-safe execution cue on every exercise).
+  One tap generates all sessions and sets for a block.
 - The **session player** shows every exercise with its sets, last time's
   numbers pre-filled as placeholders (double progression made easy), and the
   safety cue pinned under the name. *"leg press 120 4x8"* typed anywhere fills

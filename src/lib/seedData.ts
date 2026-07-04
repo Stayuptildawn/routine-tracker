@@ -92,22 +92,22 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
     ],
   },
   {
-    name: 'Spanish Learning',
+    name: 'Language Learning',
     category: 'focus',
     tasks: [
-      { label: '📖 2h structured study', tier: 'standard' },
-      { label: '🗣 1h speaking practice', tier: 'standard' },
+      { label: '📖 Structured study', tier: 'standard' },
+      { label: '🗣 Speaking practice', tier: 'standard' },
       { label: '🗂 Vocabulary review', tier: 'core' },
       { label: '🎧 Listening (podcast/show)', tier: 'bonus' },
     ],
   },
   {
-    name: 'Thesis',
+    name: 'Deep Work',
     category: 'focus',
     tasks: [
-      { label: '💻 Coding project', tier: 'core' },
-      { label: '📞 Director call prep', tier: 'standard', days: [5] },
-      { label: '📞 Call with directors', tier: 'standard', days: [5] },
+      { label: '💻 Main project block', tier: 'core' },
+      { label: '📞 Weekly sync prep', tier: 'standard', days: [5] },
+      { label: '📞 Weekly sync call', tier: 'standard', days: [5] },
       { label: '📝 Documentation', tier: 'standard' },
       { label: '✅ Next action defined', tier: 'core' },
     ],
@@ -123,6 +123,6 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
     ],
   },
   // Tracker-type routines: no daily tasks, they exist as reminder categories.
-  { name: 'Immigration', category: 'tracker', tasks: [] },
-  { name: 'Job Search', category: 'tracker', tasks: [] },
+  { name: 'Paperwork', category: 'tracker', tasks: [] },
+  { name: 'Errands', category: 'tracker', tasks: [] },
 ]
