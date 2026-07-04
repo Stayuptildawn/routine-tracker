@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan } from '../lib/types'
-import { startBlock } from '../lib/blocks'
+import { recoveryAdjustments, startBlock } from '../lib/blocks'
 import Session from './Session'
 import Skeleton from '../components/Skeleton'
 
@@ -143,13 +143,18 @@ export default function Gym() {
 
   async function beginBlock(blockNumber: number) {
     if (starting || plans.length === 0) return
+    const adjustments = await recoveryAdjustments()
+    const tweaks = [...adjustments.entries()].map(([m, d]) => `${m} ${d > 0 ? '+1' : '−1'} set`).join(', ')
+    const tweakNote = tweaks
+      ? ` Your recovery check-ins suggest: ${tweaks} (applied per exercise, never below 2 sets).`
+      : ''
     const warning = block && !sessions.every((s) => s.completed_at)
       ? ` The current ${block.name} isn't finished — the new block becomes the active one (nothing is deleted).`
       : ''
-    if (!window.confirm(`Generate Block ${blockNumber}: 6 weeks of sessions and sets from the plan?${warning}`)) return
+    if (!window.confirm(`Generate Block ${blockNumber}: 6 weeks of sessions and sets from the plan?${tweakNote}${warning}`)) return
     setStarting(true)
     try {
-      await startBlock(plans, blockNumber)
+      await startBlock(plans, blockNumber, adjustments)
       // keep the plan card's week picker in sync with the block
       await supabase
         .from('user_settings')

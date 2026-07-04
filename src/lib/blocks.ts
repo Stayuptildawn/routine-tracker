@@ -14,8 +14,42 @@ export function phaseKey(week: number): string {
 
 const BLOCK_NAMES: Record<number, string> = { 1: 'Block 1 — PPL', 2: 'Block 2 — Upper/Lower' }
 
-/** Instantiate a block: every session and set, generated from the plan. */
-export async function startBlock(allPlans: WorkoutPlan[], blockNumber: number): Promise<string> {
+/** What the recovery check-ins suggest per muscle: +1 set, -1 set, or nothing.
+ *  Needs at least two answers for a muscle in the last 60 days to say anything. */
+export async function recoveryAdjustments(): Promise<Map<string, number>> {
+  const since = new Date(Date.now() - 60 * 86400000).toISOString()
+  const { data } = await supabase
+    .from('recovery_checkins')
+    .select('muscle_group, amount')
+    .gte('created_at', since)
+    .not('amount', 'is', null)
+  const perMuscle = new Map<string, { tooMuch: number; room: number; answers: number }>()
+  for (const row of data ?? []) {
+    const m = perMuscle.get(row.muscle_group) ?? { tooMuch: 0, room: 0, answers: 0 }
+    m.answers++
+    if (row.amount === 'over_the_line') m.tooMuch += 1
+    else if (row.amount === 'stretch') m.tooMuch += 0.5
+    else if (row.amount === 'could_take_more') m.room += 1
+    perMuscle.set(row.muscle_group, m)
+  }
+  const adjustments = new Map<string, number>()
+  for (const [muscle, m] of perMuscle) {
+    if (m.answers < 2) continue
+    const net = m.room - m.tooMuch
+    if (net >= 1.5) adjustments.set(muscle, 1)
+    else if (net <= -1) adjustments.set(muscle, -1)
+  }
+  return adjustments
+}
+
+/** Instantiate a block: every session and set, generated from the plan.
+ *  adjustments (from recoveryAdjustments) tune set counts ±1 per muscle,
+ *  never below 2 sets - shown to the user before this runs, never silent. */
+export async function startBlock(
+  allPlans: WorkoutPlan[],
+  blockNumber: number,
+  adjustments: Map<string, number> = new Map(),
+): Promise<string> {
   const plans = allPlans.filter((p) => p.block === blockNumber)
   if (plans.length === 0) throw new Error(`no plan rows for block ${blockNumber}`)
   const monday = new Date()
@@ -62,7 +96,9 @@ export async function startBlock(allPlans: WorkoutPlan[], blockNumber: number): 
     let order = 0
     for (const p of plans.filter((p) => p.split_day === s.split_day)) {
       const scheme = p.schemes?.[phase] ?? null
-      const count = setCount(scheme)
+      const base = setCount(scheme)
+      const delta = p.muscle_group ? adjustments.get(p.muscle_group) ?? 0 : 0
+      const count = base > 0 ? Math.max(2, base + delta) : 0
       for (let n = 1; n <= count; n++) {
         sets.push({
           session_id: s.id,
