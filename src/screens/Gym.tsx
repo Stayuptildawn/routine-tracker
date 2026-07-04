@@ -36,6 +36,7 @@ export default function Gym() {
   const [cardio, setCardio] = useState<CardioLog[]>([])
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
   const [active, setActive] = useState<PlannedSession | null>(null)
+  const [planBlock, setPlanBlock] = useState(1) // which block the plan card shows
   const [editingPlan, setEditingPlan] = useState(false)
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [starting, setStarting] = useState(false)
@@ -89,11 +90,14 @@ export default function Gym() {
           .map(([mg]) => mg),
       )
     }
+    // plan card follows the active block; falls back to the highest seeded one
+    const shownBlock = blockRow?.block ?? Math.max(1, ...planRows.map((p) => p.block))
+    setPlanBlock(shownBlock)
     // default to the split after the last logged one, in plan rotation order
-    const rotation = [...new Set(planRows.map((p) => p.split_day))]
+    const rotation = [...new Set(planRows.filter((p) => p.block === shownBlock).map((p) => p.split_day))]
     const lastSplit = logRows.find((l) => l.split_day)?.split_day
     const nextIdx = lastSplit ? (rotation.indexOf(lastSplit) + 1) % rotation.length : 0
-    setSplit(rotation[nextIdx] ?? null)
+    setSplit(rotation[nextIdx] ?? rotation[0] ?? null)
     // week: the picked program_start wins; first-ever log is the fallback
     const start = settingsRes.data?.program_start ?? firstRes.data?.date
     if (start) setWeek(weekFromStart(start))
@@ -104,12 +108,15 @@ export default function Gym() {
     load()
   }, [load])
 
-  async function beginBlock() {
+  async function beginBlock(blockNumber: number) {
     if (starting || plans.length === 0) return
-    if (!window.confirm('Generate Block 1: 6 weeks of sessions and sets from the plan?')) return
+    const warning = block && !sessions.every((s) => s.completed_at)
+      ? ` The current ${block.name} isn't finished — the new block becomes the active one (nothing is deleted).`
+      : ''
+    if (!window.confirm(`Generate Block ${blockNumber}: 6 weeks of sessions and sets from the plan?${warning}`)) return
     setStarting(true)
     try {
-      await startBlock(plans, 1)
+      await startBlock(plans, blockNumber)
       // keep the plan card's week picker in sync with the block
       await supabase
         .from('user_settings')
@@ -133,7 +140,7 @@ export default function Gym() {
   }
 
   async function movePlan(p: WorkoutPlan, dir: -1 | 1) {
-    const list = plans.filter((x) => x.split_day === p.split_day)
+    const list = plans.filter((x) => x.split_day === p.split_day && x.block === p.block)
     const other = list[list.indexOf(p) + dir]
     if (!other) return
     await Promise.all([
@@ -154,7 +161,7 @@ export default function Gym() {
     if (!name || !split) return
     const maxOrder = Math.max(0, ...plans.map((p) => p.sort_order ?? 0))
     await supabase.from('workout_plans').insert({
-      block: block?.block ?? 1,
+      block: planBlock,
       split_day: split,
       sort_order: maxOrder + 1,
       exercise: name,
@@ -207,8 +214,10 @@ export default function Gym() {
     byDate.set(log.date, list)
   }
 
-  const rotation = [...new Set(plans.map((p) => p.split_day))]
-  const splitPlans = plans.filter((p) => p.split_day === split)
+  const blockPlans = plans.filter((p) => p.block === planBlock)
+  const availableBlocks = [...new Set(plans.map((p) => p.block))].sort()
+  const rotation = [...new Set(blockPlans.map((p) => p.split_day))]
+  const splitPlans = blockPlans.filter((p) => p.split_day === split)
   const splitCardio = splitPlans.find((p) => p.cardio)?.cardio
 
   return (
@@ -279,9 +288,9 @@ export default function Gym() {
         )
       })()}
 
-      {plans.length > 0 && !block && loaded && (
-        <button className="start-session lone" onClick={beginBlock} disabled={starting}>
-          {starting ? 'Generating…' : '▶ Start Block 1 (6 weeks from the plan)'}
+      {loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
+        <button className="start-session lone" onClick={() => beginBlock(planBlock)} disabled={starting}>
+          {starting ? 'Generating…' : `▶ Start Block ${planBlock} (6 weeks from the plan)`}
         </button>
       )}
 
@@ -345,6 +354,23 @@ export default function Gym() {
               {editingPlan ? 'Done' : 'Edit'}
             </button>
           </div>
+          {availableBlocks.length > 1 && (
+            <div className="energy-row plan-row">
+              {availableBlocks.map((b) => (
+                <button
+                  key={b}
+                  className={b === planBlock ? 'energy-btn active' : 'energy-btn'}
+                  onClick={() => {
+                    setPlanBlock(b)
+                    const firstSplit = plans.find((p) => p.block === b)?.split_day ?? null
+                    setSplit(firstSplit)
+                  }}
+                >
+                  Block {b}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="energy-row plan-row">
             <span className="energy-label">Week</span>
             {[1, 2, 3, 4, 5, 6, 7].map((w) => (

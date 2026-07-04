@@ -12,8 +12,12 @@ export function phaseKey(week: number): string {
   return week <= 2 ? '1-2' : week <= 4 ? '3-4' : '5-6'
 }
 
+const BLOCK_NAMES: Record<number, string> = { 1: 'Block 1 — PPL', 2: 'Block 2 — Upper/Lower' }
+
 /** Instantiate a block: every session and set, generated from the plan. */
-export async function startBlock(plans: WorkoutPlan[], blockNumber: number): Promise<string> {
+export async function startBlock(allPlans: WorkoutPlan[], blockNumber: number): Promise<string> {
+  const plans = allPlans.filter((p) => p.block === blockNumber)
+  if (plans.length === 0) throw new Error(`no plan rows for block ${blockNumber}`)
   const monday = new Date()
   monday.setDate(monday.getDate() - (isoWeekday() - 1))
   const totalWeeks = 6
@@ -21,7 +25,7 @@ export async function startBlock(plans: WorkoutPlan[], blockNumber: number): Pro
   const { data: block, error } = await supabase
     .from('training_blocks')
     .insert({
-      name: `Block ${blockNumber} — PPL`,
+      name: BLOCK_NAMES[blockNumber] ?? `Block ${blockNumber}`,
       block: blockNumber,
       start_date: localDate(monday),
       total_weeks: totalWeeks,
