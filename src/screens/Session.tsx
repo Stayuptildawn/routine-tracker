@@ -14,11 +14,49 @@ interface Draft {
   reps: string
 }
 
+// recovery check-in, in this app's voice - three quick questions per muscle
+const CHECKIN_QUESTIONS: { field: 'recovery' | 'effort' | 'amount'; label: string; options: [string, string][] }[] = [
+  {
+    field: 'recovery',
+    label: 'Recovered from last time?',
+    options: [
+      ['fresh', 'Fresh the whole time'],
+      ['ready_days_ago', 'Ready days ago'],
+      ['just_in_time', 'Just in time'],
+      ['still_worn', 'Still worn'],
+    ],
+  },
+  {
+    field: 'effort',
+    label: 'How hard did it work today?',
+    options: [
+      ['barely', 'Barely'],
+      ['solid', 'Solid work'],
+      ['everything', 'Everything it had'],
+    ],
+  },
+  {
+    field: 'amount',
+    label: 'How was the amount?',
+    options: [
+      ['could_take_more', 'Could take more'],
+      ['right', 'Right'],
+      ['stretch', 'A stretch'],
+      ['over_the_line', 'Over the line'],
+    ],
+  },
+]
+
+type CheckinDraft = Partial<Record<'recovery' | 'effort' | 'amount', string>>
+
 /** Full-screen session player: one exercise at a time, sets checked off. */
 export default function Session({ session, plans, onExit }: Props) {
   const [sets, setSets] = useState<PlannedSet[]>([])
   const [lastTime, setLastTime] = useState<Map<string, PlannedSet[]>>(new Map())
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map())
+  const [checkin, setCheckin] = useState<Map<string, CheckinDraft>>(new Map())
+  const [cardioMin, setCardioMin] = useState('')
+  const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   const load = useCallback(async () => {
@@ -122,6 +160,35 @@ export default function Session({ session, plans, onExit }: Props) {
     }
   }
 
+  async function saveAndClose() {
+    if (saving) return
+    setSaving(true)
+    try {
+      const rows = [...checkin.entries()]
+        .filter(([, v]) => v.recovery || v.effort || v.amount)
+        .map(([muscle_group, v]) => ({
+          session_id: session.id,
+          muscle_group,
+          recovery: v.recovery ?? null,
+          effort: v.effort ?? null,
+          amount: v.amount ?? null,
+        }))
+      if (rows.length > 0) await supabase.from('recovery_checkins').insert(rows)
+      const minutes = parseFloat(cardioMin)
+      if (session.cardio && Number.isFinite(minutes) && minutes > 0) {
+        await supabase.from('cardio_logs').insert({
+          session_id: session.id,
+          date: localDate(),
+          kind: 'run',
+          minutes,
+          notes: session.cardio,
+        })
+      }
+    } finally {
+      onExit()
+    }
+  }
+
   async function skipExercise() {
     if (!currentExercise) return
     const toSkip = exerciseSets.filter((s) => !s.logged_at)
@@ -213,17 +280,74 @@ export default function Session({ session, plans, onExit }: Props) {
             </button>
           </div>
         ) : (
-          <>
-            <div className="player-task complete">
-              ✓<br />
-              {session.split_day} done. Good work.
-            </div>
-            <div className="player-buttons">
-              <button className="player-done" onClick={onExit}>
-                Close
-              </button>
-            </div>
-          </>
+          (() => {
+            const trained = [...new Set(sets.filter((s) => s.logged_reps != null).map((s) => s.muscle_group))].filter(
+              Boolean,
+            ) as string[]
+            return (
+              <div className="session-body checkin">
+                <div className="checkin-head">
+                  <span className="checkin-check">✓</span>
+                  <h2>{session.split_day} done. Good work.</h2>
+                  {(trained.length > 0 || session.cardio) && (
+                    <p className="gentle">Quick check-in if you feel like it — skip is always fine.</p>
+                  )}
+                </div>
+
+                {session.cardio && (
+                  <div className="cardio-offer">
+                    <span className="cardio-label">🏃 {session.cardio}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="min"
+                      value={cardioMin}
+                      onChange={(e) => setCardioMin(e.target.value)}
+                    />
+                    <span className="gentle-inline">leave empty if it didn’t happen</span>
+                  </div>
+                )}
+
+                {trained.map((muscle) => {
+                  const draft = checkin.get(muscle) ?? {}
+                  return (
+                    <div key={muscle} className="checkin-muscle">
+                      <span className="muscle-badge">{muscle}</span>
+                      {CHECKIN_QUESTIONS.map((q) => (
+                        <div key={q.field} className="checkin-q">
+                          <span className="energy-label">{q.label}</span>
+                          <div className="checkin-pills">
+                            {q.options.map(([value, label]) => (
+                              <button
+                                key={value}
+                                className={draft[q.field] === value ? 'energy-btn active' : 'energy-btn'}
+                                onClick={() =>
+                                  setCheckin(
+                                    new Map(checkin).set(muscle, {
+                                      ...draft,
+                                      [q.field]: draft[q.field] === value ? undefined : value,
+                                    }),
+                                  )
+                                }
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+
+                <div className="player-buttons checkin-buttons">
+                  <button className="player-done" onClick={saveAndClose} disabled={saving}>
+                    {saving ? '…' : 'Save & close'}
+                  </button>
+                </div>
+              </div>
+            )
+          })()
         )}
       </div>
     </div>

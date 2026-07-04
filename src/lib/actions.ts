@@ -178,6 +178,8 @@ export async function undoAiAction(aiActionId: string, actions: AppliedAction[])
       if (row) await supabase.from('planned_sessions').update({ completed_at: null }).eq('id', row.session_id)
     } else if (a.type === 'log_workout' && a.workout_log_id) {
       await supabase.from('workout_logs').delete().eq('id', a.workout_log_id)
+    } else if (a.type === 'log_cardio' && a.cardio_log_id) {
+      await supabase.from('cardio_logs').delete().eq('id', a.cardio_log_id)
     } else if (a.type === 'create_reminder' && a.reminder_id) {
       await supabase.from('reminders').delete().eq('id', a.reminder_id)
     } else if (a.type === 'set_energy') {
@@ -196,6 +198,8 @@ export function describeAction(a: AppliedAction): string {
       const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
       return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}${planned}`
     }
+    case 'log_cardio':
+      return `🏃 ${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`
     case 'create_reminder':
       return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
     case 'set_energy':

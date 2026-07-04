@@ -1064,6 +1064,144 @@ select {
   padding-left: 0;
 }
 
+/* ---------- recovery check-in ---------- */
+.checkin-head {
+  text-align: center;
+  margin-bottom: var(--sp-4);
+}
+
+.checkin-check {
+  display: block;
+  font-size: var(--fs-xl);
+  color: var(--good);
+}
+
+.cardio-offer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.cardio-label {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+
+.cardio-offer input {
+  width: 5rem;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.gentle-inline {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.checkin-muscle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.checkin-q {
+  margin-top: var(--sp-3);
+}
+
+.checkin-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-top: var(--sp-1);
+}
+
+.checkin-buttons {
+  margin-top: var(--sp-2);
+}
+
+/* ---------- volume picture ---------- */
+.volume-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--sp-3);
+}
+
+.volume-muscle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.volume-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.volume-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 44px;
+}
+
+.volume-bar-wrap {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--surface-2);
+  border-radius: 3px;
+}
+
+.volume-bar {
+  width: 100%;
+  min-height: 2px;
+  background: var(--good);
+  opacity: 0.7;
+  border-radius: 3px;
+}
+
+.volume-bar.now {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.volume-bar.future {
+  opacity: 0.2;
+}
+
+.volume-avg {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.vol-suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: space-between;
+}
+
+.scheme-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+}
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed;

@@ -35,6 +35,15 @@ export async function exportTaskLogs() {
   download('task-logs.csv', [['date', 'routine', 'task', 'status', 'via', 'notes'], ...rows])
 }
 
+/** Every cardio entry. */
+export async function exportCardioLogs() {
+  const { data, error } = await supabase.from('cardio_logs').select('*').order('date')
+  if (error) throw error
+  type Row = { date: string; kind: string; minutes: number | null; distance_km: number | null; notes: string | null }
+  const rows = ((data as Row[]) ?? []).map((c) => [c.date, c.kind, c.minutes ?? '', c.distance_km ?? '', c.notes ?? ''])
+  download('cardio-logs.csv', [['date', 'kind', 'minutes', 'distance_km', 'notes'], ...rows])
+}
+
 /** The whole workout logbook, sets flattened to "60kg×8 60kg×8". */
 export async function exportWorkoutLogs() {
   const { data, error } = await supabase.from('workout_logs').select('*').order('date')

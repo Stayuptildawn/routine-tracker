@@ -20,7 +20,7 @@ const responseSchema = {
         properties: {
           type: {
             type: 'STRING',
-            enum: ['check_task', 'log_workout', 'create_reminder', 'set_energy', 'query_last_done', 'query_last_workout'],
+            enum: ['check_task', 'log_workout', 'log_cardio', 'create_reminder', 'set_energy', 'query_last_done', 'query_last_workout'],
           },
           task_id: { type: 'STRING' },
           status: { type: 'STRING', enum: ['done', 'partial', 'skipped'] },
@@ -36,6 +36,9 @@ const responseSchema = {
           reminder_text: { type: 'STRING' },
           category: { type: 'STRING' },
           due_date: { type: 'STRING' },
+          kind: { type: 'STRING', enum: ['run', 'walk', 'cycle', 'swim', 'other'] },
+          minutes: { type: 'NUMBER' },
+          distance_km: { type: 'NUMBER' },
           level: { type: 'STRING', enum: ['low', 'medium', 'high'] },
           notes: { type: 'STRING' },
         },
@@ -110,6 +113,8 @@ Rules:
   Set confidence 0-1 for how certain the match is.
 - log_workout: gym set logging like "bench 60kg 3x8" -> exercise name, sets array (3x8 at 60kg =
   three entries of {kg:60, reps:8}), plus notes if any commentary.
+- log_cardio: runs/walks/cycling ("ran 5k in 32 min", "30 minute walk") -> kind, minutes,
+  distance_km (only what was said), notes for commentary. Not for lifting.
 - create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
   reminder_text and pick the best category. Set confidence for the category choice.
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
@@ -274,6 +279,27 @@ User message: "${text}"`
         .select('id')
         .single()
       if (!error) applied.push({ type: 'log_workout', workout_log_id: row.id, exercise: action.exercise, sets: action.sets ?? null })
+    } else if (action.type === 'log_cardio') {
+      const { data: row, error } = await supabase
+        .from('cardio_logs')
+        .insert({
+          user_id: userId,
+          date,
+          kind: action.kind ?? 'run',
+          minutes: action.minutes ?? null,
+          distance_km: action.distance_km ?? null,
+          notes: action.notes ?? null,
+        })
+        .select('id')
+        .single()
+      if (!error)
+        applied.push({
+          type: 'log_cardio',
+          cardio_log_id: row.id,
+          kind: action.kind ?? 'run',
+          minutes: action.minutes ?? null,
+          distance_km: action.distance_km ?? null,
+        })
     } else if (action.type === 'create_reminder') {
       const reminderText = action.reminder_text ?? text
       const category = action.category ?? 'Other'
@@ -353,6 +379,8 @@ export function describeApplied(a: Record<string, any>): string {
       const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
       return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}${planned}`
     }
+    case 'log_cardio':
+      return `🏃 ${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`
     case 'create_reminder':
       return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
     case 'set_energy':

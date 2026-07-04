@@ -55,8 +55,18 @@ export interface Reminder {
   updated_at: string
 }
 
+export interface CardioLog {
+  id: string
+  session_id: string | null
+  date: string
+  kind: string
+  minutes: number | null
+  distance_km: number | null
+  notes: string | null
+}
+
 export interface AppliedAction {
-  type: 'check_task' | 'log_workout' | 'create_reminder' | 'set_energy'
+  type: 'check_task' | 'log_workout' | 'log_cardio' | 'create_reminder' | 'set_energy'
   task_id?: string
   label?: string
   status?: LogStatus
@@ -70,6 +80,10 @@ export interface AppliedAction {
   due_date?: string | null
   planned_set_ids?: string[] // NL-filled planned sets (undo clears them)
   split_day?: string
+  cardio_log_id?: string
+  kind?: string
+  minutes?: number | null
+  distance_km?: number | null
   level?: Energy
 }
 
