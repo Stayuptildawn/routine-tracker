@@ -556,7 +556,7 @@ select {
   flex-wrap: wrap;
   width: 100%;
   text-align: left;
-  margin-top: var(--sp-3);
+  margin: var(--sp-4) 0; /* clear air above and below - never glued to the reminders card */
   padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 8px);
   background: var(--accent-soft);
   border: 1px solid transparent;
