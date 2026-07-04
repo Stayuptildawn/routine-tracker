@@ -1,0 +1,223 @@
+// Shared interpret+apply core, used by interpret-message (browser, RLS client)
+// and telegram-webhook (service-role client). Because the service role
+// bypasses RLS and auth.uid() defaults, every query here scopes by an explicit
+// userId and every insert sets user_id explicitly - do not remove those.
+
+// deno-lint-ignore-file no-explicit-any
+
+// Cheapest first; fallbacks cover per-model overload (503) and quota (429).
+export const GEMINI_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']
+const APPLY_THRESHOLD = 0.9
+const SUGGEST_THRESHOLD = 0.6
+
+const responseSchema = {
+  type: 'OBJECT',
+  properties: {
+    actions: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          type: { type: 'STRING', enum: ['check_task', 'log_workout', 'create_reminder', 'set_energy'] },
+          task_id: { type: 'STRING' },
+          status: { type: 'STRING', enum: ['done', 'partial', 'skipped'] },
+          confidence: { type: 'NUMBER' },
+          exercise: { type: 'STRING' },
+          sets: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: { kg: { type: 'NUMBER' }, reps: { type: 'NUMBER' } },
+            },
+          },
+          reminder_text: { type: 'STRING' },
+          category: { type: 'STRING' },
+          due_date: { type: 'STRING' },
+          level: { type: 'STRING', enum: ['low', 'medium', 'high'] },
+          notes: { type: 'STRING' },
+        },
+        required: ['type', 'confidence'],
+      },
+    },
+  },
+  required: ['actions'],
+}
+
+export interface InterpretResult {
+  ai_action_id: string | null
+  applied: Record<string, any>[]
+  suggestions: Record<string, any>[]
+  error?: string
+}
+
+/** Parse free text into actions and apply them for the given user. */
+export async function interpretAndApply(
+  supabase: any,
+  userId: string,
+  text: string,
+  date: string,
+  weekday: number,
+): Promise<InterpretResult> {
+  // Today's candidate tasks (small list) get injected into the prompt so the
+  // model fuzzy-matches natively - no vector store needed at this scale.
+  const { data: routines } = await supabase
+    .from('routines')
+    .select('id, name, tasks(id, label, tier, scheduled_days)')
+    .eq('user_id', userId)
+  const taskIds = (routines ?? []).flatMap((r: any) => (r.tasks ?? []).map((t: any) => t.id))
+  const { data: logs } = await supabase
+    .from('task_logs')
+    .select('task_id, status')
+    .eq('date', date)
+    .in('task_id', taskIds)
+  const logByTask = new Map((logs ?? []).map((l: any) => [l.task_id, l.status]))
+
+  const candidates: { id: string; label: string; routine: string; status: string }[] = []
+  for (const r of routines ?? []) {
+    for (const t of r.tasks ?? []) {
+      if (!t.scheduled_days?.includes(weekday)) continue
+      candidates.push({ id: t.id, label: t.label, routine: r.name, status: (logByTask.get(t.id) as string) ?? 'pending' })
+    }
+  }
+  const categories = (routines ?? []).map((r: any) => r.name).join(', ')
+
+  const prompt = `You are the input parser for an AuDHD-friendly routine tracker.
+Parse the user's message into zero or more actions. The message may contain several intents at once.
+
+Today's tasks (only ever reference these exact task_id values):
+${candidates.map((c) => `- task_id=${c.id} | ${c.routine} | ${c.label} | currently: ${c.status}`).join('\n')}
+
+Routine categories for reminders: ${categories}, Other
+
+Rules:
+- check_task: match mentions of completed activities to task_ids above (fuzzy match is expected,
+  e.g. "meds" matches a medication task). status "done" unless the user says partial/skipped.
+  "did X except Y" means all tasks of routine X are done and Y is skipped.
+  Set confidence 0-1 for how certain the match is.
+- log_workout: gym set logging like "bench 60kg 3x8" -> exercise name, sets array (3x8 at 60kg =
+  three entries of {kg:60, reps:8}), plus notes if any commentary.
+- create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
+  reminder_text and pick the best category. Set confidence for the category choice.
+  If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
+  yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
+- set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
+- If nothing actionable, return an empty actions array. Never invent task_ids.
+
+User message: "${text}"`
+
+  let gemini: { candidates?: { content?: { parts?: { text?: string }[] } }[] } | null = null
+  let lastError = ''
+  for (const model of GEMINI_MODELS) {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0 },
+        }),
+      },
+    )
+    if (geminiRes.ok) {
+      gemini = await geminiRes.json()
+      break
+    }
+    lastError = `${model}: ${await geminiRes.text()}`
+    // overload / quota are per-model - try the next one; anything else is fatal
+    if (geminiRes.status !== 503 && geminiRes.status !== 429) break
+  }
+  if (!gemini) return { ai_action_id: null, applied: [], suggestions: [], error: `Gemini error: ${lastError}` }
+  const parsed = JSON.parse(gemini.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"actions":[]}')
+
+  const candidateById = new Map(candidates.map((c) => [c.id, c]))
+  const routineByName = new Map((routines ?? []).map((r: any) => [r.name.toLowerCase(), r.id]))
+  const applied: Record<string, any>[] = []
+  const suggestions: Record<string, any>[] = []
+
+  for (const action of parsed.actions ?? []) {
+    const confidence = typeof action.confidence === 'number' ? action.confidence : 1
+
+    if (action.type === 'check_task') {
+      const candidate = candidateById.get(action.task_id)
+      if (!candidate || confidence < SUGGEST_THRESHOLD) continue
+      const status = action.status ?? 'done'
+      if (confidence < APPLY_THRESHOLD) {
+        suggestions.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, confidence })
+        continue
+      }
+      const { data: log, error } = await supabase
+        .from('task_logs')
+        .upsert(
+          { task_id: candidate.id, date, status, completed_via: 'ai_text', notes: action.notes ?? null },
+          { onConflict: 'task_id,date' },
+        )
+        .select('id')
+        .single()
+      if (!error) applied.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, log_id: log.id })
+    } else if (action.type === 'log_workout') {
+      if (!action.exercise) continue
+      const { data: row, error } = await supabase
+        .from('workout_logs')
+        .insert({ user_id: userId, date, exercise: action.exercise, sets: action.sets ?? null, notes: action.notes ?? null })
+        .select('id')
+        .single()
+      if (!error) applied.push({ type: 'log_workout', workout_log_id: row.id, exercise: action.exercise, sets: action.sets ?? null })
+    } else if (action.type === 'create_reminder') {
+      const reminderText = action.reminder_text ?? text
+      const category = action.category ?? 'Other'
+      const routineId = routineByName.get(category.toLowerCase()) ?? null
+      const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
+      const { data: row, error } = await supabase
+        .from('reminders')
+        .insert({
+          user_id: userId,
+          raw_text: reminderText,
+          ai_category: category,
+          final_category: category,
+          ai_confidence: confidence,
+          routine_id: routineId,
+          due_date: dueDate,
+        })
+        .select('id')
+        .single()
+      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate })
+    } else if (action.type === 'set_energy') {
+      if (!action.level) continue
+      const { error } = await supabase
+        .from('daily_state')
+        .upsert({ user_id: userId, date, energy: action.level }, { onConflict: 'user_id,date' })
+      if (!error) applied.push({ type: 'set_energy', level: action.level })
+    }
+  }
+
+  let aiActionId: string | null = null
+  if (applied.length > 0) {
+    const { data: row } = await supabase
+      .from('ai_actions')
+      .insert({ user_id: userId, raw_text: text, actions: applied })
+      .select('id')
+      .single()
+    aiActionId = row?.id ?? null
+  }
+
+  return { ai_action_id: aiActionId, applied, suggestions }
+}
+
+/** One line of plain text per applied action - for chat replies. */
+export function describeApplied(a: Record<string, any>): string {
+  switch (a.type) {
+    case 'check_task':
+      return `${a.status === 'skipped' ? '⏭' : '✓'} ${a.label}`
+    case 'log_workout': {
+      const sets = a.sets?.map((s: { kg: number; reps: number }) => `${s.kg}kg×${s.reps}`).join(', ')
+      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}`
+    }
+    case 'create_reminder':
+      return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
+    case 'set_energy':
+      return `🔋 Energy: ${a.level}`
+    default:
+      return ''
+  }
+}
