@@ -1340,8 +1340,28 @@ select {
 /* ---------- volume picture ---------- */
 .volume-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--sp-3);
+}
+
+.volume-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.volume-date {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.volume-date.now {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .volume-muscle {

@@ -264,6 +264,14 @@ export default function Gym() {
     }
   }
 
+  // week-start date for block week i (0-based), same short format as the cardio chart
+  const blockWeekDate = (i: number) => {
+    if (!block) return ''
+    const d = new Date(block.start_date + 'T00:00:00')
+    d.setDate(d.getDate() + i * 7)
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'numeric' })
+  }
+
   const byDate = new Map<string, WorkoutLog[]>()
   for (const log of logs) {
     const list = byDate.get(log.date) ?? []
@@ -564,11 +572,14 @@ export default function Gym() {
                   <span className="volume-label">{mg}</span>
                   <div className="volume-bars">
                     {weeks.map((n, i) => (
-                      <div key={i} className="volume-bar-wrap" title={`week ${i + 1}: ${n}`}>
-                        <div
-                          className={i + 1 === currentWeek ? 'volume-bar now' : i + 1 > currentWeek ? 'volume-bar future' : 'volume-bar'}
-                          style={{ height: `${(n / max) * 100}%` }}
-                        />
+                      <div key={i} className="volume-col" title={`week ${i + 1} (${blockWeekDate(i)}): ${n}`}>
+                        <div className="volume-bar-wrap">
+                          <div
+                            className={i + 1 === currentWeek ? 'volume-bar now' : i + 1 > currentWeek ? 'volume-bar future' : 'volume-bar'}
+                            style={{ height: `${(n / max) * 100}%` }}
+                          />
+                        </div>
+                        <span className={i + 1 === currentWeek ? 'volume-date now' : 'volume-date'}>{blockWeekDate(i)}</span>
                       </div>
                     ))}
                   </div>
