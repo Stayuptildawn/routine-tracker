@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
-import { interpretMessage, setTaskStatus, setReminderStatus, suggestNext, describeAction, undoAiAction } from '../lib/actions'
-import type { NextSuggestion } from '../lib/actions'
+import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
 import { describeDue, pendingOrder } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
@@ -43,8 +42,6 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [undo, setUndo] = useState<UndoState | null>(null)
   const [playing, setPlaying] = useState<{ routineId: string; focusTaskId?: string | null } | null>(null)
-  const [next, setNext] = useState<NextSuggestion | null>(null)
-  const [nextBusy, setNextBusy] = useState(false)
   const [listening, setListening] = useState(false)
   const [nudges, setNudges] = useState<'unknown' | 'on' | 'off' | 'unsupported'>('unknown')
   const [nowMin, setNowMin] = useState(() => new Date().getHours() * 60 + new Date().getMinutes())
@@ -156,29 +153,6 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
     load()
   }
 
-  async function askNext() {
-    if (nextBusy) return
-    setNextBusy(true)
-    setNotice(null)
-    try {
-      const s = await suggestNext()
-      if (s.error) setNotice(`Something went wrong: ${s.error}`)
-      else if (!s.task_id) setNotice('Nothing pending — you’re free.')
-      else setNext(s)
-    } catch (err) {
-      setNotice(`Couldn't reach the AI: ${String(err)}`)
-    } finally {
-      setNextBusy(false)
-    }
-  }
-
-  function openNext() {
-    if (!next?.task_id) return
-    const section = sections.find((s) => s.tasks.some((t) => t.id === next.task_id))
-    if (section) setPlaying({ routineId: section.routine.id, focusTaskId: next.task_id })
-    setNext(null)
-  }
-
   async function runUndo() {
     if (!undo) return
     await undoAiAction(undo.aiActionId, undo.response.applied)
@@ -240,6 +214,22 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
   const activeAnchorId = sections.find(
     (s) => !s.complete && s.anchorDiff !== null && Math.abs(s.anchorDiff) <= ANCHOR_WINDOW,
   )?.routine.id
+
+  // "up next": deterministic, instant, free - the first pending core task of
+  // the top incomplete routine (anchor sorting already made that the right one)
+  const upNext = (() => {
+    const section = sections.find((s) => !s.complete)
+    if (!section) return null
+    const pending = (t: Task) => {
+      const status = logs.get(t.id)?.status
+      return status !== 'done' && status !== 'skipped' && status !== 'partial'
+    }
+    const task = section.tasks.find((t) => t.tier === 'core' && pending(t)) ?? section.tasks.find(pending)
+    if (!task) return null
+    const eta =
+      section.anchorDiff !== null && Math.abs(section.anchorDiff) <= ANCHOR_WINDOW ? fmtEta(section.anchorDiff) : null
+    return { routine: section.routine, task, eta }
+  })()
 
   return (
     <div className="now">
@@ -305,23 +295,19 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
         <p className="gentle">Low-energy mode: only the essentials. Doing these counts as a full win.</p>
       )}
 
-      {loaded && sections.some((s) => !s.complete) && (
-        <div className="next-row">
-          {next?.task_id ? (
-            <>
-              <button className="chip" onClick={openNext}>
-                Next: {next.label} — {next.reason}
-              </button>
-              <button className="chip dismiss" onClick={() => setNext(null)}>
-                ✕
-              </button>
-            </>
-          ) : (
-            <button className="next-btn" onClick={askNext} disabled={nextBusy}>
-              {nextBusy ? 'Thinking…' : '✨ What’s next?'}
-            </button>
-          )}
-        </div>
+      {loaded && upNext && (
+        <button
+          className="upnext"
+          onClick={() => setPlaying({ routineId: upNext.routine.id, focusTaskId: upNext.task.id })}
+        >
+          <span className="upnext-label">Up next</span>
+          <span className="upnext-task">{upNext.task.label}</span>
+          <span className="routine-progress">
+            {upNext.routine.name}
+            {upNext.eta ? ` · ${upNext.eta}` : ''}
+          </span>
+          <span className="upnext-go" aria-hidden="true">▶</span>
+        </button>
       )}
 
       {loaded && (

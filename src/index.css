@@ -548,31 +548,41 @@ select {
   border-color: var(--accent);
 }
 
-/* ---------- what's next ---------- */
-.next-row {
+/* ---------- up next (deterministic, no AI) ---------- */
+.upnext {
   display: flex;
-  flex-wrap: wrap;
+  align-items: baseline;
   gap: var(--sp-2);
-  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  text-align: left;
   margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
 }
 
-.next-btn {
-  background: var(--surface-2);
-  color: var(--text-dim);
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-full);
-  font-size: var(--fs-sm);
+.upnext:hover {
+  border-color: var(--accent);
 }
 
-.next-btn:hover:not(:disabled) {
-  background: var(--surface-3);
-  color: var(--text);
+.upnext-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-.next-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
+.upnext-task {
+  font-weight: 700;
+}
+
+.upnext-go {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 /* ---------- routine cards + the progress rail ---------- */
