@@ -557,7 +557,7 @@ select {
   width: 100%;
   text-align: left;
   margin-top: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 8px);
   background: var(--accent-soft);
   border: 1px solid transparent;
   border-radius: var(--r-md);
@@ -1947,8 +1947,9 @@ select {
 }
 
 .reminders-card {
-  /* no rail here - don't inherit the rail's reserved left padding */
-  padding-left: var(--sp-4);
+  /* no rail, but keep the rail-matched inset so text lines up with
+     the routine cards below - misaligned text reads as broken layout */
+  padding-left: calc(var(--sp-4) + 8px);
 }
 
 /* empty = one quiet strip, not a whole silent card */
