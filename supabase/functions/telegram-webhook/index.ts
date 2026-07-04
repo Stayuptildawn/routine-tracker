@@ -19,16 +19,26 @@ import { interpretAndApply, describeApplied } from '../_shared/interpret.ts'
 const ok = () => new Response('ok') // Telegram retries anything else - always 200
 
 async function reply(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  })
+  try {
+    await fetch(`https://api.telegram.org/bot${Deno.env.get('TELEGRAM_BOT_TOKEN')}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    })
+  } catch (err) {
+    console.error('sendMessage failed:', err) // best effort - never take the handler down
+  }
 }
 
 /** Today's yyyy-mm-dd and ISO weekday (1=Mon) in the user's timezone. */
 function localToday(): { date: string; weekday: number } {
-  const tz = Deno.env.get('USER_TIMEZONE') ?? 'UTC'
+  let tz = Deno.env.get('USER_TIMEZONE') ?? 'UTC'
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: tz })
+  } catch {
+    console.error(`invalid USER_TIMEZONE "${tz}" - falling back to UTC`)
+    tz = 'UTC' // a UTC date beats a dead bot
+  }
   const now = new Date()
   const date = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
   const day = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(now)
@@ -41,10 +51,11 @@ Deno.serve(async (req) => {
     return new Response('forbidden', { status: 403 })
   }
 
+  let chatId: number | undefined
   try {
     const update = await req.json()
     const message = update.message
-    const chatId: number | undefined = message?.chat?.id
+    chatId = message?.chat?.id
     const text: string | undefined = message?.text
     if (!chatId || !text) return ok() // edits, stickers, joins... ignore quietly
 
@@ -97,7 +108,11 @@ Deno.serve(async (req) => {
       await reply(chatId, lines.join('\n'))
     }
     return ok()
-  } catch {
-    return ok() // never make Telegram retry-loop
+  } catch (err) {
+    // never make Telegram retry-loop, but leave a trace and tell the user -
+    // a silent bot is the worst failure mode
+    console.error('telegram-webhook error:', err)
+    if (chatId) await reply(chatId, 'Something went wrong on my end — check the function logs.')
+    return ok()
   }
 })
