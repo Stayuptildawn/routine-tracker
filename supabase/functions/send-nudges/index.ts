@@ -16,6 +16,7 @@ import webpush from 'npm:web-push@3'
 import { userNow } from '../_shared/localtime.ts'
 
 const WINDOW_MIN = 15 // must match the cron cadence
+const REMINDER_WINDOW_START = 9 * 60 // due-today reminders go out after 09:00 local
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -90,6 +91,59 @@ Deno.serve(async (req) => {
           } else {
             console.error('push failed:', status, err)
           }
+        }
+      }
+    }
+
+    // due-today reminders: one push each, in the first morning tick.
+    // "Due today", never "overdue" - the invitation framing holds here too.
+    if (minutes >= REMINDER_WINDOW_START && minutes < REMINDER_WINDOW_START + WINDOW_MIN) {
+      const { data: dueReminders } = await supabase
+        .from('reminders')
+        .select('id, user_id, raw_text')
+        .eq('due_date', date)
+        .in('status', ['auto', 'reassigned'])
+        .or(`nudged_at.is.null,nudged_at.lt.${date}T00:00:00`)
+      const byUser = new Map<string, { id: string; raw_text: string }[]>()
+      for (const r of dueReminders ?? []) {
+        const list = byUser.get(r.user_id) ?? []
+        list.push(r)
+        byUser.set(r.user_id, list)
+      }
+      for (const [userId, items] of byUser) {
+        const { data: subs } = await supabase
+          .from('push_subscriptions')
+          .select('endpoint, p256dh, auth')
+          .eq('user_id', userId)
+        if (!subs || subs.length === 0) continue
+        const body =
+          items.length === 1
+            ? `🔔 Due today: ${items[0].raw_text}`
+            : `🔔 Due today: ${items[0].raw_text} (+${items.length - 1} more)`
+        const payload = JSON.stringify({ title: 'Routine Tracker', body, tag: 'reminders-due' })
+        let delivered = 0
+        for (const sub of subs) {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload,
+            )
+            delivered++
+            sent++
+          } catch (err: unknown) {
+            const status = (err as { statusCode?: number }).statusCode
+            if (status === 404 || status === 410) {
+              await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+            } else {
+              console.error('reminder push failed:', status, err)
+            }
+          }
+        }
+        if (delivered > 0) {
+          await supabase
+            .from('reminders')
+            .update({ nudged_at: new Date().toISOString() })
+            .in('id', items.map((r) => r.id))
         }
       }
     }
