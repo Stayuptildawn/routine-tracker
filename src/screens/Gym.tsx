@@ -57,6 +57,7 @@ export default function Gym() {
   const [loggedSets, setLoggedSets] = useState<{ muscle_group: string | null; session_id: string; logged_reps: number | null }[]>([])
   const [cardio, setCardio] = useState<CardioLog[]>([])
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
+  const [nextTweaks, setNextTweaks] = useState<string | null>(null) // wrap-up preview
   const [active, setActive] = useState<PlannedSession | null>(null)
   const [planBlock, setPlanBlock] = useState(1) // which block the plan card shows
   const [editingPlan, setEditingPlan] = useState(false)
@@ -277,6 +278,21 @@ export default function Gym() {
     byDate.set(log.date, list)
   }
 
+  // the block is "wrapped" when every session is handled or its weeks have run out
+  const doneSessionCount = sessions.filter((s) => s.completed_at).length
+  const blockDone =
+    !!block &&
+    sessions.length > 0 &&
+    (doneSessionCount === sessions.length || weekFromStart(block.start_date) > block.total_weeks)
+  const nextBlockNumber = block && plans.some((p) => p.block === block.block + 1) ? block.block + 1 : block?.block ?? 1
+
+  useEffect(() => {
+    if (!blockDone) return
+    recoveryAdjustments().then((a) =>
+      setNextTweaks([...a.entries()].map(([m, d]) => `${m} ${d > 0 ? '+1' : '−1'} set`).join(' · ')),
+    )
+  }, [blockDone]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const blockPlans = plans.filter((p) => p.block === planBlock)
   const availableBlocks = [...new Set(plans.map((p) => p.block))].sort()
   const rotation = [...new Set(blockPlans.map((p) => p.split_day))]
@@ -349,16 +365,39 @@ export default function Gym() {
               ))}
             </div>
             <p className="gentle">Tap any cell to open that session — past weeks can be filled in late.</p>
-            {upNext && (
+            {upNext && !blockDone && (
               <button className="start-session" onClick={() => setActive(upNext)}>
                 ▶ {upNext.date && !upNext.completed_at ? 'Continue' : 'Start'} {upNext.split_day}
                 <span className="routine-progress"> week {upNext.week_number}</span>
               </button>
             )}
-            {!upNext && <p className="gentle">Block complete. Whenever you’re ready for the next one.</p>}
           </section>
         )
       })()}
+
+      {view === 'strength' && block && blockDone && (
+        <section className="gym-day wrapup-card">
+          <h2>
+            {block.name} — wrapped
+            <span className="routine-progress"> ✓</span>
+          </h2>
+          <p className="gentle">
+            {doneSessionCount} of {sessions.length} sessions handled ·{' '}
+            {loggedSets.filter((s) => s.logged_reps != null).length} hard sets logged.
+            {doneSessionCount < sessions.length && ' Open sessions stay available in the grid above.'}
+          </p>
+          <p className="gentle">
+            {nextTweaks
+              ? `From your recovery check-ins: ${nextTweaks} — applied when the next block generates.`
+              : 'Your check-ins read as “right” across the board — the next block keeps the written volumes.'}
+          </p>
+          <button className="start-session" onClick={() => beginBlock(nextBlockNumber)} disabled={starting}>
+            {starting
+              ? 'Generating…'
+              : `▶ Start Block ${nextBlockNumber}${nextBlockNumber === 2 ? ' — Upper/Lower' : ''}${nextBlockNumber === (block.block ?? 1) ? ' (repeat)' : ''}, recovery-informed`}
+          </button>
+        </section>
+      )}
 
       {view === 'strength' && loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
         <button className="start-session lone" onClick={() => beginBlock(planBlock)} disabled={starting}>

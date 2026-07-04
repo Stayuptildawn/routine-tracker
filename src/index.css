@@ -1400,6 +1400,15 @@ select {
   margin-top: var(--sp-2);
 }
 
+/* ---------- block wrap-up ---------- */
+.wrapup-card {
+  border-color: var(--good);
+}
+
+.wrapup-card h2 {
+  color: var(--good);
+}
+
 /* ---------- volume picture ---------- */
 .volume-grid {
   display: grid;
