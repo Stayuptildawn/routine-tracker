@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { Reminder } from '../lib/types'
-import { setReminderStatus, reassignReminder } from '../lib/actions'
+import { setReminderStatus } from '../lib/actions'
 import Skeleton from '../components/Skeleton'
 
 interface Category {
@@ -28,11 +28,20 @@ export function pendingOrder(a: Reminder, b: Reminder): number {
   return b.created_at.localeCompare(a.created_at)
 }
 
+const MAX_TEXT = 300 // long enough for any reminder, short enough to stay a reminder
+
+interface Draft {
+  text: string
+  category: string
+  due: string
+}
+
 export default function Reminders({ onBack }: { onBack: () => void }) {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [reassigning, setReassigning] = useState<string | null>(null)
+  const [adding, setAdding] = useState<Draft>({ text: '', category: 'Other', due: '' })
+  const [editing, setEditing] = useState<(Draft & { id: string }) | null>(null)
   const [showCleared, setShowCleared] = useState(false)
   const today = localDate()
 
@@ -67,14 +76,47 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
     await setReminderStatus(r.id, 'auto')
   }
 
-  async function reassign(r: Reminder, cat: Category) {
-    setReassigning(null)
+  function routineIdFor(category: string): string | null {
+    return categories.find((c) => c.name === category)?.id ?? null
+  }
+
+  async function addReminder() {
+    const text = adding.text.trim().slice(0, MAX_TEXT)
+    if (!text) return
+    await supabase.from('reminders').insert({
+      raw_text: text,
+      final_category: adding.category,
+      routine_id: routineIdFor(adding.category),
+      status: 'reassigned', // user-made, not AI-sorted
+      due_date: adding.due || null,
+    })
+    setAdding({ ...adding, text: '', due: '' })
+    load()
+  }
+
+  async function saveEdit() {
+    if (!editing) return
+    const text = editing.text.trim().slice(0, MAX_TEXT)
+    if (!text) return
+    setEditing(null)
     setReminders((prev) =>
       prev.map((x) =>
-        x.id === r.id ? { ...x, final_category: cat.name, routine_id: cat.id, status: 'reassigned' } : x,
+        x.id === editing.id
+          ? { ...x, raw_text: text, final_category: editing.category, routine_id: routineIdFor(editing.category), due_date: editing.due || null, status: 'reassigned' }
+          : x,
       ),
     )
-    await reassignReminder(r.id, cat.name, cat.id)
+    await supabase
+      .from('reminders')
+      .update({
+        raw_text: text,
+        final_category: editing.category,
+        routine_id: routineIdFor(editing.category),
+        due_date: editing.due || null,
+        status: 'reassigned',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', editing.id)
   }
 
   const pending = reminders.filter((r) => r.status === 'auto' || r.status === 'reassigned')
@@ -101,6 +143,32 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
       <h1>Reminders</h1>
       <p className="gentle">Things you asked to hold onto. Nothing here expires or nags.</p>
 
+      {loaded && (
+        <div className="add-task reminder-add">
+          <input
+            value={adding.text}
+            maxLength={MAX_TEXT}
+            onChange={(e) => setAdding({ ...adding, text: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && addReminder()}
+            placeholder="Add a reminder…"
+          />
+          <select value={adding.category} onChange={(e) => setAdding({ ...adding, category: e.target.value })}>
+            {categories.map((c) => (
+              <option key={c.name}>{c.name}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={adding.due}
+            onChange={(e) => setAdding({ ...adding, due: e.target.value })}
+            title="Due date (optional)"
+          />
+          <button onClick={addReminder} disabled={!adding.text.trim()}>
+            Add
+          </button>
+        </div>
+      )}
+
       {!loaded && <Skeleton cards={2} />}
 
       {loaded &&
@@ -109,6 +177,46 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
             <h2>{cat.name}</h2>
             {items.map((r) => {
               const due = r.due_date ? describeDue(r.due_date, today) : null
+              if (editing?.id === r.id) {
+                return (
+                  <div key={r.id} className="edit-task reminder-edit">
+                    <div className="edit-task-row">
+                      <input
+                        value={editing.text}
+                        maxLength={MAX_TEXT}
+                        onChange={(e) => setEditing({ ...editing, text: e.target.value })}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="edit-task-row">
+                      <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
+                        {categories.map((c) => (
+                          <option key={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="date"
+                        value={editing.due}
+                        onChange={(e) => setEditing({ ...editing, due: e.target.value })}
+                      />
+                      {editing.due && (
+                        <button className="link" onClick={() => setEditing({ ...editing, due: '' })}>
+                          clear date
+                        </button>
+                      )}
+                    </div>
+                    <div className="edit-task-row">
+                      <button className="save" onClick={saveEdit} disabled={!editing.text.trim()}>
+                        Save
+                      </button>
+                      <button className="link" onClick={() => setEditing(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
               return (
                 <div key={r.id} className="reminder">
                   <div className="reminder-main">
@@ -121,26 +229,21 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                         </span>
                       )}
                       {r.status === 'auto' && <span className="badge">AI-sorted</span>}
+                      <span className="cat-pill">{r.final_category ?? 'Other'}</span>
                       <button
-                        className="cat-pill"
-                        onClick={() => setReassigning(reassigning === r.id ? null : r.id)}
-                        title="Change category"
+                        className="link reminder-edit-link"
+                        onClick={() =>
+                          setEditing({
+                            id: r.id,
+                            text: r.raw_text,
+                            category: categories.some((c) => c.name === r.final_category) ? r.final_category! : 'Other',
+                            due: r.due_date ?? '',
+                          })
+                        }
                       >
-                        {r.final_category ?? 'Other'} ▾
+                        edit
                       </button>
                     </div>
-                    {reassigning === r.id && (
-                      <div className="chips">
-                        <span className="chips-label">Move to:</span>
-                        {categories
-                          .filter((c) => c.name !== (r.final_category ?? 'Other'))
-                          .map((c) => (
-                            <button key={c.name} className="chip" onClick={() => reassign(r, c)}>
-                              {c.name}
-                            </button>
-                          ))}
-                      </div>
-                    )}
                   </div>
                   <div className="task-buttons">
                     <button className="do" onClick={() => clear(r, 'done')}>

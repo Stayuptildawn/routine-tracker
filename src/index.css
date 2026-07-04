@@ -1883,6 +1883,56 @@ select {
   margin-top: var(--sp-4);
 }
 
+.reminder-add {
+  margin-bottom: var(--sp-3);
+}
+
+.reminder-add select,
+.reminder-add input[type='date'] {
+  padding: var(--sp-2) var(--sp-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  min-width: 0;
+}
+
+.reminder-add button:disabled {
+  opacity: 0.5;
+}
+
+.reminder-edit {
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  border-bottom: none;
+  margin: var(--sp-2) 0;
+}
+
+.reminder-edit .save {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  padding: var(--sp-2) var(--sp-3);
+  font-weight: 700;
+}
+
+.reminder-edit .save:disabled {
+  opacity: 0.5;
+}
+
+.reminder-edit input[type='date'] {
+  flex: 0 1 auto;
+}
+
+.reminder-edit-link {
+  padding: 2px var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
+.reminders-empty {
+  margin: var(--sp-2) 0 0;
+}
+
 .reminders-card .see-all {
   padding-left: 0;
   margin-top: var(--sp-2);

@@ -324,6 +324,42 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
         </div>
       )}
 
+      {loaded && (
+        <section className="routine reminders-card">
+          <h2>
+            Reminders
+            {reminders.length > 0 && <span className="routine-progress">{reminders.length}</span>}
+          </h2>
+          {reminders.slice(0, 4).map((r) => {
+            const due = r.due_date ? describeDue(r.due_date, today) : null
+            return (
+              <div key={r.id} className="task">
+                <span className="task-label">
+                  {r.raw_text}
+                  {due && (
+                    <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
+                      {due.overdue ? '⏳ ' : '📆 '}
+                      {due.label}
+                    </span>
+                  )}
+                </span>
+                <div className="task-buttons">
+                  <button className="do" onClick={() => clearReminder(r)}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+          {reminders.length === 0 && (
+            <p className="gentle reminders-empty">Nothing on hold. Say “remind me to…” and it lands here.</p>
+          )}
+          <button className="link see-all" onClick={onOpenReminders}>
+            {reminders.length > 4 ? `See all ${reminders.length} →` : 'Open reminders →'}
+          </button>
+        </section>
+      )}
+
       {!loaded ? (
         <Skeleton cards={3} />
       ) : (
@@ -395,39 +431,6 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
 
       {loaded && sections.length === 0 && (
         <p className="gentle">Nothing scheduled right now. That’s allowed.</p>
-      )}
-
-      {loaded && reminders.length > 0 && (
-        <section className="routine reminders-card">
-          <h2>
-            Reminders
-            <span className="routine-progress">{reminders.length}</span>
-          </h2>
-          {reminders.slice(0, 4).map((r) => {
-            const due = r.due_date ? describeDue(r.due_date, today) : null
-            return (
-              <div key={r.id} className="task">
-                <span className="task-label">
-                  {r.raw_text}
-                  {due && (
-                    <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
-                      {due.overdue ? '⏳ ' : '📆 '}
-                      {due.label}
-                    </span>
-                  )}
-                </span>
-                <div className="task-buttons">
-                  <button className="do" onClick={() => clearReminder(r)}>
-                    Done
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-          <button className="link see-all" onClick={onOpenReminders}>
-            {reminders.length > 4 ? `See all ${reminders.length} →` : 'See all →'}
-          </button>
-        </section>
       )}
 
       {loaded && (nudges === 'on' || nudges === 'off') && (
