@@ -325,7 +325,7 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
       )}
 
       {loaded && (
-        <section className="routine reminders-card">
+        <section className={reminders.length === 0 ? 'routine reminders-card empty' : 'routine reminders-card'}>
           <h2>
             Reminders
             {reminders.length > 0 && <span className="routine-progress">{reminders.length}</span>}
@@ -351,11 +351,9 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
               </div>
             )
           })}
-          {reminders.length === 0 && (
-            <p className="gentle reminders-empty">Nothing on hold. Say “remind me to…” and it lands here.</p>
-          )}
+          {reminders.length === 0 && <p className="gentle reminders-empty">Nothing on hold.</p>}
           <button className="link see-all" onClick={onOpenReminders}>
-            {reminders.length > 4 ? `See all ${reminders.length} →` : 'Open reminders →'}
+            {reminders.length > 4 ? `See all ${reminders.length} →` : 'Open →'}
           </button>
         </section>
       )}
