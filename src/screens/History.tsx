@@ -31,6 +31,8 @@ export default function History() {
   }, [load])
 
   async function undo(item: AiAction) {
+    const what = item.actions.map(describeAction).join(', ')
+    if (!window.confirm(`Undo everything this message did?\n\n${what}\n\nThe changes will be reverted.`)) return
     await undoAiAction(item.id, item.actions)
     load()
   }

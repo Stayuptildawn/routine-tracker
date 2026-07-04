@@ -34,27 +34,37 @@ export default function Reflect() {
   useEffect(() => {
     const from = new Date()
     from.setDate(from.getDate() - 6)
-    supabase
-      .from('task_logs')
-      .select('date, status')
-      .gte('date', localDate(from))
-      .then(({ data }) => {
-        const stats: DayStat[] = []
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          const date = localDate(d)
-          const dayLogs = (data ?? []).filter((l) => l.date === date)
-          stats.push({
-            date,
-            dayName: d.toLocaleDateString(undefined, { weekday: 'short' }),
-            done: dayLogs.filter((l) => l.status === 'done' || l.status === 'partial').length,
-            skipped: dayLogs.filter((l) => l.status === 'skipped').length,
-          })
-        }
-        setDays(stats)
-        setLoaded(true)
-      })
+    const fromDate = localDate(from)
+    Promise.all([
+      supabase.from('task_logs').select('date, status').gte('date', fromDate),
+      // workouts count too: a finished session, a cardio entry, a freeform lift
+      supabase.from('planned_sessions').select('completed_at').gte('completed_at', fromDate + 'T00:00:00'),
+      supabase.from('cardio_logs').select('date').gte('date', fromDate),
+      supabase.from('workout_logs').select('date').gte('date', fromDate),
+    ]).then(([tasksRes, sessionsRes, cardioRes, liftsRes]) => {
+      const sessionDates = (sessionsRes.data ?? [])
+        .filter((s) => s.completed_at)
+        .map((s) => localDate(new Date(s.completed_at)))
+      const stats: DayStat[] = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const date = localDate(d)
+        const dayLogs = (tasksRes.data ?? []).filter((l) => l.date === date)
+        stats.push({
+          date,
+          dayName: d.toLocaleDateString(undefined, { weekday: 'short' }),
+          done:
+            dayLogs.filter((l) => l.status === 'done' || l.status === 'partial').length +
+            sessionDates.filter((s) => s === date).length +
+            (cardioRes.data ?? []).filter((c) => c.date === date).length +
+            (liftsRes.data ?? []).filter((w) => w.date === date).length,
+          skipped: dayLogs.filter((l) => l.status === 'skipped').length,
+        })
+      }
+      setDays(stats)
+      setLoaded(true)
+    })
   }, [])
 
   const totalDone = days.reduce((n, d) => n + d.done, 0)
@@ -94,7 +104,8 @@ export default function Reflect() {
       {!loaded ? null : totalDone > 0 ? (
         <div className="reflect-notes">
           <p>
-            You completed <strong>{totalDone}</strong> tasks this week.
+            You completed <strong>{totalDone}</strong> things this week — tasks, gym sessions and
+            cardio all count.
             {strongest && strongest.done > 0 && <> {strongest.dayName} was your strongest day.</>}
           </p>
           {days.reduce((n, d) => n + d.skipped, 0) > 0 && (

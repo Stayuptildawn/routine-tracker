@@ -1593,14 +1593,23 @@ select {
   display: flex;
   gap: var(--sp-2);
   align-items: center;
+  flex-wrap: wrap; /* phones: controls drop to the next line, never off-screen */
 }
 
 .edit-task-row input {
   flex: 1;
+  min-width: 0;
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--surface-2);
+}
+
+@media (max-width: 600px) {
+  /* the name field gets its own line; select + buttons wrap below */
+  .edit-task-row > input:first-child {
+    flex: 1 1 100%;
+  }
 }
 
 .edit-task-row input:hover,
@@ -1616,6 +1625,8 @@ select {
   background: var(--surface-2);
   color: var(--text-dim);
   font-size: var(--fs-sm);
+  min-width: 0;
+  max-width: 45vw;
 }
 
 .danger {
@@ -1666,6 +1677,7 @@ select {
 .add-task {
   display: flex;
   gap: var(--sp-2);
+  flex-wrap: wrap;
 }
 
 .add-task input {
@@ -1685,6 +1697,13 @@ select {
 
 .add-routine {
   margin-top: var(--sp-4);
+  /* keep the row clear of the tab bar + mobile keyboard */
+  margin-bottom: var(--sp-7);
+  scroll-margin-bottom: 120px;
+}
+
+.add-task input {
+  min-width: 0;
 }
 
 /* ---------- workout log ---------- */

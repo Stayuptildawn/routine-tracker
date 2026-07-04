@@ -320,6 +320,7 @@ export default function Week() {
             value={newRoutine}
             onChange={(e) => setNewRoutine(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addRoutine()}
+            onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
             placeholder="New routine name"
             autoFocus
           />
