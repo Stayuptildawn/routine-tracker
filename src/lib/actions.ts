@@ -164,6 +164,18 @@ export async function undoAiAction(aiActionId: string, actions: AppliedAction[])
       await supabase
         .from('task_logs')
         .upsert({ task_id: a.task_id, date: localDate(), status: 'pending' }, { onConflict: 'task_id,date' })
+    } else if (a.type === 'log_workout' && a.planned_set_ids?.length) {
+      // NL-filled planned sets: clear them and reopen the session
+      await supabase
+        .from('planned_sets')
+        .update({ logged_weight: null, logged_reps: null, logged_at: null })
+        .in('id', a.planned_set_ids)
+      const { data: row } = await supabase
+        .from('planned_sets')
+        .select('session_id')
+        .eq('id', a.planned_set_ids[0])
+        .maybeSingle()
+      if (row) await supabase.from('planned_sessions').update({ completed_at: null }).eq('id', row.session_id)
     } else if (a.type === 'log_workout' && a.workout_log_id) {
       await supabase.from('workout_logs').delete().eq('id', a.workout_log_id)
     } else if (a.type === 'create_reminder' && a.reminder_id) {
@@ -181,7 +193,8 @@ export function describeAction(a: AppliedAction): string {
       return `${a.status === 'skipped' ? '⏭' : '✓'} ${a.label}`
     case 'log_workout': {
       const sets = a.sets?.map((s) => `${s.kg}kg×${s.reps}`).join(', ')
-      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}`
+      const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
+      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}${planned}`
     }
     case 'create_reminder':
       return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`

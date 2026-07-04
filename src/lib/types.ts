@@ -68,6 +68,8 @@ export interface AppliedAction {
   text?: string
   category?: string
   due_date?: string | null
+  planned_set_ids?: string[] // NL-filled planned sets (undo clears them)
+  split_day?: string
   level?: Energy
 }
 
@@ -97,6 +99,40 @@ export interface WorkoutPlan {
   safety_note: string | null
   schemes: Record<string, string> | null // {"1-2": "4 x 8-10", ...}
   cardio: string | null
+  muscle_group?: string | null
+}
+
+export interface TrainingBlock {
+  id: string
+  name: string
+  block: number
+  start_date: string
+  total_weeks: number
+}
+
+export interface PlannedSession {
+  id: string
+  block_id: string
+  week_number: number
+  day_number: number
+  split_day: string
+  cardio: string | null
+  date: string | null
+  completed_at: string | null
+}
+
+export interface PlannedSet {
+  id: string
+  session_id: string
+  sort_order: number
+  exercise: string
+  muscle_group: string | null
+  set_number: number
+  target_scheme: string | null
+  target_weight: number | null
+  logged_weight: number | null
+  logged_reps: number | null
+  logged_at: string | null
 }
 
 export interface AiAction {

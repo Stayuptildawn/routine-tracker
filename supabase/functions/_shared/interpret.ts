@@ -201,9 +201,60 @@ User message: "${text}"`
       if (!error) applied.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, log_id: log.id })
     } else if (action.type === 'log_workout') {
       if (!action.exercise) continue
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+      // a planned session opened today takes the sets first (Session Player /
+      // Telegram parity); anything else falls through to the freeform log
+      const { data: openSession } = await supabase
+        .from('planned_sessions')
+        .select('id, split_day')
+        .eq('user_id', userId)
+        .eq('date', date)
+        .is('completed_at', null)
+        .limit(1)
+        .maybeSingle()
+      if (openSession && Array.isArray(action.sets) && action.sets.length > 0) {
+        const { data: openSets } = await supabase
+          .from('planned_sets')
+          .select('id, exercise')
+          .eq('session_id', openSession.id)
+          .is('logged_at', null)
+          .order('sort_order')
+        const matching = (openSets ?? []).filter(
+          (s: any) => norm(s.exercise).includes(norm(action.exercise)) || norm(action.exercise).includes(norm(s.exercise)),
+        )
+        if (matching.length > 0) {
+          const filled: string[] = []
+          for (let i = 0; i < action.sets.length && i < matching.length; i++) {
+            const { error } = await supabase
+              .from('planned_sets')
+              .update({ logged_weight: action.sets[i].kg, logged_reps: action.sets[i].reps, logged_at: new Date().toISOString() })
+              .eq('id', matching[i].id)
+            if (!error) filled.push(matching[i].id)
+          }
+          if (filled.length > 0) {
+            const { count } = await supabase
+              .from('planned_sets')
+              .select('id', { count: 'exact', head: true })
+              .eq('session_id', openSession.id)
+              .is('logged_at', null)
+            if ((count ?? 1) === 0) {
+              await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', openSession.id)
+            }
+            applied.push({
+              type: 'log_workout',
+              exercise: matching[0].exercise,
+              sets: action.sets.slice(0, filled.length),
+              planned_set_ids: filled,
+              split_day: openSession.split_day,
+            })
+            continue
+          }
+        }
+      }
+
       // infer split_day + target_scheme from the plan, week from the first log
       const { plans, week } = await getPlanContext()
-      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
       const plan = plans.find(
         (p) => norm(p.exercise).includes(norm(action.exercise)) || norm(action.exercise).includes(norm(p.exercise)),
       )
@@ -299,7 +350,8 @@ export function describeApplied(a: Record<string, any>): string {
       return `${a.status === 'skipped' ? '⏭' : '✓'} ${a.label}`
     case 'log_workout': {
       const sets = a.sets?.map((s: { kg: number; reps: number }) => `${s.kg}kg×${s.reps}`).join(', ')
-      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}`
+      const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
+      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}${planned}`
     }
     case 'create_reminder':
       return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
