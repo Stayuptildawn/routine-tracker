@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // GitHub Pages serves from /<repo-name>/; CI sets VITE_BASE_PATH accordingly.
+const base = process.env.VITE_BASE_PATH ?? '/'
+
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH ?? '/',
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -17,6 +19,12 @@ export default defineConfig({
         background_color: '#1a1714',
         display: 'standalone',
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        // Android: share text into the installed PWA (iOS has no share target)
+        share_target: {
+          action: base,
+          method: 'GET',
+          params: { title: 'title', text: 'text', url: 'url' },
+        },
       },
     }),
   ],

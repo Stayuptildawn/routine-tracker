@@ -5,6 +5,7 @@ import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretRes
 import { interpretMessage, setTaskStatus, setReminderStatus, suggestNext, describeAction, undoAiAction } from '../lib/actions'
 import type { NextSuggestion } from '../lib/actions'
 import { describeDue, pendingOrder } from './Reminders'
+import { consumeSharedText } from '../lib/shareTarget'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 
@@ -25,7 +26,8 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [energy, setEnergy] = useState<Energy | null>(null)
   const [loaded, setLoaded] = useState(false)
-  const [message, setMessage] = useState('')
+  // text shared into the PWA prefills the composer - reviewed, never auto-sent
+  const [message, setMessage] = useState(() => consumeSharedText() ?? '')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
