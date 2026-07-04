@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
-import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
+import { interpretMessage, setTaskStatus, setReminderStatus, suggestNext, describeAction, undoAiAction } from '../lib/actions'
+import type { NextSuggestion } from '../lib/actions'
 import { describeDue, pendingOrder } from './Reminders'
+import Player from './Player'
 import Skeleton from '../components/Skeleton'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
@@ -28,6 +30,9 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
   const [notice, setNotice] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [undo, setUndo] = useState<UndoState | null>(null)
+  const [playing, setPlaying] = useState<{ routineId: string; focusTaskId?: string | null } | null>(null)
+  const [next, setNext] = useState<NextSuggestion | null>(null)
+  const [nextBusy, setNextBusy] = useState(false)
   const [listening, setListening] = useState(false)
   const recognitionRef = useRef<{ stop: () => void } | null>(null)
   const today = localDate()
@@ -122,6 +127,29 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
     await setTaskStatus(s.task_id, s.status, 'ai_text')
     setSuggestions((prev) => prev.filter((x) => x.task_id !== s.task_id))
     load()
+  }
+
+  async function askNext() {
+    if (nextBusy) return
+    setNextBusy(true)
+    setNotice(null)
+    try {
+      const s = await suggestNext()
+      if (s.error) setNotice(`Something went wrong: ${s.error}`)
+      else if (!s.task_id) setNotice('Nothing pending — you’re free.')
+      else setNext(s)
+    } catch (err) {
+      setNotice(`Couldn't reach the AI: ${String(err)}`)
+    } finally {
+      setNextBusy(false)
+    }
+  }
+
+  function openNext() {
+    if (!next?.task_id) return
+    const section = sections.find((s) => s.tasks.some((t) => t.id === next.task_id))
+    if (section) setPlaying({ routineId: section.routine.id, focusTaskId: next.task_id })
+    setNext(null)
   }
 
   async function runUndo() {
@@ -235,6 +263,25 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
         <p className="gentle">Low-energy mode: only the essentials. Doing these counts as a full win.</p>
       )}
 
+      {loaded && sections.some((s) => !s.complete) && (
+        <div className="next-row">
+          {next?.task_id ? (
+            <>
+              <button className="chip" onClick={openNext}>
+                Next: {next.label} — {next.reason}
+              </button>
+              <button className="chip dismiss" onClick={() => setNext(null)}>
+                ✕
+              </button>
+            </>
+          ) : (
+            <button className="next-btn" onClick={askNext} disabled={nextBusy}>
+              {nextBusy ? 'Thinking…' : '✨ What’s next?'}
+            </button>
+          )}
+        </div>
+      )}
+
       {!loaded ? (
         <Skeleton cards={3} />
       ) : (
@@ -253,6 +300,15 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
                   <span className="routine-progress">
                     {allHandled ? ' ✓' : ` ${doneCount}/${tasks.length}`}
                   </span>
+                  {!allHandled && (
+                    <button
+                      className="start-btn"
+                      onClick={() => setPlaying({ routineId: routine.id })}
+                      title="One task at a time"
+                    >
+                      ▶ Start
+                    </button>
+                  )}
                 </h2>
                 {!allHandled &&
                   tasks.map((task) => {
@@ -319,6 +375,22 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
           </button>
         </section>
       )}
+
+      {playing &&
+        (() => {
+          const s = sections.find((x) => x.routine.id === playing.routineId)
+          if (!s) return null
+          return (
+            <Player
+              routineName={s.routine.name}
+              tasks={s.tasks}
+              logs={logs}
+              focusTaskId={playing.focusTaskId}
+              onStatus={tapStatus}
+              onExit={() => setPlaying(null)}
+            />
+          )
+        })()}
 
       {undo && (
         <div className="toast">
