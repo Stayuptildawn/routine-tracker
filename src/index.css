@@ -187,6 +187,9 @@ select {
 .content {
   flex: 1;
   padding: var(--sp-4) var(--sp-4) calc(var(--sp-7) + var(--sp-6));
+  /* nothing may ever push the page into horizontal scroll */
+  overflow-x: clip;
+  min-width: 0;
 }
 
 .center-note {
@@ -1931,6 +1934,11 @@ select {
 
 .reminders-empty {
   margin: var(--sp-2) 0 0;
+}
+
+.reminders-card {
+  /* no rail here - don't inherit the rail's reserved left padding */
+  padding-left: var(--sp-4);
 }
 
 .reminders-card .see-all {
