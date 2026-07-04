@@ -486,7 +486,7 @@ select {
   color: var(--text-dim);
 }
 
-.plan-card .plan-chips {
+.plan-card .plan-row {
   margin: 0 0 var(--sp-2);
 }
 

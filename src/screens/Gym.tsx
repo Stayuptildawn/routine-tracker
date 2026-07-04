@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { localDate } from '../lib/types'
+import { localDate, isoWeekday } from '../lib/types'
 import type { WorkoutLog, WorkoutPlan } from '../lib/types'
 import Skeleton from '../components/Skeleton'
 
@@ -9,6 +9,18 @@ const PHASES: { key: string; name: string; maxWeek: number }[] = [
   { key: '3-4', name: 'Intensification', maxWeek: 4 },
   { key: '5-6', name: 'Realization', maxWeek: 6 },
 ]
+
+/** Monday of the week containing `date`, minus (week-1) weeks. */
+function programStartForWeek(week: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - (isoWeekday() - 1) - (week - 1) * 7)
+  return localDate(d)
+}
+
+function weekFromStart(start: string): number {
+  const days = (new Date(localDate() + 'T00:00:00').getTime() - new Date(start + 'T00:00:00').getTime()) / 86400000
+  return Math.max(1, Math.floor(days / 7) + 1)
+}
 
 export default function Gym() {
   const [logs, setLogs] = useState<WorkoutLog[]>([])
@@ -21,8 +33,9 @@ export default function Gym() {
     Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
+      supabase.from('user_settings').select('program_start').maybeSingle(),
       supabase.from('workout_logs').select('date').order('date', { ascending: true }).limit(1).maybeSingle(),
-    ]).then(([logsRes, plansRes, firstRes]) => {
+    ]).then(([logsRes, plansRes, settingsRes, firstRes]) => {
       const logRows = (logsRes.data as WorkoutLog[]) ?? []
       const planRows = (plansRes.data as WorkoutPlan[]) ?? []
       setLogs(logRows)
@@ -32,14 +45,19 @@ export default function Gym() {
       const lastSplit = logRows.find((l) => l.split_day)?.split_day
       const nextIdx = lastSplit ? (rotation.indexOf(lastSplit) + 1) % rotation.length : 0
       setSplit(rotation[nextIdx] ?? null)
-      // week number derives from the first ever log
-      if (firstRes.data) {
-        const days = (new Date(localDate() + 'T00:00:00').getTime() - new Date(firstRes.data.date + 'T00:00:00').getTime()) / 86400000
-        setWeek(Math.floor(days / 7) + 1)
-      }
+      // week: the picked program_start wins; first-ever log is the fallback
+      const start = settingsRes.data?.program_start ?? firstRes.data?.date
+      if (start) setWeek(weekFromStart(start))
       setLoaded(true)
     })
   }, [])
+
+  async function pickWeek(w: number) {
+    setWeek(w)
+    await supabase
+      .from('user_settings')
+      .upsert({ program_start: programStartForWeek(w), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  }
 
   const phase = week === null ? null : PHASES.find((p) => week <= p.maxWeek) ?? null
 
@@ -67,15 +85,24 @@ export default function Gym() {
         <section className="gym-day plan-card">
           <h2>
             The plan
-            <span className="routine-progress">
-              {week !== null && ` week ${week}`}
-              {phase && ` · ${phase.name}`}
-              {week !== null && week > 6 && ' · deload / Block 2 soon'}
-            </span>
+            <span className="routine-progress">{phase ? ` ${phase.name}` : week !== null && week > 6 ? ' deload / Block 2 soon' : ''}</span>
           </h2>
-          <div className="chips plan-chips">
+          <div className="energy-row plan-row">
+            <span className="energy-label">Week</span>
+            {[1, 2, 3, 4, 5, 6, 7].map((w) => (
+              <button
+                key={w}
+                className={week === w || (w === 7 && week !== null && week > 6) ? 'energy-btn active' : 'energy-btn'}
+                onClick={() => pickWeek(w)}
+              >
+                {w === 7 ? '7+' : w}
+              </button>
+            ))}
+          </div>
+          <div className="energy-row plan-row">
+            <span className="energy-label">Session</span>
             {rotation.map((s) => (
-              <button key={s} className={s === split ? 'chip active' : 'chip'} onClick={() => setSplit(s)}>
+              <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
                 {s}
               </button>
             ))}
