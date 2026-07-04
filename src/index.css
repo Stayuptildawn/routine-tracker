@@ -1064,6 +1064,106 @@ select {
   padding-left: 0;
 }
 
+/* ---------- session day view ---------- */
+.session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.exercise-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow);
+}
+
+.exercise-card.current {
+  border-color: var(--accent);
+}
+
+.exercise-card.done {
+  opacity: 0.6;
+}
+
+.exercise-card h2 {
+  margin: var(--sp-1) 0 var(--sp-2);
+}
+
+.exercise-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+/* ---------- block weeks grid ---------- */
+.weeks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-2) 0;
+}
+
+.weeks-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.weeks-label {
+  flex: 0 0 4.6rem;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weeks-num {
+  flex: 1;
+  text-align: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.weeks-num.now {
+  color: var(--accent);
+}
+
+.weeks-cell {
+  flex: 1;
+  height: 2rem;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--good);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.weeks-cell:hover {
+  border-color: var(--neutral);
+}
+
+.weeks-cell.done {
+  background: var(--good-soft);
+}
+
+.weeks-cell.next {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.weeks-cell.empty {
+  background: transparent;
+}
+
 /* ---------- recovery check-in ---------- */
 .checkin-head {
   text-align: center;

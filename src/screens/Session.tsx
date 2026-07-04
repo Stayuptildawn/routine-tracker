@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
-import type { PlannedSession, PlannedSet, WorkoutPlan } from '../lib/types'
+import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
 
 interface Props {
   session: PlannedSession
@@ -12,6 +12,12 @@ interface Props {
 interface Draft {
   weight: string
   reps: string
+}
+
+interface PrevSet {
+  set_number: number
+  weight: number | null
+  reps: number | null
 }
 
 // recovery check-in, in this app's voice - three quick questions per muscle
@@ -49,10 +55,12 @@ const CHECKIN_QUESTIONS: { field: 'recovery' | 'effort' | 'amount'; label: strin
 
 type CheckinDraft = Partial<Record<'recovery' | 'effort' | 'amount', string>>
 
-/** Full-screen session player: one exercise at a time, sets checked off. */
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** Full-screen day view: every exercise with its set rows, RP-style overview. */
 export default function Session({ session, plans, onExit }: Props) {
   const [sets, setSets] = useState<PlannedSet[]>([])
-  const [lastTime, setLastTime] = useState<Map<string, PlannedSet[]>>(new Map())
+  const [lastTime, setLastTime] = useState<Map<string, PrevSet[]>>(new Map())
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map())
   const [checkin, setCheckin] = useState<Map<string, CheckinDraft>>(new Map())
   const [cardioMin, setCardioMin] = useState('')
@@ -88,47 +96,73 @@ export default function Session({ session, plans, onExit }: Props) {
     }
   }, [load, session, onExit])
 
-  // previous logged sets per exercise (for "last time" + placeholders)
+  // previous numbers per exercise: planned sets from earlier sessions first,
+  // the old freeform workout_logs as fallback (pre-block history counts)
   useEffect(() => {
     const exercises = [...new Set(sets.map((s) => s.exercise))]
     if (exercises.length === 0) return
-    supabase
-      .from('planned_sets')
-      .select('*')
-      .neq('session_id', session.id)
-      .not('logged_at', 'is', null)
-      .in('exercise', exercises)
-      .order('logged_at', { ascending: false })
-      .limit(60)
-      .then(({ data }) => {
-        const map = new Map<string, PlannedSet[]>()
-        for (const row of (data as PlannedSet[]) ?? []) {
-          // keep only the most recent session's sets per exercise
-          const existing = map.get(row.exercise)
-          if (!existing) map.set(row.exercise, [row])
-          else if (existing[0].session_id === row.session_id) existing.push(row)
+    Promise.all([
+      supabase
+        .from('planned_sets')
+        .select('exercise, session_id, set_number, logged_weight, logged_reps, logged_at')
+        .neq('session_id', session.id)
+        .not('logged_at', 'is', null)
+        .not('logged_reps', 'is', null)
+        .in('exercise', exercises)
+        .order('logged_at', { ascending: false })
+        .limit(60),
+      supabase.from('workout_logs').select('exercise, sets, date').order('date', { ascending: false }).limit(100),
+    ]).then(([plannedRes, legacyRes]) => {
+      const map = new Map<string, PrevSet[]>()
+      const bySession = new Map<string, string>()
+      for (const row of plannedRes.data ?? []) {
+        // keep only the most recent session's sets per exercise
+        const keeper = bySession.get(row.exercise)
+        if (keeper && keeper !== row.session_id) continue
+        bySession.set(row.exercise, row.session_id)
+        const list = map.get(row.exercise) ?? []
+        list.push({ set_number: row.set_number, weight: row.logged_weight, reps: row.logged_reps })
+        map.set(row.exercise, list)
+      }
+      for (const list of map.values()) list.sort((a, b) => a.set_number - b.set_number)
+      // legacy fallback for exercises never logged in a block
+      for (const ex of exercises) {
+        if (map.has(ex)) continue
+        const legacy = (legacyRes.data as WorkoutLog[] | null)?.find(
+          (l) => l.sets && (norm(l.exercise).includes(norm(ex)) || norm(ex).includes(norm(l.exercise))),
+        )
+        if (legacy?.sets) {
+          map.set(
+            ex,
+            legacy.sets.map((s, i) => ({ set_number: i + 1, weight: s.kg, reps: s.reps })),
+          )
         }
-        for (const list of map.values()) list.sort((a, b) => a.set_number - b.set_number)
-        setLastTime(map)
-      })
+      }
+      setLastTime(map)
+    })
   }, [sets.length > 0, session.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const exercises = [...new Set(sets.map((s) => s.exercise))]
-  const currentExercise = exercises.find((e) => sets.some((s) => s.exercise === e && !s.logged_at))
-  const exerciseSets = sets.filter((s) => s.exercise === currentExercise)
   const handled = sets.filter((s) => s.logged_at).length
-  const plan = plans.find((p) => p.exercise === currentExercise)
-  const prev = currentExercise ? lastTime.get(currentExercise) : undefined
+  const allDone = loaded && sets.length > 0 && handled === sets.length
+  const currentExercise = exercises.find((e) => sets.some((s) => s.exercise === e && !s.logged_at))
 
   function draftFor(set: PlannedSet): Draft {
     return drafts.get(set.id) ?? { weight: '', reps: '' }
   }
 
   function placeholderFor(set: PlannedSet): Draft {
+    const prev = lastTime.get(set.exercise)
     const prevSet = prev?.find((p) => p.set_number === set.set_number) ?? prev?.[prev.length - 1]
     return {
-      weight: prevSet?.logged_weight != null ? String(prevSet.logged_weight) : '',
-      reps: prevSet?.logged_reps != null ? String(prevSet.logged_reps) : '',
+      weight: prevSet?.weight != null ? String(prevSet.weight) : '',
+      reps: prevSet?.reps != null ? String(prevSet.reps) : '',
+    }
+  }
+
+  async function markComplete(after: PlannedSet[]) {
+    if (after.every((s) => s.logged_at)) {
+      await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', session.id)
     }
   }
 
@@ -155,9 +189,21 @@ export default function Session({ session, plans, onExit }: Props) {
     const after = sets.map((s) => (s.id === set.id ? { ...s, ...logged } : s))
     setSets(after)
     await supabase.from('planned_sets').update(logged).eq('id', set.id)
-    if (after.every((s) => s.logged_at)) {
-      await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', session.id)
-    }
+    await markComplete(after)
+  }
+
+  async function skipExercise(exercise: string) {
+    const toSkip = sets.filter((s) => s.exercise === exercise && !s.logged_at)
+    if (toSkip.length === 0) return
+    const after = sets.map((s) =>
+      toSkip.some((t) => t.id === s.id) ? { ...s, logged_at: new Date().toISOString() } : s,
+    )
+    setSets(after)
+    await supabase
+      .from('planned_sets')
+      .update({ logged_at: new Date().toISOString() })
+      .in('id', toSkip.map((s) => s.id))
+    await markComplete(after)
   }
 
   async function saveAndClose() {
@@ -189,22 +235,6 @@ export default function Session({ session, plans, onExit }: Props) {
     }
   }
 
-  async function skipExercise() {
-    if (!currentExercise) return
-    const toSkip = exerciseSets.filter((s) => !s.logged_at)
-    const after = sets.map((s) =>
-      toSkip.some((t) => t.id === s.id) ? { ...s, logged_at: new Date().toISOString() } : s,
-    )
-    setSets(after)
-    await supabase
-      .from('planned_sets')
-      .update({ logged_at: new Date().toISOString() })
-      .in('id', toSkip.map((s) => s.id))
-    if (after.every((s) => s.logged_at)) {
-      await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', session.id)
-    }
-  }
-
   return (
     <div className="player session" role="dialog" aria-label={`${session.split_day} session`}>
       <div className="player-rail" aria-hidden="true">
@@ -220,64 +250,80 @@ export default function Session({ session, plans, onExit }: Props) {
           </button>
         </div>
 
-        {!loaded ? null : currentExercise ? (
-          <div className="session-body" key={currentExercise}>
-            <div className="session-exercise">
-              {plan?.muscle_group && <span className="muscle-badge">{plan.muscle_group}</span>}
-              <h2>{currentExercise}</h2>
-              {exerciseSets[0]?.target_scheme && (
-                <span className="session-target">{exerciseSets[0].target_scheme}</span>
-              )}
-              {plan?.safety_note && <p className="session-cue">🛡 {plan.safety_note}</p>}
-              {prev && prev.length > 0 && (
-                <p className="session-last">
-                  last time: {prev.map((p) => `${p.logged_weight ?? '–'}×${p.logged_reps ?? '–'}`).join('  ')}
-                </p>
-              )}
-            </div>
-            <div className="set-rows">
-              {exerciseSets.map((set) => {
-                const done = !!set.logged_at
-                const draft = draftFor(set)
-                const ph = placeholderFor(set)
-                return (
-                  <div key={set.id} className={done ? 'set-row done' : 'set-row'}>
-                    <span className="set-num">{set.set_number}</span>
-                    {done ? (
-                      <span className="set-logged">
-                        {set.logged_weight != null || set.logged_reps != null
-                          ? `${set.logged_weight ?? '–'} kg × ${set.logged_reps ?? '–'}`
-                          : 'skipped'}
-                      </span>
-                    ) : (
-                      <>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          placeholder={ph.weight || 'kg'}
-                          value={draft.weight}
-                          onChange={(e) => setDrafts(new Map(drafts).set(set.id, { ...draft, weight: e.target.value }))}
-                        />
-                        <span className="set-x">×</span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder={ph.reps || 'reps'}
-                          value={draft.reps}
-                          onChange={(e) => setDrafts(new Map(drafts).set(set.id, { ...draft, reps: e.target.value }))}
-                        />
-                      </>
-                    )}
-                    <button className={done ? 'set-check done' : 'set-check'} onClick={() => toggleSet(set)}>
-                      ✓
-                    </button>
+        {!loaded ? null : !allDone ? (
+          <div className="session-list">
+            {exercises.map((exercise) => {
+              const exSets = sets.filter((s) => s.exercise === exercise)
+              const plan = plans.find((p) => p.exercise === exercise)
+              const prev = lastTime.get(exercise)
+              const exDone = exSets.every((s) => s.logged_at)
+              const isCurrent = exercise === currentExercise
+              const muscle = exSets[0]?.muscle_group ?? plan?.muscle_group
+              return (
+                <div key={exercise} className={`exercise-card${exDone ? ' done' : ''}${isCurrent ? ' current' : ''}`}>
+                  <div className="exercise-head">
+                    {muscle && <span className="muscle-badge">{muscle}</span>}
+                    <span className="session-target">{exSets[0]?.target_scheme ?? ''}</span>
                   </div>
-                )
-              })}
-            </div>
-            <button className="link session-skip" onClick={skipExercise}>
-              skip this exercise
-            </button>
+                  <h2>{exercise}</h2>
+                  {plan?.safety_note && !exDone && <p className="session-cue">🛡 {plan.safety_note}</p>}
+                  {prev && prev.length > 0 && !exDone && (
+                    <p className="session-last">
+                      last time: {prev.map((p) => `${p.weight ?? '–'}×${p.reps ?? '–'}`).join('  ')}
+                    </p>
+                  )}
+                  <div className="set-rows">
+                    {exSets.map((set) => {
+                      const done = !!set.logged_at
+                      const draft = draftFor(set)
+                      const ph = placeholderFor(set)
+                      return (
+                        <div key={set.id} className={done ? 'set-row done' : 'set-row'}>
+                          <span className="set-num">{set.set_number}</span>
+                          {done ? (
+                            <span className="set-logged">
+                              {set.logged_weight != null || set.logged_reps != null
+                                ? `${set.logged_weight ?? '–'} kg × ${set.logged_reps ?? '–'}`
+                                : 'skipped'}
+                            </span>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                placeholder={ph.weight || 'kg'}
+                                value={draft.weight}
+                                onChange={(e) =>
+                                  setDrafts(new Map(drafts).set(set.id, { ...draft, weight: e.target.value }))
+                                }
+                              />
+                              <span className="set-x">×</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                placeholder={ph.reps || 'reps'}
+                                value={draft.reps}
+                                onChange={(e) =>
+                                  setDrafts(new Map(drafts).set(set.id, { ...draft, reps: e.target.value }))
+                                }
+                              />
+                            </>
+                          )}
+                          <button className={done ? 'set-check done' : 'set-check'} onClick={() => toggleSet(set)}>
+                            ✓
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {!exDone && (
+                    <button className="link session-skip" onClick={() => skipExercise(exercise)}>
+                      skip this exercise
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         ) : (
           (() => {

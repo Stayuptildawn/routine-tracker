@@ -222,8 +222,9 @@ export default function Gym() {
 
       {block && sessions.length > 0 && (() => {
         const blockWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
-        const thisWeek = sessions.filter((s) => s.week_number === blockWeek)
         const upNext = sessions.find((s) => !s.completed_at)
+        const weeks = Array.from({ length: block.total_weeks }, (_, i) => i + 1)
+        const dayRows = sessions.filter((s) => s.week_number === 1)
         return (
           <section className="gym-day block-card">
             <h2>
@@ -232,18 +233,41 @@ export default function Gym() {
                 week {blockWeek} of {block.total_weeks}
               </span>
             </h2>
-            <div className="energy-row plan-row">
-              {thisWeek.map((s) => (
-                <button
-                  key={s.id}
-                  className={s.completed_at ? 'energy-btn session-done' : upNext?.id === s.id ? 'energy-btn active' : 'energy-btn'}
-                  onClick={() => setActive(s)}
-                >
-                  {s.completed_at ? '✓ ' : ''}
-                  {s.split_day}
-                </button>
+            <div className="weeks-grid" role="grid" aria-label="block sessions">
+              <div className="weeks-row weeks-head">
+                <span className="weeks-label"></span>
+                {weeks.map((w) => (
+                  <span key={w} className={w === blockWeek ? 'weeks-num now' : 'weeks-num'}>
+                    {w}
+                  </span>
+                ))}
+              </div>
+              {dayRows.map((day) => (
+                <div key={day.day_number} className="weeks-row">
+                  <span className="weeks-label">{day.split_day}</span>
+                  {weeks.map((w) => {
+                    const s = sessions.find((x) => x.week_number === w && x.day_number === day.day_number)
+                    if (!s) return <span key={w} className="weeks-cell empty" />
+                    const cls = s.completed_at
+                      ? 'weeks-cell done'
+                      : upNext?.id === s.id
+                        ? 'weeks-cell next'
+                        : 'weeks-cell'
+                    return (
+                      <button
+                        key={w}
+                        className={cls}
+                        title={`${s.split_day} — week ${w}${s.completed_at ? ' ✓' : ''}`}
+                        onClick={() => setActive(s)}
+                      >
+                        {s.completed_at ? '✓' : ''}
+                      </button>
+                    )
+                  })}
+                </div>
               ))}
             </div>
+            <p className="gentle">Tap any cell to open that session — past weeks can be filled in late.</p>
             {upNext && (
               <button className="start-session" onClick={() => setActive(upNext)}>
                 ▶ {upNext.date && !upNext.completed_at ? 'Continue' : 'Start'} {upNext.split_day}
