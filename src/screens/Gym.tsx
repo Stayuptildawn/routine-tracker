@@ -366,9 +366,9 @@ export default function Gym() {
         const bestPace = paces.length ? Math.min(...paces) : null
         const kindIcon = (k: string) => CARDIO_KINDS.find(([v]) => v === k)?.[1].split(' ')[0] ?? '🏃'
         return (
-          <section className="gym-day running-card">
+          <section className="gym-day cardio-card">
             <h2>
-              Running
+              Cardio
               <span className="routine-progress">
                 {weekKm > 0 || weekMin > 0
                   ? ` this week: ${weekKm > 0 ? `${Math.round(weekKm * 10) / 10} km` : ''}${weekKm > 0 && weekMin > 0 ? ' · ' : ''}${weekMin > 0 ? `${Math.round(weekMin)} min` : ''}`
