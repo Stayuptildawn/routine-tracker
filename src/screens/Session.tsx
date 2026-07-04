@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
@@ -64,6 +64,8 @@ export default function Session({ session, plans, onExit }: Props) {
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map())
   const [checkin, setCheckin] = useState<Map<string, CheckinDraft>>(new Map())
   const [cardioMin, setCardioMin] = useState('')
+  const [existingCardioId, setExistingCardioId] = useState<string | null>(null)
+  const [hadSaved, setHadSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -88,13 +90,41 @@ export default function Session({ session, plans, onExit }: Props) {
     if (!session.date) {
       supabase.from('planned_sessions').update({ date: localDate() }).eq('id', session.id).then(() => {})
     }
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onExit()
-    window.addEventListener('keydown', onKey)
+    // earlier check-in answers and the session's cardio come back, so a
+    // reopened session never looks unlogged (and saves update, not duplicate)
+    supabase
+      .from('recovery_checkins')
+      .select('muscle_group, recovery, effort, amount')
+      .eq('session_id', session.id)
+      .then(({ data }) => {
+        if (!data || data.length === 0) return
+        const map = new Map<string, CheckinDraft>()
+        for (const row of data) {
+          map.set(row.muscle_group, {
+            recovery: row.recovery ?? undefined,
+            effort: row.effort ?? undefined,
+            amount: row.amount ?? undefined,
+          })
+        }
+        setCheckin(map)
+        setHadSaved(true)
+      })
+    supabase
+      .from('cardio_logs')
+      .select('id, minutes')
+      .eq('session_id', session.id)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        setExistingCardioId(data.id)
+        if (data.minutes != null) setCardioMin(String(data.minutes))
+        setHadSaved(true)
+      })
     return () => {
       supabase.removeChannel(channel)
-      window.removeEventListener('keydown', onKey)
     }
-  }, [load, session, onExit])
+  }, [load, session])
 
   // previous numbers per exercise: planned sets from earlier sessions first,
   // the old freeform workout_logs as fallback (pre-block history counts)
@@ -146,6 +176,15 @@ export default function Session({ session, plans, onExit }: Props) {
   const handled = sets.filter((s) => s.logged_at).length
   const allDone = loaded && sets.length > 0 && handled === sets.length
   const currentExercise = exercises.find((e) => sets.some((s) => s.exercise === e && !s.logged_at))
+
+  // leaving a finished session saves the check-in - exit must never lose data
+  const leaveRef = useRef<() => void>(onExit)
+  leaveRef.current = allDone ? saveAndClose : onExit
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && leaveRef.current()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   function draftFor(set: PlannedSet): Draft {
     return drafts.get(set.id) ?? { weight: '', reps: '' }
@@ -219,16 +258,22 @@ export default function Session({ session, plans, onExit }: Props) {
           effort: v.effort ?? null,
           amount: v.amount ?? null,
         }))
+      // replace this session's answers wholesale - never duplicate
+      await supabase.from('recovery_checkins').delete().eq('session_id', session.id)
       if (rows.length > 0) await supabase.from('recovery_checkins').insert(rows)
       const minutes = parseFloat(cardioMin)
       if (session.cardio && Number.isFinite(minutes) && minutes > 0) {
-        await supabase.from('cardio_logs').insert({
-          session_id: session.id,
-          date: localDate(),
-          kind: 'run',
-          minutes,
-          notes: session.cardio,
-        })
+        if (existingCardioId) {
+          await supabase.from('cardio_logs').update({ minutes }).eq('id', existingCardioId)
+        } else {
+          await supabase.from('cardio_logs').insert({
+            session_id: session.id,
+            date: localDate(),
+            kind: 'run',
+            minutes,
+            notes: session.cardio,
+          })
+        }
       }
     } finally {
       onExit()
@@ -245,7 +290,7 @@ export default function Session({ session, plans, onExit }: Props) {
           <span className="eyebrow">
             Week {session.week_number} · {session.split_day} · {handled}/{sets.length} sets
           </span>
-          <button className="link" onClick={onExit}>
+          <button className="link" onClick={() => leaveRef.current()}>
             exit
           </button>
         </div>
@@ -336,7 +381,11 @@ export default function Session({ session, plans, onExit }: Props) {
                   <span className="checkin-check">✓</span>
                   <h2>{session.split_day} done. Good work.</h2>
                   {(trained.length > 0 || session.cardio) && (
-                    <p className="gentle">Quick check-in if you feel like it — skip is always fine.</p>
+                    <p className="gentle">
+                      {hadSaved
+                        ? 'Your earlier answers are loaded — edit freely, leaving saves.'
+                        : 'Quick check-in if you feel like it — skip is always fine.'}
+                    </p>
                   )}
                 </div>
 
