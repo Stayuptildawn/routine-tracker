@@ -1164,6 +1164,74 @@ select {
   background: transparent;
 }
 
+/* ---------- running card ---------- */
+.run-log-row {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.run-log-row select,
+.run-log-row input {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.run-log-row input {
+  width: 5.5rem;
+  text-align: center;
+  min-width: 0;
+}
+
+.run-log-btn {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  padding: var(--sp-2) var(--sp-4);
+  font-weight: 700;
+}
+
+.run-log-btn:disabled {
+  opacity: 0.6;
+}
+
+.run-weeks {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-end;
+  margin: var(--sp-2) 0;
+}
+
+.run-bar-wrap {
+  height: 56px;
+}
+
+.run-bar {
+  background: var(--good);
+  opacity: 0.7;
+}
+
+.run-bar.now {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.run-stats {
+  margin: var(--sp-1) 0 var(--sp-2);
+}
+
+.run-entry {
+  align-items: center;
+}
+
+.run-delete {
+  margin-left: auto;
+  padding: var(--sp-1) var(--sp-2);
+  min-height: 0;
+  font-size: var(--fs-xs);
+}
+
 /* ---------- recovery check-in ---------- */
 .checkin-head {
   text-align: center;

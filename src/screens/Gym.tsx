@@ -8,6 +8,28 @@ import Skeleton from '../components/Skeleton'
 
 const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
 const PHASE_KEYS = ['1-2', '3-4', '5-6']
+const CARDIO_KINDS = [
+  ['run', '🏃 Run'],
+  ['walk', '🚶 Walk'],
+  ['cycle', '🚴 Cycle'],
+  ['swim', '🏊 Swim'],
+] as const
+
+/** minutes over km -> "6:24 /km" */
+function fmtPace(minutes: number | null, km: number | null): string | null {
+  if (!minutes || !km || km <= 0) return null
+  const perKm = minutes / km
+  const m = Math.floor(perKm)
+  const s = Math.round((perKm - m) * 60)
+  return `${m}:${String(s).padStart(2, '0')} /km`
+}
+
+/** Monday (yyyy-mm-dd) of the week containing the given date string. */
+function mondayOf(date: string): string {
+  const d = new Date(date + 'T00:00:00')
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return localDate(d)
+}
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
   { key: '1-2', name: 'Accumulation', maxWeek: 2 },
@@ -38,6 +60,8 @@ export default function Gym() {
   const [active, setActive] = useState<PlannedSession | null>(null)
   const [planBlock, setPlanBlock] = useState(1) // which block the plan card shows
   const [editingPlan, setEditingPlan] = useState(false)
+  const [run, setRun] = useState({ kind: 'run', km: '', min: '' })
+  const [loggingRun, setLoggingRun] = useState(false)
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [starting, setStarting] = useState(false)
   const [split, setSplit] = useState<string | null>(null)
@@ -45,13 +69,15 @@ export default function Gym() {
   const [loaded, setLoaded] = useState(false)
 
   const load = useCallback(async () => {
-    const [logsRes, plansRes, settingsRes, firstRes, blockRes] = await Promise.all([
+    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
       supabase.from('user_settings').select('program_start').maybeSingle(),
       supabase.from('workout_logs').select('date').order('date', { ascending: true }).limit(1).maybeSingle(),
       supabase.from('training_blocks').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
     ])
+    setCardio((cardioAllRes.data as CardioLog[]) ?? [])
     const logRows = (logsRes.data as WorkoutLog[]) ?? []
     const planRows = (plansRes.data as WorkoutPlan[]) ?? []
     setLogs(logRows)
@@ -67,7 +93,7 @@ export default function Gym() {
         .order('day_number')
       const sessRows = (sess as PlannedSession[]) ?? []
       setSessions(sessRows)
-      const [setsRes, checkinRes, cardioRes] = await Promise.all([
+      const [setsRes, checkinRes] = await Promise.all([
         supabase
           .from('planned_sets')
           .select('muscle_group, session_id, logged_reps')
@@ -78,10 +104,8 @@ export default function Gym() {
           .select('muscle_group, amount')
           .eq('amount', 'over_the_line')
           .gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()),
-        supabase.from('cardio_logs').select('*').order('date', { ascending: false }).limit(100),
       ])
       setLoggedSets(setsRes.data ?? [])
-      setCardio((cardioRes.data as CardioLog[]) ?? [])
       const counts = new Map<string, number>()
       for (const c of checkinRes.data ?? []) counts.set(c.muscle_group, (counts.get(c.muscle_group) ?? 0) + 1)
       setOverLine(
@@ -132,6 +156,30 @@ export default function Gym() {
     await supabase
       .from('user_settings')
       .upsert({ program_start: programStartForWeek(w), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  }
+
+  async function logRun() {
+    const km = parseFloat(run.km)
+    const min = parseFloat(run.min)
+    if (loggingRun || (!Number.isFinite(km) && !Number.isFinite(min))) return
+    setLoggingRun(true)
+    try {
+      await supabase.from('cardio_logs').insert({
+        date: localDate(),
+        kind: run.kind,
+        distance_km: Number.isFinite(km) ? km : null,
+        minutes: Number.isFinite(min) ? min : null,
+      })
+      setRun({ ...run, km: '', min: '' })
+      await load()
+    } finally {
+      setLoggingRun(false)
+    }
+  }
+
+  async function deleteCardio(id: string) {
+    await supabase.from('cardio_logs').delete().eq('id', id)
+    load()
   }
 
   async function updatePlan(id: string, patch: Partial<WorkoutPlan>) {
@@ -293,6 +341,119 @@ export default function Gym() {
           {starting ? 'Generating…' : `▶ Start Block ${planBlock} (6 weeks from the plan)`}
         </button>
       )}
+
+      {loaded && (() => {
+        const thisMonday = mondayOf(localDate())
+        const thisWeek = cardio.filter((c) => mondayOf(c.date) === thisMonday)
+        const weekKm = thisWeek.reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
+        const weekMin = thisWeek.reduce((n, c) => n + Number(c.minutes ?? 0), 0)
+        // last 8 weeks of distance, oldest first
+        const weeks: { label: string; km: number; now: boolean }[] = []
+        for (let i = 7; i >= 0; i--) {
+          const d = new Date(thisMonday + 'T00:00:00')
+          d.setDate(d.getDate() - i * 7)
+          const monday = localDate(d)
+          weeks.push({
+            label: d.toLocaleDateString(undefined, { day: 'numeric', month: 'numeric' }),
+            km: cardio.filter((c) => mondayOf(c.date) === monday).reduce((n, c) => n + Number(c.distance_km ?? 0), 0),
+            now: monday === thisMonday,
+          })
+        }
+        const maxKm = Math.max(1, ...weeks.map((w) => w.km))
+        const runs = cardio.filter((c) => Number(c.distance_km ?? 0) >= 1 && c.minutes)
+        const longest = runs.length ? Math.max(...runs.map((c) => Number(c.distance_km))) : null
+        const paces = runs.filter((c) => Number(c.distance_km) >= 2).map((c) => Number(c.minutes) / Number(c.distance_km))
+        const bestPace = paces.length ? Math.min(...paces) : null
+        const kindIcon = (k: string) => CARDIO_KINDS.find(([v]) => v === k)?.[1].split(' ')[0] ?? '🏃'
+        return (
+          <section className="gym-day running-card">
+            <h2>
+              Running
+              <span className="routine-progress">
+                {weekKm > 0 || weekMin > 0
+                  ? ` this week: ${weekKm > 0 ? `${Math.round(weekKm * 10) / 10} km` : ''}${weekKm > 0 && weekMin > 0 ? ' · ' : ''}${weekMin > 0 ? `${Math.round(weekMin)} min` : ''}`
+                  : ' nothing yet this week — that’s allowed'}
+              </span>
+            </h2>
+
+            <div className="run-log-row">
+              <select value={run.kind} onChange={(e) => setRun({ ...run, kind: e.target.value })}>
+                {CARDIO_KINDS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="km"
+                value={run.km}
+                onChange={(e) => setRun({ ...run, km: e.target.value })}
+              />
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="min"
+                value={run.min}
+                onChange={(e) => setRun({ ...run, min: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && logRun()}
+              />
+              <button className="run-log-btn" onClick={logRun} disabled={loggingRun}>
+                {loggingRun ? '…' : 'Log'}
+              </button>
+            </div>
+
+            {weeks.some((w) => w.km > 0) && (
+              <div className="run-weeks">
+                {weeks.map((w) => (
+                  <div key={w.label} className="reflect-day" title={`week of ${w.label}: ${Math.round(w.km * 10) / 10} km`}>
+                    <div className="bar-wrap run-bar-wrap">
+                      <div className={w.now ? 'bar run-bar now' : 'bar run-bar'} style={{ height: `${(w.km / maxKm) * 100}%` }} />
+                    </div>
+                    <span className="bar-count">{w.km > 0 ? Math.round(w.km * 10) / 10 : ''}</span>
+                    <span className="bar-day">{w.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(longest || bestPace) && (
+              <p className="gentle run-stats">
+                {longest ? `Longest: ${longest} km` : ''}
+                {longest && bestPace ? ' · ' : ''}
+                {bestPace ? `Best pace: ${fmtPace(bestPace, 1)}` : ''}
+              </p>
+            )}
+
+            {cardio.slice(0, 5).map((c) => {
+              const pace = fmtPace(Number(c.minutes), Number(c.distance_km))
+              return (
+                <div key={c.id} className="gym-entry run-entry">
+                  <span className="gym-exercise">
+                    {kindIcon(c.kind)} {c.date}
+                  </span>
+                  <span className="gym-sets">
+                    {c.distance_km ? `${c.distance_km} km` : ''}
+                    {c.distance_km && c.minutes ? ' · ' : ''}
+                    {c.minutes ? `${c.minutes} min` : ''}
+                    {pace ? ` · ${pace}` : ''}
+                  </span>
+                  <button className="danger run-delete" title="Remove this entry" onClick={() => deleteCardio(c.id)}>
+                    ✕
+                  </button>
+                  {c.notes && <span className="gym-notes">{c.notes}</span>}
+                </div>
+              )
+            })}
+            {cardio.length === 0 && (
+              <p className="gentle">
+                Log above, tell the composer <em>“ran 5k in 32 min”</em>, or finish a Pull session — they all land here.
+              </p>
+            )}
+          </section>
+        )
+      })()}
 
       {overLine.map((mg) => (
         <div key={mg} className="notice vol-suggestion">
