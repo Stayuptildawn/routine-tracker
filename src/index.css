@@ -1537,6 +1537,31 @@ select {
   outline-offset: -1.5px;
 }
 
+/* phones: the full week must fit without sideways scrolling - the task
+   name gives way (ellipsis), never the days */
+@media (max-width: 600px) {
+  .week-routine {
+    padding: var(--sp-3);
+  }
+
+  .week-grid .task-name {
+    max-width: 28vw;
+    font-size: var(--fs-xs);
+  }
+
+  .week-grid th {
+    font-size: 0.58rem;
+    letter-spacing: 0.02em;
+    padding: var(--sp-1) 0;
+  }
+
+  .week-grid .cell {
+    width: 1.7rem;
+    height: 1.8rem;
+    font-size: var(--fs-xs);
+  }
+}
+
 /* past + today cells can be tapped to fix the record */
 .week-grid .cell.tappable {
   cursor: pointer;
