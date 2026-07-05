@@ -32,24 +32,20 @@ The best tracker is
 So the whole idea here is one text box. You write what you did in plain words
 and the AI files it. No hunting through lists, no forms, no fee.
 
-The other half of it was that my life was scattered across a pile of apps and
-tabs. Routines in one, workout notes in another, reminders somewhere else, and
-I was the one stuck keeping them all in sync. I wanted a single place that just
-held everything I needed, so checking in on my day was one seamless move
-instead of a scavenger hunt across five apps.
+The other reason was simple. My life was spread across too many apps. Routines
+in one, workout notes in another, reminders somewhere else, and I was the one
+keeping them all in sync. I just wanted one place that holds everything, so
+checking my day is one move and not a hunt through five different apps.
 
 And honestly, I don't think you need an AuDHD brain to get something out of
 this. I built it around mine, but everyone has days where a list feels like too
-much, or where typing *"went for a run"* beats tapping through a bunch of
-menus. If the friction of just keeping up with your own life bothers you at
-all, this was made to take that friction away, and that is not a
-neurodivergent-only problem.
+much, or where typing *"went for a run"* is easier than tapping through menus.
+Wanting less friction in your day is not only a neurodivergent thing.
 
-I built it around my own brain first, but I'm nowhere near done with it. I'm
-actively expanding it, and I'd like it to fit more people than just me. So if
-you've got an idea, I'm honestly happy to hear it, and if the project is useful
-to you and you want to help keep it going, both suggestions and donations are
-welcome.
+I'm also nowhere near done with it. I keep adding to it, and I'd like it to fit
+more people than just me. So if you have an idea, I'm happy to hear it. And if
+the project is useful to you and you want to help keep it going, suggestions
+and donations are both welcome.
 
 ## What it does
 
@@ -132,16 +128,16 @@ maximum legibility. There is no red X anywhere in the app!
 React + Vite + TypeScript · Supabase (Postgres, Auth, Realtime, Edge
 Functions, pg_cron) · Gemini Flash-Lite · GitHub Pages · Web Push · PWA
 
-No chart libraries, no drag-and-drop libraries, no CSS framework — the bars
-are divs and the design system is one CSS file.
+No chart libraries, no drag-and-drop libraries, no CSS framework. The bars are
+plain divs and the whole design system is one CSS file.
 
 ## How many users can this handle?
 
-Honestly: it's built for **one** — me — though the sharpest single-user edges
-have been filed off (each user picks their own timezone in Settings, the
-starter routines and workout plan are opt-in templates now). The main
-remaining assumption is the Telegram bot, which links to a single account.
-Signups are meant to be disabled after you create your account.
+Honestly, it's built for one person, me. I have cleaned up the roughest
+single-user parts (each user picks their own timezone in Settings, and the
+starter routines and workout plan are opt-in now), but the main thing still
+tied to one account is the Telegram bot. Signups are meant to be off once you
+create your account.
 
 That said, since people ask, here's where the free-tier ceilings actually
 are, in the order they'd break:
@@ -158,51 +154,51 @@ are, in the order they'd break:
    of personal data (a whole 6-week training block is ~700 tiny rows), and
    GitHub Pages barely notices a 450KB app.
 
-If you enabled Gemini billing, the AI cost is ~$0.0002 per message (~100
+If you enabled Gemini billing, the AI cost is about $0.0002 per message (~100
 messages a day is well under $1/month), and the ceiling moves to Realtime
-connections. But making it genuinely multi-user would also need real work:
+connections. But making it truly multi-user would also need real work:
 per-user timezones, per-user Telegram links, onboarding instead of my seed
-routines. For its actual job — one person, zero dollars — the headroom is
-enormous.
+routines. For what it actually does, one person and zero cost, there is a lot
+of room to spare.
 
 ## Is your data safe?
 
-Short version: yes, and I actually checked instead of assuming.
+Short answer: yes, and I checked it, I didn't just assume.
 
-**What holds up.** Every table in the database is locked to its owner. That's
-not the app being polite about it — it's Postgres itself (Row Level Security)
-refusing to hand your rows to anyone else, one layer below the app. So even if
-I wrote a bug that asked for "everyone's reminders," the database would still
-only ever give you yours. I went through every single table and confirmed it,
-including the awkward ones that don't store an owner directly and have to prove
-it through a join. The key that ships inside the app is public on purpose —
-that's just how Supabase works, and it unlocks nothing without you logged in.
-The secrets that actually matter (the AI key, the admin key, the push and bot
-tokens) live only on the server and never touch the code you download. It's
-all over HTTPS, the app never renders raw HTML so the usual injection tricks
-have almost nothing to grab, and the AI only ever touches your own data — so
-even a weird message can't reach past your account.
+Every table in the database is locked to its owner. This is not the app being
+careful, it is the database itself (Postgres Row Level Security) that refuses
+to give your rows to anyone else. So even if I made a mistake in the code and
+asked for everyone's data, the database would still only return yours. I went
+through every table and confirmed it, including the ones that don't store an
+owner directly and have to check it through a join.
 
-**Where I'll be honest about the limits.** This is a personal project I host
-myself, not something a security firm has audited. The per-user isolation
-holds up fine at the database level, but a couple of pieces (the Telegram bot)
-still assume it's just me. A few background jobs run with elevated access and
-lean on my code to stay scoped to the right person, which is the one spot that
-needs care rather than trusting the database to catch a slip. And GitHub Pages
-won't let me set a couple of the belt-and-suspenders headers I'd add if I ran
-the server myself.
+The key that ships inside the app is public on purpose. That's how Supabase
+works, and it opens nothing without you being logged in. The secrets that
+actually matter (the AI key, the admin key, the push and bot tokens) stay on
+the server and never reach the code you download. Everything runs over HTTPS,
+and the app never renders raw HTML, so there is very little for injection
+attacks to grab. The AI only ever touches your own data, so even a strange
+message can't reach past your account.
 
-None of that keeps me up at night for what this is, but I'd rather say it
-plainly than pretend it's Fort Knox.
+Now the honest limits. This is a personal project I host myself, and no
+security company has audited it. The per-user isolation is solid at the
+database level, but a few parts, like the Telegram bot, still assume it's only
+me. Some background jobs run with higher access and rely on my code to stay
+scoped to the right person, so that part needs care instead of trusting the
+database to catch a mistake. And GitHub Pages does not let me set a couple of
+extra security headers I would add if I ran the server myself.
+
+None of this worries me for what the project is, but I would rather tell you
+straight than pretend it's perfect.
 
 ## Setup
 
 ### 1. Supabase project
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migrations in `supabase/migrations/` **in order** (0001 → 0010) in
-   the SQL editor, or `supabase db push` with the CLI. Heads-up: the editor
-   runs each paste as one transaction, so run them one file at a time.
+2. Run the migrations in `supabase/migrations/` **in order** (0001 upward) in
+   the SQL editor, or `supabase db push` with the CLI. Note: the editor runs
+   each paste as one transaction, so run them one file at a time.
 3. In **Authentication > Providers**, enable Email. Disable "Confirm email"
    if you want instant single-user signup.
 
@@ -275,7 +271,7 @@ confidence ≥ 0.9 are applied immediately (still undoable, every batch is
 recorded in `ai_actions`), the 0.6–0.9 ones come back as one-tap confirm
 chips, and below that nothing happens at all. If a planned training session
 is open today, logged sets fill the session's planned sets instead of the
-freeform log — so the composer, the Telegram bot and the session player all
+freeform log, so the composer, the Telegram bot and the session player all
 write the same rows. The day's tasks are injected straight into the prompt as
 candidates, which at personal scale works better than embeddings and costs
 basically nothing.
