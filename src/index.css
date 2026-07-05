@@ -163,6 +163,20 @@ select {
   transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease);
 }
 
+/* every select is themed by default so none fall back to the browser's
+   white box; specific rules (.settings-tz, .edit-task-row select, …) still win */
+select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
 /* focus: one visible ring, everywhere, keyboard only */
 :focus {
   outline: none;
