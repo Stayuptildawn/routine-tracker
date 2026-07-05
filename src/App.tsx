@@ -5,6 +5,7 @@ import { SEED_ROUTINES } from './lib/seedData'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import { flushOps } from './lib/offline'
 import Auth from './screens/Auth'
+import SetPassword from './screens/SetPassword'
 import Now from './screens/Now'
 import Week from './screens/Week'
 import Gym from './screens/Gym'
@@ -57,6 +58,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('now')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [recovering, setRecovering] = useState(false)
 
   useEffect(() => {
     if (theme === 'auto') {
@@ -73,7 +75,11 @@ export default function App() {
       setSession(data.session)
       setReady(true)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s)
+      // invite/reset links land here: force a password set before the app
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -109,6 +115,7 @@ export default function App() {
     )
   if (!ready) return <div className="center-note">Loading…</div>
   if (!session) return <Auth />
+  if (recovering) return <SetPassword onDone={() => setRecovering(false)} />
   if (seeding) return <div className="center-note">Setting up your routines…</div>
 
   return (

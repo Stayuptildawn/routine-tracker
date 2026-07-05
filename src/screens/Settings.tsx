@@ -33,6 +33,10 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
     FALLBACK_ZONES
   const [tz, setTz] = useState('')
   const [tzSaved, setTzSaved] = useState<boolean | null>(null) // null = loading
+  const [email, setEmail] = useState('')
+  const [pw, setPw] = useState('')
+  const [pwMsg, setPwMsg] = useState<string | null>(null)
+  const [pwBusy, setPwBusy] = useState(false)
 
   useEffect(() => {
     supabase
@@ -43,6 +47,7 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
         setTz(data?.timezone ?? deviceTz)
         setTzSaved(!!data?.timezone)
       })
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ''))
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -54,6 +59,19 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
     await supabase
       .from('user_settings')
       .upsert({ timezone: value, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  }
+
+  async function savePassword() {
+    if (pw.length < 6) {
+      setPwMsg('Use at least 6 characters.')
+      return
+    }
+    setPwBusy(true)
+    setPwMsg(null)
+    const { error } = await supabase.auth.updateUser({ password: pw })
+    setPwBusy(false)
+    setPw('')
+    setPwMsg(error ? error.message : 'Password saved. Use it to sign in next time.')
   }
 
   return (
@@ -108,6 +126,27 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
                 )}
               </>
             )}
+          </section>
+
+          <section className="settings-section">
+            <h2>Account</h2>
+            {email && <p className="gentle">Signed in as {email}.</p>}
+            <div className="add-task">
+              <input
+                type="password"
+                placeholder="Set or change password"
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                minLength={6}
+                autoComplete="new-password"
+              />
+              <button onClick={savePassword} disabled={pwBusy || pw.length < 6}>
+                {pwBusy ? '…' : 'Save'}
+              </button>
+            </div>
+            <p className="gentle">
+              {pwMsg ?? 'If you were invited by email, set a password here so you can sign back in later.'}
+            </p>
           </section>
         </div>
       </div>
