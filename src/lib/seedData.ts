@@ -118,17 +118,6 @@ export const SEED_ROUTINES: { name: string; category: string; active?: boolean; 
       { label: '✅ Next action defined', tier: 'core' },
     ],
   },
-  {
-    name: 'Gym',
-    active: false,
-    category: 'health',
-    tasks: [
-      { label: '🏋️ Gym session', tier: 'core', days: [1, 2, 3, 4, 5] },
-      { label: '💪 Body parts trained', tier: 'standard', days: [1, 2, 3, 4, 5] },
-      { label: '🏃 5k run (Zone 2)', tier: 'standard', days: [2, 5] },
-      { label: '🧘 Recovery / mobility', tier: 'standard', days: [1, 2, 3, 4, 5] },
-    ],
-  },
   // Tracker-type routines: no daily tasks, they exist as reminder categories.
   { name: 'Paperwork', category: 'tracker', tasks: [] },
   { name: 'Errands', category: 'tracker', tasks: [] },
