@@ -11,6 +11,69 @@ interface DayStat {
   skipped: number
 }
 
+// ---- data explorer: up to 3 years, bucketed server-side ----
+type Metric = 'tasks' | 'sets' | 'cardio'
+type Frame = 'daily' | 'weekly' | 'monthly' | 'half' | 'yearly'
+
+const METRICS: { id: Metric; label: string; unit: string }[] = [
+  { id: 'tasks', label: '✅ Tasks', unit: '' },
+  { id: 'sets', label: '🏋️ Sets', unit: '' },
+  { id: 'cardio', label: '🏃 Cardio', unit: ' km' },
+]
+
+// every range ends today / this week / this month
+const FRAMES: { id: Frame; label: string; hint: string }[] = [
+  { id: 'daily', label: 'D', hint: 'last 30 days' },
+  { id: 'weekly', label: 'W', hint: 'last 26 weeks' },
+  { id: 'monthly', label: 'M', hint: 'last 3 years, monthly' },
+  { id: 'half', label: '6M', hint: 'last 3 years in half-years' },
+  { id: 'yearly', label: 'Y', hint: 'the last 12 months' },
+]
+
+interface Slot {
+  key: string // bucket start, yyyy-mm-dd (as the RPC returns it)
+  label: string // sparse axis label, '' = unlabeled
+}
+
+function buildSlots(frame: Frame): Slot[] {
+  const today = new Date()
+  const slots: Slot[] = []
+  const dm = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`
+  if (frame === 'daily') {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      slots.push({ key: localDate(d), label: i % 7 === 0 ? dm(d) : '' })
+    }
+  } else if (frame === 'weekly') {
+    const monday = new Date(today)
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+    for (let i = 25; i >= 0; i--) {
+      const d = new Date(monday)
+      d.setDate(d.getDate() - i * 7)
+      slots.push({ key: localDate(d), label: i % 5 === 0 ? dm(d) : '' })
+    }
+  } else if (frame === 'monthly') {
+    for (let i = 35; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+      slots.push({ key: localDate(d), label: i % 6 === 0 ? `${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}` : '' })
+    }
+  } else if (frame === 'yearly') {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+      slots.push({ key: localDate(d), label: d.toLocaleDateString(undefined, { month: 'narrow' }) })
+    }
+  } else {
+    // half-years: the six 6-month blocks containing today, aligned Jan/Jul
+    const startMonth = today.getMonth() < 6 ? 0 : 6
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), startMonth - i * 6, 1)
+      slots.push({ key: localDate(d), label: `${d.getMonth() === 0 ? 'H1' : 'H2'}’${String(d.getFullYear()).slice(2)}` })
+    }
+  }
+  return slots
+}
+
 interface Reflection {
   week_start: string
   body: string
@@ -20,6 +83,39 @@ export default function Reflect() {
   const [days, setDays] = useState<DayStat[]>([])
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [metric, setMetric] = useState<Metric>('tasks')
+  const [frame, setFrame] = useState<Frame>('daily')
+  const [explore, setExplore] = useState<{ slots: Slot[]; values: number[] } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setExplore(null)
+    const slots = buildSlots(frame)
+    const bucket = frame === 'daily' ? 'day' : frame === 'weekly' ? 'week' : 'month'
+    supabase.rpc('explore_buckets', { metric, bucket, start_date: slots[0].key }).then(({ data }) => {
+      if (cancelled) return
+      const byKey = new Map<string, number>(
+        ((data as { b: string; v: number }[]) ?? []).map((r) => [r.b, Number(r.v)]),
+      )
+      let values: number[]
+      if (frame === 'half') {
+        values = slots.map((s) => {
+          const start = new Date(s.key + 'T00:00:00')
+          let sum = 0
+          for (let m = 0; m < 6; m++) {
+            sum += byKey.get(localDate(new Date(start.getFullYear(), start.getMonth() + m, 1))) ?? 0
+          }
+          return sum
+        })
+      } else {
+        values = slots.map((s) => byKey.get(s.key) ?? 0)
+      }
+      setExplore({ slots, values })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [metric, frame])
 
   useEffect(() => {
     supabase
@@ -118,6 +214,57 @@ export default function Reflect() {
       ) : (
         <p className="gentle">Nothing logged yet this week. Whenever you’re ready.</p>
       )}
+
+      <section className="reflect-bars explore-card">
+        <div className="explore-inner">
+          <h2>
+            Explore
+            <span className="routine-progress">
+              {' '}
+              {FRAMES.find((f) => f.id === frame)?.hint}
+              {explore
+                ? ` · ${metric === 'cardio' ? `${Math.round(explore.values.reduce((a, b) => a + b, 0) * 10) / 10} km` : `${Math.round(explore.values.reduce((a, b) => a + b, 0))} total`}`
+                : ''}
+            </span>
+          </h2>
+          <div className="energy-row explore-row">
+            {METRICS.map((m) => (
+              <button key={m.id} className={metric === m.id ? 'energy-btn active' : 'energy-btn'} onClick={() => setMetric(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <div className="energy-row explore-row">
+            {FRAMES.map((f) => (
+              <button key={f.id} className={frame === f.id ? 'energy-btn active' : 'energy-btn'} onClick={() => setFrame(f.id)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {explore ? (
+            <div className="explore-bars">
+              {(() => {
+                const max = Math.max(1, ...explore.values)
+                return explore.slots.map((s, i) => {
+                  const v = explore.values[i]
+                  const shown = metric === 'cardio' ? Math.round(v * 10) / 10 : Math.round(v)
+                  return (
+                    <div key={s.key} className="explore-col" title={`${s.key}: ${shown}${metric === 'cardio' ? ' km' : ''}`}>
+                      <div className="bar-wrap explore-wrap">
+                        <div className={i === explore.slots.length - 1 ? 'bar explore-bar now' : 'bar explore-bar'} style={{ height: `${(v / max) * 100}%` }} />
+                      </div>
+                      {explore.slots.length <= 12 && <span className="bar-count">{shown || ''}</span>}
+                      <span className="bar-day">{s.label}</span>
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+          ) : (
+            <p className="gentle">Loading…</p>
+          )}
+        </div>
+      </section>
 
       <p className="gentle export-row">
         Your data is yours:
