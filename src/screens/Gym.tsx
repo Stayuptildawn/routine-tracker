@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan } from '../lib/types'
 import { recoveryAdjustments, startBlock } from '../lib/blocks'
+import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import Session from './Session'
 import Skeleton from '../components/Skeleton'
 
@@ -106,6 +107,9 @@ export default function Gym() {
     localStorage.setItem('gym-view', v)
   }
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
+  const [newSession, setNewSession] = useState('')
+  const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', scheme: '3 x 10-12' })
+  const [settingUp, setSettingUp] = useState(false)
   const [starting, setStarting] = useState(false)
   const [split, setSplit] = useState<string | null>(null)
   const [week, setWeek] = useState<number | null>(null)
@@ -290,6 +294,39 @@ export default function Gym() {
     if (!window.confirm(`Remove "${p.exercise}" from the plan? (Already-generated sessions keep it.)`)) return
     await supabase.from('workout_plans').delete().eq('id', p.id)
     load()
+  }
+
+  async function useTemplate() {
+    if (settingUp) return
+    setSettingUp(true)
+    try {
+      await seedWorkoutTemplate()
+      await load()
+    } finally {
+      setSettingUp(false)
+    }
+  }
+
+  async function createOwnPlan() {
+    const session = scratch.session.trim()
+    const exercise = scratch.exercise.trim()
+    if (settingUp || !session || !exercise) return
+    setSettingUp(true)
+    try {
+      await supabase.from('workout_plans').insert({
+        block: 1,
+        split_day: session,
+        sort_order: 1,
+        exercise,
+        muscle_group: scratch.muscle,
+        schemes: { '1-2': scratch.scheme, '3-4': scratch.scheme, '5-6': scratch.scheme },
+      })
+      await load()
+      setSplit(session)
+      setEditingPlan(true)
+    } finally {
+      setSettingUp(false)
+    }
   }
 
   async function addPlan() {
@@ -767,6 +804,53 @@ export default function Gym() {
         </section>
       )}
 
+      {view === 'strength' && loaded && plans.length === 0 && (
+        <section className="gym-day setup-card">
+          <h2>Set up your training</h2>
+          <p className="gentle">Two ways to begin — everything stays editable either way.</p>
+          <button className="start-session" onClick={useTemplate} disabled={settingUp}>
+            {settingUp ? 'Setting up…' : '▶ Use the starter plan'}
+          </button>
+          <p className="gentle">
+            A joint-friendly 6-week Push/Pull/Legs block plus an Upper/Lower follow-up — machines,
+            dumbbells and cables only, with an injury-safe cue on every exercise.
+          </p>
+          <p className="gentle setup-or">— or build your own —</p>
+          <div className="add-task">
+            <input
+              placeholder="First session name (e.g. Upper A)"
+              value={scratch.session}
+              onChange={(e) => setScratch({ ...scratch, session: e.target.value })}
+            />
+          </div>
+          <div className="add-task">
+            <input
+              placeholder="First exercise"
+              value={scratch.exercise}
+              onChange={(e) => setScratch({ ...scratch, exercise: e.target.value })}
+            />
+            <select value={scratch.muscle} onChange={(e) => setScratch({ ...scratch, muscle: e.target.value })}>
+              {MUSCLE_GROUPS.map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+            <input
+              placeholder="3 x 10-12"
+              value={scratch.scheme}
+              onChange={(e) => setScratch({ ...scratch, scheme: e.target.value })}
+            />
+          </div>
+          <button
+            className="start-session"
+            onClick={createOwnPlan}
+            disabled={settingUp || !scratch.session.trim() || !scratch.exercise.trim()}
+          >
+            {settingUp ? '…' : 'Create my plan'}
+          </button>
+          <p className="gentle">You can add more sessions and exercises right after.</p>
+        </section>
+      )}
+
       {view === 'strength' && plans.length > 0 && (
         <section className="gym-day plan-card">
           <div className="routine-header">
@@ -809,7 +893,7 @@ export default function Gym() {
           </div>
           <div className="energy-row plan-row">
             <span className="energy-label">Session</span>
-            {rotation.map((s) => (
+            {(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => (
               <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
                 {s}
               </button>
@@ -869,6 +953,23 @@ export default function Gym() {
                   </div>
                 </div>
               ))}
+              <div className="add-task">
+                <input
+                  value={newSession}
+                  onChange={(e) => setNewSession(e.target.value)}
+                  placeholder="New session name (e.g. Upper C)"
+                />
+                <button
+                  onClick={() => {
+                    const v = newSession.trim()
+                    if (!v) return
+                    setSplit(v)
+                    setNewSession('')
+                  }}
+                >
+                  Add session
+                </button>
+              </div>
               <div className="add-task">
                 <input
                   value={newEx.name}
