@@ -11,3 +11,4 @@ private/
 *.xlsx
 handoff.md
 .claude/
+supabase/.temp/
