@@ -32,6 +32,19 @@ The best tracker is
 So the whole idea here is one text box. You write what you did in plain words
 and the AI files it. No hunting through lists, no forms, no fee.
 
+The other half of it was that my life was scattered across a pile of apps and
+tabs. Routines in one, workout notes in another, reminders somewhere else, and
+I was the one stuck keeping them all in sync. I wanted a single place that just
+held everything I needed, so checking in on my day was one seamless move
+instead of a scavenger hunt across five apps.
+
+And honestly, I don't think you need an AuDHD brain to get something out of
+this. I built it around mine, but everyone has days where a list feels like too
+much, or where typing *"went for a run"* beats tapping through a bunch of
+menus. If the friction of just keeping up with your own life bothers you at
+all, this was made to take that friction away, and that is not a
+neurodivergent-only problem.
+
 ## What it does
 
 **One message box, reachable from anywhere.**
