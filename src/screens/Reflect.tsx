@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
+import { trainingReflection } from '../lib/actions'
 import Skeleton from '../components/Skeleton'
+
+const TRAINING_CACHE = 'training-reflection'
 
 interface DayStat {
   date: string
@@ -99,6 +102,35 @@ export default function Reflect() {
   const [metric, setMetric] = useState<Metric>('tasks')
   const [frame, setFrame] = useState<Frame>('daily')
   const [explore, setExplore] = useState<{ slots: Slot[]; values: number[] } | null>(null)
+  const [training, setTraining] = useState<string | null>(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem(TRAINING_CACHE) ?? 'null')
+      return c?.date === localDate() ? c.comment : null
+    } catch {
+      return null
+    }
+  })
+  const [trainingBusy, setTrainingBusy] = useState(false)
+  const [trainingErr, setTrainingErr] = useState<string | null>(null)
+
+  async function askTraining() {
+    if (trainingBusy) return
+    setTrainingBusy(true)
+    setTrainingErr(null)
+    try {
+      const { comment, noData } = await trainingReflection()
+      if (noData) {
+        setTrainingErr('Nothing logged in the last two weeks yet. Train a little and check back.')
+      } else {
+        setTraining(comment)
+        localStorage.setItem(TRAINING_CACHE, JSON.stringify({ date: localDate(), comment }))
+      }
+    } catch {
+      setTrainingErr("Couldn't reach the AI just now — try again in a minute.")
+    } finally {
+      setTrainingBusy(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -218,6 +250,17 @@ export default function Reflect() {
       ) : (
         <p className="gentle">Nothing logged yet this week. Whenever you’re ready.</p>
       )}
+
+      <section className="reflect-bars training-card">
+        <div className="explore-inner">
+          <h2>How’s your training going?</h2>
+          {training && <p className="reflection-body training-body">{training}</p>}
+          {trainingErr && <p className="gentle">{trainingErr}</p>}
+          <button className="training-btn" onClick={askTraining} disabled={trainingBusy}>
+            {trainingBusy ? 'Thinking…' : training ? 'Refresh (this week vs last)' : '✨ Compare this week to last'}
+          </button>
+        </div>
+      </section>
 
       <section className="reflect-bars explore-card">
         <div className="explore-inner">

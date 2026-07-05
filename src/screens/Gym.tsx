@@ -5,6 +5,7 @@ import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan 
 import { recoveryAdjustments, startBlock } from '../lib/blocks'
 import { runOp } from '../lib/offline'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
+import { DEFAULT_BASE_KM, cardioTargetForWeek } from '../lib/cardioPlan'
 import Session from './Session'
 import Skeleton from '../components/Skeleton'
 
@@ -96,6 +97,8 @@ export default function Gym() {
   const [active, setActive] = useState<PlannedSession | null>(null)
   const [planBlock, setPlanBlock] = useState(1) // which block the plan card shows
   const [editingPlan, setEditingPlan] = useState(false)
+  const [cardioBase, setCardioBase] = useState<number | null>(null) // null=loading
+  const [baseDraft, setBaseDraft] = useState('')
   const [run, setRun] = useState({ kind: 'run', km: '', min: '' })
   const [loggingRun, setLoggingRun] = useState(false)
   const [view, setView] = useState<'strength' | 'cardio'>(
@@ -120,7 +123,7 @@ export default function Gym() {
     const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
-      supabase.from('user_settings').select('program_start').maybeSingle(),
+      supabase.from('user_settings').select('program_start, cardio_target_km').maybeSingle(),
       supabase.from('workout_logs').select('date').order('date', { ascending: true }).limit(1).maybeSingle(),
       supabase.from('training_blocks').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
@@ -174,6 +177,8 @@ export default function Gym() {
     // the first-ever log are fallbacks for block-less use
     const start = blockRow?.start_date ?? settingsRes.data?.program_start ?? firstRes.data?.date
     if (start) setWeek(weekFromStart(start))
+    setCardioBase(settingsRes.data?.cardio_target_km ?? DEFAULT_BASE_KM)
+    setBaseDraft(String(settingsRes.data?.cardio_target_km ?? DEFAULT_BASE_KM))
     setLoaded(true)
   }, [])
 
@@ -210,6 +215,15 @@ export default function Gym() {
     await supabase
       .from('user_settings')
       .upsert({ program_start: programStartForWeek(w), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  }
+
+  async function saveCardioBase() {
+    const v = parseFloat(baseDraft)
+    if (!Number.isFinite(v) || v <= 0) return
+    setCardioBase(v)
+    await supabase
+      .from('user_settings')
+      .upsert({ cardio_target_km: v, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   }
 
   async function logRun() {
@@ -532,6 +546,8 @@ export default function Gym() {
         const paces = runs.filter((c) => Number(c.distance_km) >= 2).map((c) => Number(c.minutes) / Number(c.distance_km))
         const bestPace = paces.length ? Math.min(...paces) : null
         const kindIcon = (k: string) => CARDIO_KINDS.find(([v]) => v === k)?.[1].split(' ')[0] ?? '🏃'
+        const target = cardioTargetForWeek(cardioBase ?? DEFAULT_BASE_KM, week ?? 1)
+        const pct = Math.min(100, Math.round((weekKm / target.km) * 100))
         return (
           <section className="gym-day cardio-card">
             <h2>
@@ -542,6 +558,33 @@ export default function Gym() {
                   : ' nothing yet this week — that’s allowed'}
               </span>
             </h2>
+
+            <div className="cardio-plan">
+              <div className="cardio-plan-head">
+                <span className="cardio-plan-phase">{target.phase} week</span>
+                <span className="cardio-plan-target">
+                  aim ~{target.km} km · {target.sessions} easy sessions
+                </span>
+              </div>
+              <div className="cardio-plan-rail" aria-hidden="true">
+                <div className="cardio-plan-fill" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="gentle cardio-plan-note">
+                {Math.round(weekKm * 10) / 10} / {target.km} km so far. {target.note}
+              </p>
+              <div className="cardio-plan-base">
+                <span className="gentle-inline">Easy-week base</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={baseDraft}
+                  onChange={(e) => setBaseDraft(e.target.value)}
+                  onBlur={saveCardioBase}
+                  onKeyDown={(e) => e.key === 'Enter' && saveCardioBase()}
+                />
+                <span className="gentle-inline">km/week</span>
+              </div>
+            </div>
 
             <div className="run-log-row">
               <select value={run.kind} onChange={(e) => setRun({ ...run, kind: e.target.value })}>
