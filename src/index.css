@@ -361,7 +361,11 @@ select option {
 .settings-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--sp-5) 0;
+  /* overflow-y:auto also clips horizontally, which shaves the amber focus
+     ring off fields at the edges. Negative margin + matching padding widens
+     the clip box without moving the content, so the ring has room. */
+  margin: 0 calc(-1 * var(--sp-2));
+  padding: var(--sp-5) var(--sp-2);
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
