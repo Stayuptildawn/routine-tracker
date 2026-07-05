@@ -384,6 +384,37 @@ select option {
   background: var(--surface-2);
 }
 
+.account-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-1) var(--sp-4);
+  margin: 0 0 var(--sp-4);
+}
+
+.account-info dt {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.account-info dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.settings-pw {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-width: 26rem;
+}
+
+.settings-pw input {
+  padding: var(--sp-3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
 .settings-screen .start-session {
   max-width: 26rem;
 }

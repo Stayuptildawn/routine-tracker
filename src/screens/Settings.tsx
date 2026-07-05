@@ -34,7 +34,9 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
   const [tz, setTz] = useState('')
   const [tzSaved, setTzSaved] = useState<boolean | null>(null) // null = loading
   const [email, setEmail] = useState('')
+  const [createdAt, setCreatedAt] = useState('')
   const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
   const [pwMsg, setPwMsg] = useState<string | null>(null)
   const [pwBusy, setPwBusy] = useState(false)
 
@@ -47,7 +49,10 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
         setTz(data?.timezone ?? deviceTz)
         setTzSaved(!!data?.timezone)
       })
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ''))
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? '')
+      setCreatedAt(data.user?.created_at ?? '')
+    })
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -66,11 +71,16 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
       setPwMsg('Use at least 6 characters.')
       return
     }
+    if (pw !== pw2) {
+      setPwMsg('The two passwords don’t match.')
+      return
+    }
     setPwBusy(true)
     setPwMsg(null)
     const { error } = await supabase.auth.updateUser({ password: pw })
     setPwBusy(false)
     setPw('')
+    setPw2('')
     setPwMsg(error ? error.message : 'Password saved. Use it to sign in next time.')
   }
 
@@ -130,22 +140,48 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
 
           <section className="settings-section">
             <h2>Account</h2>
-            {email && <p className="gentle">Signed in as {email}.</p>}
-            <div className="add-task">
+            <dl className="account-info">
+              <dt>Email</dt>
+              <dd>{email || '…'}</dd>
+              {createdAt && (
+                <>
+                  <dt>Member since</dt>
+                  <dd>{new Date(createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</dd>
+                </>
+              )}
+            </dl>
+
+            <div className="settings-pw">
               <input
                 type="password"
-                placeholder="Set or change password"
+                placeholder="New password"
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
                 minLength={6}
                 autoComplete="new-password"
               />
-              <button onClick={savePassword} disabled={pwBusy || pw.length < 6}>
-                {pwBusy ? '…' : 'Save'}
+              <input
+                type="password"
+                placeholder="Repeat new password"
+                value={pw2}
+                onChange={(e) => setPw2(e.target.value)}
+                minLength={6}
+                autoComplete="new-password"
+                onKeyDown={(e) => e.key === 'Enter' && savePassword()}
+              />
+              <button
+                className="start-session"
+                onClick={savePassword}
+                disabled={pwBusy || pw.length < 6 || pw !== pw2}
+              >
+                {pwBusy ? '…' : 'Save password'}
               </button>
             </div>
             <p className="gentle">
-              {pwMsg ?? 'If you were invited by email, set a password here so you can sign back in later.'}
+              {pwMsg ??
+                (pw && pw2 && pw !== pw2
+                  ? 'The two passwords don’t match yet.'
+                  : 'If you were invited by email, set a password here so you can sign back in later.')}
             </p>
           </section>
         </div>
