@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       .from('routines')
       .select('id, name, user_id, anchor_time, tasks(id, tier, scheduled_days)')
       .not('anchor_time', 'is', null)
+      .eq('active', true)
 
     let sent = 0
     for (const routine of routines ?? []) {

@@ -8,6 +8,7 @@ export interface Routine {
   category: string | null
   sort_order: number | null
   anchor_time?: string | null // "HH:MM:SS"; absent until the 0005 migration runs
+  active?: boolean // false = paused: hidden from Now/AI/nudges, dimmed on Week
   tasks: Task[]
 }
 

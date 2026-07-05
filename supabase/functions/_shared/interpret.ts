@@ -76,6 +76,7 @@ export async function interpretAndApply(
     .from('routines')
     .select('id, name, tasks(id, label, tier, scheduled_days)')
     .eq('user_id', userId)
+    .eq('active', true)
   const taskIds = (routines ?? []).flatMap((r: any) => (r.tasks ?? []).map((t: any) => t.id))
   const { data: logs } = await supabase
     .from('task_logs')

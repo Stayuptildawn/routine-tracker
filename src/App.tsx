@@ -31,7 +31,7 @@ async function seedIfEmpty() {
   for (const [i, seed] of SEED_ROUTINES.entries()) {
     const { data: routine, error } = await supabase
       .from('routines')
-      .insert({ name: seed.name, category: seed.category, sort_order: i })
+      .insert({ name: seed.name, category: seed.category, sort_order: i, active: seed.active ?? true })
       .select('id')
       .single()
     if (error || !routine) continue
@@ -111,7 +111,7 @@ export default function App() {
   return (
     <div className="app">
       <main className="content">
-        {tab === 'now' && <Now onOpenReminders={() => setTab('reminders')} />}
+        {tab === 'now' && <Now onOpenReminders={() => setTab('reminders')} onOpenSettings={() => setSettingsOpen(true)} />}
         {tab === 'reminders' && <Reminders onBack={() => setTab('now')} />}
         {tab === 'week' && <Week />}
         {tab === 'gym' && <Gym />}
@@ -133,9 +133,6 @@ export default function App() {
           ⚙️ Settings
         </button>
       </nav>
-      <button className="settings-fab" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
-        ⚙️
-      </button>
       {settingsOpen && <Settings theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />}
     </div>
   )

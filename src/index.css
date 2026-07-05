@@ -290,27 +290,39 @@ select {
   display: none;
 }
 
-.settings-fab {
-  position: fixed;
-  top: calc(env(safe-area-inset-top) + 10px);
-  right: 12px;
-  z-index: 25;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--r-full);
-  background: var(--surface-2);
-  box-shadow: var(--shadow);
-  font-size: 1.05rem;
-  opacity: 0.92;
+.now-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-2);
 }
 
-.settings-fab:hover {
-  background: var(--surface-3);
+.settings-inline {
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: 1rem;
+  opacity: 0.85;
+}
+
+.settings-inline:hover {
+  background: var(--surface-2);
+}
+
+.week-routine.paused {
+  opacity: 0.55;
+}
+
+.week-routine.paused:hover {
+  opacity: 0.8;
+}
+
+.link.activate {
+  font-weight: 700;
 }
 
 @media (min-width: 900px) {
-  .settings-fab {
-    display: none;
+  .settings-inline {
+    display: none; /* the rail button covers desktop */
   }
 
   .settings-rail {

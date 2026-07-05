@@ -29,7 +29,7 @@ function fmtEta(diff: number): string {
   return diff > 0 ? `in ${t}` : diff < 0 ? `${t} ago` : 'now'
 }
 
-export default function Now({ onOpenReminders }: { onOpenReminders: () => void }) {
+export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminders: () => void; onOpenSettings: () => void }) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<Map<string, TaskLog>>(new Map())
   const [reminders, setReminders] = useState<Reminder[]>([])
@@ -63,7 +63,8 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
     const [routinesRes, logsRes, stateRes, remindersRes] = await Promise.all([
       supabase
         .from('routines')
-        .select('id, name, category, sort_order, anchor_time, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
+        .select('id, name, category, sort_order, anchor_time, active, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
+        .eq('active', true)
         .order('sort_order'),
       supabase.from('task_logs').select('*').eq('date', today),
       supabase.from('daily_state').select('energy').eq('date', today).maybeSingle(),
@@ -233,9 +234,14 @@ export default function Now({ onOpenReminders }: { onOpenReminders: () => void }
 
   return (
     <div className="now">
-      <p className="eyebrow">
-        {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-      </p>
+      <div className="now-head">
+        <p className="eyebrow">
+          {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
+        <button className="settings-inline" onClick={onOpenSettings} title="Settings" aria-label="Settings">
+          ⚙️
+        </button>
+      </div>
       <div className="composer">
         <textarea
           value={message}

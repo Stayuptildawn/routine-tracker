@@ -52,7 +52,7 @@ export default function Week() {
     const [routinesRes, logsRes] = await Promise.all([
       supabase
         .from('routines')
-        .select('id, name, category, sort_order, anchor_time, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
+        .select('id, name, category, sort_order, anchor_time, active, tasks(id, routine_id, label, sort_order, scheduled_days, tier)')
         .order('sort_order'),
       supabase.from('task_logs').select('*').in('date', currentWeekDates()),
     ])
@@ -116,6 +116,11 @@ export default function Week() {
     load()
   }
 
+  async function setActive(routineId: string, active: boolean) {
+    await supabase.from('routines').update({ active }).eq('id', routineId)
+    load()
+  }
+
   async function deleteRoutine(routine: Routine) {
     if (!window.confirm(`Delete "${routine.name}" and all its tasks and history?`)) return
     await supabase.from('routines').delete().eq('id', routine.id)
@@ -150,8 +155,9 @@ export default function Week() {
       {routines.map((routine) => {
         const tasks = (routine.tasks ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         const isEditing = editing === routine.id
+        const paused = routine.active === false
         return (
-          <section key={routine.id} className="week-routine">
+          <section key={routine.id} className={paused ? 'week-routine paused' : 'week-routine'}>
             <div className="routine-header">
               {isEditing ? (
                 <div className="rename-row">
@@ -166,8 +172,18 @@ export default function Week() {
                   </button>
                 </div>
               ) : (
-                <h2>{routine.name}</h2>
+                <h2>
+                  {routine.name}
+                  {paused && <span className="routine-progress"> paused</span>}
+                </h2>
               )}
+              <button
+                className={paused ? 'link activate' : 'link'}
+                onClick={() => setActive(routine.id, paused)}
+                title={paused ? 'Show on the Now tab again' : 'Hide from the Now tab (keeps all history)'}
+              >
+                {paused ? 'Activate' : 'Pause'}
+              </button>
               <button
                 className="link"
                 onClick={() => {

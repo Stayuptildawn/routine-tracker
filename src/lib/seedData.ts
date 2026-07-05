@@ -9,7 +9,9 @@ interface SeedTask {
   days?: number[]
 }
 
-export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] }[] = [
+// active: false = seeded paused; the user activates what applies to them
+// from the Week page (focus/health routines are opt-in, basics are on)
+export const SEED_ROUTINES: { name: string; category: string; active?: boolean; tasks: SeedTask[] }[] = [
   {
     name: 'Morning Routine',
     category: 'daily',
@@ -39,6 +41,7 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
   },
   {
     name: 'Take Medication',
+    active: false,
     category: 'daily',
     tasks: [
       { label: '💊 Morning dose', tier: 'core' },
@@ -71,6 +74,7 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
   },
   {
     name: 'Study Time',
+    active: false,
     category: 'focus',
     tasks: [
       { label: '🎯 Define session goal', tier: 'core' },
@@ -93,6 +97,7 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
   },
   {
     name: 'Language Learning',
+    active: false,
     category: 'focus',
     tasks: [
       { label: '📖 Structured study', tier: 'standard' },
@@ -103,6 +108,7 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
   },
   {
     name: 'Deep Work',
+    active: false,
     category: 'focus',
     tasks: [
       { label: '💻 Main project block', tier: 'core' },
@@ -114,6 +120,7 @@ export const SEED_ROUTINES: { name: string; category: string; tasks: SeedTask[] 
   },
   {
     name: 'Gym',
+    active: false,
     category: 'health',
     tasks: [
       { label: '🏋️ Gym session', tier: 'core', days: [1, 2, 3, 4, 5] },

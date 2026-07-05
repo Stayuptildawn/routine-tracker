@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
         .from('routines')
         .select('id, name, tasks(id, label, tier, scheduled_days)')
         .eq('user_id', user.id)
+        .eq('active', true)
       const tasks = (routines ?? []).flatMap((r) => (r.tasks ?? []).map((t) => ({ ...t, routine: r.name })))
       if (tasks.length === 0) continue
       const taskById = new Map(tasks.map((t) => [t.id, t]))
