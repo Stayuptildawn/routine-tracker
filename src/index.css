@@ -1261,9 +1261,25 @@ select {
 .cardio-edit {
   margin-top: var(--sp-2);
   padding: var(--sp-3);
-  background: var(--surface-2);
+  /* surface (not surface-2) so the check-in pills contrast like they do
+     on the strength completion screen */
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  border-bottom: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.cardio-edit .energy-btn {
+  background: var(--surface-2);
+}
+
+.cardio-edit .energy-btn:hover {
+  background: var(--surface-3);
+}
+
+.cardio-edit .energy-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .cardio-edit .save {
@@ -2217,6 +2233,10 @@ select {
 
 .explore-row {
   margin: 0 0 var(--sp-2);
+}
+
+.explore-stats {
+  margin: var(--sp-1) 0 0;
 }
 
 .explore-bars {

@@ -241,6 +241,16 @@ export default function Reflect() {
               </button>
             ))}
           </div>
+          {explore && (
+            <p className="gentle explore-stats">
+              {(() => {
+                const vs = explore.values
+                const f = (v: number) => (metric === 'cardio' ? Math.round(v * 10) / 10 : Math.round(v * 10) / 10)
+                const unit = metric === 'cardio' ? ' km' : ''
+                return `Min ${f(Math.min(...vs))}${unit} · Max ${f(Math.max(...vs))}${unit} · Avg ${f(vs.reduce((a, b) => a + b, 0) / vs.length)}${unit}`
+              })()}
+            </p>
+          )}
           {explore ? (
             <div className="explore-bars">
               {(() => {
