@@ -114,8 +114,9 @@ Rules:
   Set confidence 0-1 for how certain the match is.
 - log_workout: gym set logging like "bench 60kg 3x8" -> exercise name, sets array (3x8 at 60kg =
   three entries of {kg:60, reps:8}), plus notes if any commentary.
-- log_cardio: runs/walks/cycling ("ran 5k in 32 min", "30 minute walk") -> kind, minutes,
-  distance_km (only what was said), notes for commentary. Not for lifting.
+- log_cardio: runs/walks/cycling -> kind, minutes, distance_km, notes. Capture BOTH numbers
+  when both are said: "ran 5km in 32 min" -> {kind:"run", distance_km:5, minutes:32}.
+  "5k"/"5 k" means distance_km:5. Not for lifting.
 - create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
   reminder_text and pick the best category. Set confidence for the category choice.
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
@@ -281,14 +282,25 @@ User message: "${text}"`
         .single()
       if (!error) applied.push({ type: 'log_workout', workout_log_id: row.id, exercise: action.exercise, sets: action.sets ?? null })
     } else if (action.type === 'log_cardio') {
+      // deterministic safety net: models sometimes drop one of the numbers
+      let distanceKm = action.distance_km ?? null
+      let minutes = action.minutes ?? null
+      if (distanceKm == null) {
+        const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:km|kms|k\b)/i)
+        if (m) distanceKm = parseFloat(m[1].replace(',', '.'))
+      }
+      if (minutes == null) {
+        const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:min|mins|minutes|minutos)/i)
+        if (m) minutes = parseFloat(m[1].replace(',', '.'))
+      }
       const { data: row, error } = await supabase
         .from('cardio_logs')
         .insert({
           user_id: userId,
           date,
           kind: action.kind ?? 'run',
-          minutes: action.minutes ?? null,
-          distance_km: action.distance_km ?? null,
+          minutes,
+          distance_km: distanceKm,
           notes: action.notes ?? null,
         })
         .select('id')
@@ -298,8 +310,8 @@ User message: "${text}"`
           type: 'log_cardio',
           cardio_log_id: row.id,
           kind: action.kind ?? 'run',
-          minutes: action.minutes ?? null,
-          distance_km: action.distance_km ?? null,
+          minutes,
+          distance_km: distanceKm,
         })
     } else if (action.type === 'create_reminder') {
       const reminderText = action.reminder_text ?? text
