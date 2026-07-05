@@ -166,8 +166,15 @@ User message: "${text}"`
   let planContext: { plans: any[]; week: number | null } | null = null
   async function getPlanContext() {
     if (planContext) return planContext
-    const [{ data: plans }, { data: settings }, { data: first }] = await Promise.all([
+    const [{ data: plans }, { data: block }, { data: settings }, { data: first }] = await Promise.all([
       supabase.from('workout_plans').select('split_day, exercise, schemes').eq('user_id', userId),
+      supabase
+        .from('training_blocks')
+        .select('start_date')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
       supabase.from('user_settings').select('program_start').eq('user_id', userId).maybeSingle(),
       supabase
         .from('workout_logs')
@@ -177,8 +184,9 @@ User message: "${text}"`
         .limit(1)
         .maybeSingle(),
     ])
-    // the week picked on the Gym tab (program_start) wins; first log is the fallback
-    const start = settings?.program_start ?? first?.date
+    // one clock: the active block's start wins, then the Gym tab's picked
+    // week (program_start), then the first-ever log
+    const start = block?.start_date ?? settings?.program_start ?? first?.date
     const week = start
       ? Math.max(1, Math.floor((new Date(date + 'T00:00:00Z').getTime() - new Date(start + 'T00:00:00Z').getTime()) / (7 * 86400000)) + 1)
       : null

@@ -43,27 +43,6 @@ export async function flushMessageQueue(): Promise<number> {
   return sent
 }
 
-export interface NextSuggestion {
-  task_id: string | null
-  label?: string
-  routine?: string
-  reason?: string
-  error?: string
-}
-
-/** One-tap "what's next?" - a single gentle suggestion, no DB writes. */
-export async function suggestNext(): Promise<NextSuggestion> {
-  const { data, error } = await supabase.functions.invoke<NextSuggestion>('suggest-next', {
-    body: {
-      date: localDate(),
-      weekday: isoWeekday(),
-      time: new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-    },
-  })
-  if (error) throw error
-  return data!
-}
-
 export function queuedMessageCount(): number {
   return (JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]') as string[]).length
 }

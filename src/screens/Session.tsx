@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
 
@@ -88,7 +89,7 @@ export default function Session({ session, plans, onExit }: Props) {
       .subscribe()
     // stamp the start date so NL logging knows this session is open today
     if (!session.date) {
-      supabase.from('planned_sessions').update({ date: localDate() }).eq('id', session.id).then(() => {})
+      runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { date: localDate() } }).catch(() => {})
     }
     // earlier check-in answers and the session's cardio come back, so a
     // reopened session never looks unlogged (and saves update, not duplicate)
@@ -201,7 +202,7 @@ export default function Session({ session, plans, onExit }: Props) {
 
   async function markComplete(after: PlannedSet[]) {
     if (after.every((s) => s.logged_at)) {
-      await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', session.id)
+      await runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { completed_at: new Date().toISOString() } })
     }
   }
 
@@ -209,11 +210,13 @@ export default function Session({ session, plans, onExit }: Props) {
     if (set.logged_at) {
       // un-log: taps are always reversible
       setSets((prev) => prev.map((s) => (s.id === set.id ? { ...s, logged_at: null, logged_weight: null, logged_reps: null } : s)))
-      await supabase
-        .from('planned_sets')
-        .update({ logged_at: null, logged_weight: null, logged_reps: null })
-        .eq('id', set.id)
-      await supabase.from('planned_sessions').update({ completed_at: null }).eq('id', session.id)
+      await runOp({
+        table: 'planned_sets',
+        op: 'update',
+        ids: [set.id],
+        values: { logged_at: null, logged_weight: null, logged_reps: null },
+      })
+      await runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { completed_at: null } })
       return
     }
     const draft = draftFor(set)
@@ -227,7 +230,7 @@ export default function Session({ session, plans, onExit }: Props) {
     }
     const after = sets.map((s) => (s.id === set.id ? { ...s, ...logged } : s))
     setSets(after)
-    await supabase.from('planned_sets').update(logged).eq('id', set.id)
+    await runOp({ table: 'planned_sets', op: 'update', ids: [set.id], values: logged })
     await markComplete(after)
   }
 
@@ -238,10 +241,12 @@ export default function Session({ session, plans, onExit }: Props) {
       toSkip.some((t) => t.id === s.id) ? { ...s, logged_at: new Date().toISOString() } : s,
     )
     setSets(after)
-    await supabase
-      .from('planned_sets')
-      .update({ logged_at: new Date().toISOString() })
-      .in('id', toSkip.map((s) => s.id))
+    await runOp({
+      table: 'planned_sets',
+      op: 'update',
+      ids: toSkip.map((s) => s.id),
+      values: { logged_at: new Date().toISOString() },
+    })
     await markComplete(after)
   }
 
@@ -259,19 +264,24 @@ export default function Session({ session, plans, onExit }: Props) {
           amount: v.amount ?? null,
         }))
       // replace this session's answers wholesale - never duplicate
-      await supabase.from('recovery_checkins').delete().eq('session_id', session.id)
-      if (rows.length > 0) await supabase.from('recovery_checkins').insert(rows)
+      await runOp({ table: 'recovery_checkins', op: 'delete', match: { session_id: session.id } })
+      if (rows.length > 0) await runOp({ table: 'recovery_checkins', op: 'insert', values: rows })
       const minutes = parseFloat(cardioMin)
       if (session.cardio && Number.isFinite(minutes) && minutes > 0) {
         if (existingCardioId) {
-          await supabase.from('cardio_logs').update({ minutes }).eq('id', existingCardioId)
+          await runOp({ table: 'cardio_logs', op: 'update', ids: [existingCardioId], values: { minutes } })
         } else {
-          await supabase.from('cardio_logs').insert({
-            session_id: session.id,
-            date: localDate(),
-            kind: 'run',
-            minutes,
-            notes: session.cardio,
+          await runOp({
+            table: 'cardio_logs',
+            op: 'insert',
+            values: {
+              id: crypto.randomUUID(),
+              session_id: session.id,
+              date: localDate(),
+              kind: 'run',
+              minutes,
+              notes: session.cardio,
+            },
           })
         }
       }

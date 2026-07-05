@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase, configured } from './lib/supabase'
 import { SEED_ROUTINES } from './lib/seedData'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
+import { flushOps } from './lib/offline'
 import Auth from './screens/Auth'
 import Now from './screens/Now'
 import Week from './screens/Week'
@@ -87,9 +88,11 @@ export default function App() {
     })
     flushMessageQueue()
     flushTapQueue()
+    flushOps()
     const onOnline = () => {
       flushMessageQueue()
       flushTapQueue()
+      flushOps()
     }
     window.addEventListener('online', onOnline)
     return () => {

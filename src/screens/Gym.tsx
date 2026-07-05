@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan } from '../lib/types'
 import { recoveryAdjustments, startBlock } from '../lib/blocks'
+import { runOp } from '../lib/offline'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import Session from './Session'
 import Skeleton from '../components/Skeleton'
@@ -169,8 +170,9 @@ export default function Gym() {
     const lastSplit = logRows.find((l) => l.split_day)?.split_day
     const nextIdx = lastSplit ? (rotation.indexOf(lastSplit) + 1) % rotation.length : 0
     setSplit(rotation[nextIdx] ?? rotation[0] ?? null)
-    // week: the picked program_start wins; first-ever log is the fallback
-    const start = settingsRes.data?.program_start ?? firstRes.data?.date
+    // one clock: the active block's start wins; the picked program_start and
+    // the first-ever log are fallbacks for block-less use
+    const start = blockRow?.start_date ?? settingsRes.data?.program_start ?? firstRes.data?.date
     if (start) setWeek(weekFromStart(start))
     setLoaded(true)
   }, [])
@@ -216,28 +218,28 @@ export default function Gym() {
     if (loggingRun || (!Number.isFinite(km) && !Number.isFinite(min))) return
     setLoggingRun(true)
     try {
-      const { data: row } = await supabase
-        .from('cardio_logs')
-        .insert({
-          date: localDate(),
-          kind: run.kind,
-          distance_km: Number.isFinite(km) ? km : null,
-          minutes: Number.isFinite(min) ? min : null,
-        })
-        .select('id')
-        .single()
-      setRun({ ...run, km: '', min: '' })
-      await load()
-      // offer the check-in right away - each pill saves on tap, closing skips
-      if (row) {
-        setEditCardio({
-          id: row.id,
-          kind: run.kind,
-          km: Number.isFinite(km) ? String(km) : '',
-          min: Number.isFinite(min) ? String(min) : '',
-          notes: '',
-        })
+      // client-generated id: works identically online and queued-offline
+      const entry: CardioLog = {
+        id: crypto.randomUUID(),
+        session_id: null,
+        date: localDate(),
+        kind: run.kind,
+        distance_km: Number.isFinite(km) ? km : null,
+        minutes: Number.isFinite(min) ? min : null,
+        notes: null,
       }
+      const result = await runOp({ table: 'cardio_logs', op: 'insert', values: entry as unknown as Record<string, unknown> })
+      setRun({ ...run, km: '', min: '' })
+      if (result === 'saved') await load()
+      else setCardio((prev) => [entry, ...prev]) // optimistic while offline
+      // offer the check-in right away - each pill saves on tap, closing skips
+      setEditCardio({
+        id: entry.id,
+        kind: run.kind,
+        km: Number.isFinite(km) ? String(km) : '',
+        min: Number.isFinite(min) ? String(min) : '',
+        notes: '',
+      })
     } finally {
       setLoggingRun(false)
     }
@@ -247,24 +249,22 @@ export default function Gym() {
     const current = cardio.find((c) => c.id === id)?.[field]
     const next = current === value ? null : value // tap again to unset
     setCardio((prev) => prev.map((c) => (c.id === id ? { ...c, [field]: next } : c)))
-    await supabase.from('cardio_logs').update({ [field]: next }).eq('id', id)
+    await runOp({ table: 'cardio_logs', op: 'update', ids: [id], values: { [field]: next } })
   }
 
   async function saveCardio() {
     if (!editCardio) return
     const km = parseFloat(editCardio.km)
     const min = parseFloat(editCardio.min)
-    await supabase
-      .from('cardio_logs')
-      .update({
-        kind: editCardio.kind,
-        distance_km: Number.isFinite(km) ? km : null,
-        minutes: Number.isFinite(min) ? min : null,
-        notes: editCardio.notes.trim() || null,
-      })
-      .eq('id', editCardio.id)
+    const values = {
+      kind: editCardio.kind,
+      distance_km: Number.isFinite(km) ? km : null,
+      minutes: Number.isFinite(min) ? min : null,
+      notes: editCardio.notes.trim() || null,
+    }
+    setCardio((prev) => prev.map((c) => (c.id === editCardio.id ? { ...c, ...values } : c)))
     setEditCardio(null)
-    load()
+    if ((await runOp({ table: 'cardio_logs', op: 'update', ids: [editCardio.id], values })) === 'saved') load()
   }
 
   async function deleteCardio(id: string) {
@@ -884,18 +884,20 @@ export default function Gym() {
               ))}
             </div>
           )}
-          <div className="energy-row plan-row">
-            <span className="energy-label">Week</span>
-            {[1, 2, 3, 4, 5, 6, 7].map((w) => (
-              <button
-                key={w}
-                className={week === w || (w === 7 && week !== null && week > 6) ? 'energy-btn active' : 'energy-btn'}
-                onClick={() => pickWeek(w)}
-              >
-                {w === 7 ? '7+' : w}
-              </button>
-            ))}
-          </div>
+          {!block && (
+            <div className="energy-row plan-row">
+              <span className="energy-label">Week</span>
+              {[1, 2, 3, 4, 5, 6, 7].map((w) => (
+                <button
+                  key={w}
+                  className={week === w || (w === 7 && week !== null && week > 6) ? 'energy-btn active' : 'energy-btn'}
+                  onClick={() => pickWeek(w)}
+                >
+                  {w === 7 ? '7+' : w}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="energy-row plan-row">
             <span className="energy-label">Session</span>
             {(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => (

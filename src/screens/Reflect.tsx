@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
-import { exportCardioLogs, exportTaskLogs, exportWorkoutLogs } from '../lib/csv'
+import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
 import Skeleton from '../components/Skeleton'
 
 interface DayStat {
@@ -178,18 +178,17 @@ export default function Reflect() {
       <p className="gentle">
         Patterns, not judgment. No streaks here — a quiet day is information, not failure.
       </p>
-      {reflection && (
-        <div className="reflection-card">
-          <p className="eyebrow">
-            Noticed, week of{' '}
-            {new Date(reflection.week_start + 'T00:00:00').toLocaleDateString(undefined, {
-              day: 'numeric',
-              month: 'long',
-            })}
-          </p>
-          <p className="reflection-body">{reflection.body}</p>
-        </div>
-      )}
+      {reflection && (() => {
+        const monday = new Date()
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+        const thisWeek = reflection.week_start === localDate(monday)
+        return (
+          <div className="reflection-card">
+            <p className="eyebrow">{thisWeek ? 'Noticed this week' : 'Noticed recently'}</p>
+            <p className="reflection-body">{reflection.body}</p>
+          </div>
+        )
+      })()}
       {!loaded && <Skeleton cards={1} />}
       <div className="reflect-bars" style={loaded ? undefined : { display: 'none' }}>
         {days.map((d) => (
@@ -291,6 +290,15 @@ export default function Reflect() {
         </button>
         <button className="link" onClick={() => exportCardioLogs()}>
           ⬇ cardio CSV
+        </button>
+        <button className="link" onClick={() => exportTrainingSets()}>
+          ⬇ training CSV
+        </button>
+        <button className="link" onClick={() => exportCheckins()}>
+          ⬇ check-ins CSV
+        </button>
+        <button className="link" onClick={() => exportReminders()}>
+          ⬇ reminders CSV
         </button>
       </p>
     </div>

@@ -57,8 +57,11 @@ and the AI files it. No hunting through lists, no forms, no fee.
 - Routines can have a time anchor ("around 8:00"). Near their time they float
   to the top with a little countdown ring — a time-blindness aid, not an alarm.
 - A **routine player**: one task at a time, full screen, two big buttons, for
-  the days when a list is already too much. "What's next?" asks the AI to pick
-  one single task and say why it's easy to start.
+  the days when a list is already too much. An always-on **"Up next" strip**
+  picks the single most sensible pending task (instantly, no AI call) — tap
+  it and the player opens right there.
+- Routines can be **paused** from the week view: hidden from the day, the AI
+  and the nudges, history intact, one tap to bring back.
 - Optional **push nudges**: if a routine's anchor passes and its core tasks are
   still pending, you get one gentle notification ("Morning routine is ready
   when you are") — at most once per routine per day, and never "you missed".
@@ -85,14 +88,18 @@ and the AI files it. No hunting through lists, no forms, no fee.
 
 - Weekly bars count everything you did — tasks, gym sessions, cardio — with
   patterns instead of pass/fail.
+- An **Explore chart**: tasks, hard sets or cardio km over the last 24 hours
+  (hourly), 7 days, 32 days, 6 months or 12 months, with min/max/avg.
 - Every Sunday evening the AI writes two sentences about your week: one
   pattern it noticed, one permission-based suggestion. Words like "failed" and
   "missed" are banned at the prompt level and checked again after.
-- Your data is yours: one-tap CSV export of tasks, workouts and cardio.
+- Your data is yours: one-tap CSV export of tasks, workouts, training sets,
+  cardio, recovery check-ins and reminders.
 
 **And the basics done right.** Installable PWA, realtime sync across devices,
-offline queues for messages and taps, dark/light/auto theme, fully editable
-routines, tasks and training plans.
+offline queues for messages, taps and gym logging, a settings screen with
+theme (auto/light/dark) and per-user timezone, fully editable routines,
+tasks and training plans.
 
 ## Design
 
@@ -111,10 +118,11 @@ are divs and the design system is one CSS file.
 
 ## How many users can this handle?
 
-Honestly: it's built for **one** — me — and a few pieces assume that (the
-Telegram bot links to the only auth account, there's a single timezone
-setting, and the seed data is literally my routines). Signups are meant to be
-disabled after you create your account.
+Honestly: it's built for **one** — me — though the sharpest single-user edges
+have been filed off (each user picks their own timezone in Settings, the
+starter routines and workout plan are opt-in templates now). The main
+remaining assumption is the Telegram bot, which links to a single account.
+Signups are meant to be disabled after you create your account.
 
 That said, since people ask, here's where the free-tier ceilings actually
 are, in the order they'd break:
@@ -156,7 +164,6 @@ npm i -g supabase
 supabase login
 supabase secrets set GEMINI_API_KEY=<your-gemini-api-key>   # aistudio.google.com/apikey
 supabase functions deploy interpret-message --project-ref <ref>
-supabase functions deploy suggest-next --project-ref <ref>
 ```
 
 Mind that you should keep the Gemini project unbilled to stay on the free
