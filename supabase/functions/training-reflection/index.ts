@@ -1,7 +1,7 @@
-// training-reflection: on-demand, a kind but truthful comment on the user's
-// physical activity, comparing the last 7 days against the 7 before. Called
-// from the Reflect tab with the user's JWT (verify_jwt ON) so every query is
-// RLS-scoped to them automatically. Read-only, no writes.
+// training-reflection: on-demand, a kind but truthful read on the PATTERN of
+// the user's physical activity over the last 12 weeks (averages, trend), plus
+// everything they logged as feedback. Called from Reflect with the user's JWT
+// (verify_jwt ON) so every query is RLS-scoped to them. Read-only.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { GEMINI_MODELS } from '../_shared/interpret.ts'
@@ -10,15 +10,28 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+const WEEKS = 12
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
-
 function addDays(date: string, n: number): string {
   const d = new Date(date + 'T00:00:00Z')
   d.setUTCDate(d.getUTCDate() + n)
   return d.toISOString().slice(0, 10)
+}
+function mondayOf(date: string): string {
+  const d = new Date(date + 'T00:00:00Z')
+  return addDays(date, -((d.getUTCDay() + 6) % 7))
+}
+const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0)
+const r1 = (n: number) => Math.round(n * 10) / 10
+const trend = (first: number, last: number) => {
+  if (first === 0 && last === 0) return 'flat'
+  const change = last - first
+  const rel = first ? change / first : 1
+  if (Math.abs(rel) < 0.12) return 'steady'
+  return change > 0 ? 'up' : 'down'
 }
 
 Deno.serve(async (req) => {
@@ -33,67 +46,93 @@ Deno.serve(async (req) => {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user) return json({ error: 'not authenticated' }, 401)
 
-    const thisStart = addDays(date, -6) // last 7 days incl. today
-    const prevStart = addDays(date, -13)
-    const prevEnd = addDays(date, -7)
-
-    // gather both windows (RLS scopes to this user)
-    const [sessionsRes, setsRes, cardioRes, checkinRes] = await Promise.all([
-      supabase.from('planned_sessions').select('completed_at, split_day').gte('completed_at', prevStart + 'T00:00:00').not('completed_at', 'is', null),
-      supabase.from('planned_sets').select('logged_at, muscle_group').gte('logged_at', prevStart + 'T00:00:00').not('logged_reps', 'is', null),
-      supabase.from('cardio_logs').select('date, kind, distance_km, minutes, effort, amount').gte('date', prevStart),
-      supabase.from('recovery_checkins').select('created_at, muscle_group, amount').gte('created_at', prevStart + 'T00:00:00'),
-    ])
-
-    const inThis = (d: string) => d.slice(0, 10) >= thisStart && d.slice(0, 10) <= date
-    const inPrev = (d: string) => d.slice(0, 10) >= prevStart && d.slice(0, 10) <= prevEnd
-
-    function window(pred: (d: string) => boolean) {
-      const sessions = (sessionsRes.data ?? []).filter((s) => pred(s.completed_at)).map((s) => s.split_day)
-      const sets = (setsRes.data ?? []).filter((s) => pred(s.logged_at)).length
-      const cardio = (cardioRes.data ?? []).filter((c) => pred(c.date))
-      const km = cardio.reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
-      const min = cardio.reduce((n, c) => n + Number(c.minutes ?? 0), 0)
-      const overCardio = cardio.filter((c) => c.amount === 'over_the_line').length
-      const overLifts = (checkinRes.data ?? []).filter((c) => pred(c.created_at) && c.amount === 'over_the_line').map((c) => c.muscle_group)
-      return {
-        sessions: sessions.length,
-        splits: [...new Set(sessions)].join(', ') || 'none',
-        sets,
-        cardioSessions: cardio.length,
-        km: Math.round(km * 10) / 10,
-        min: Math.round(min),
-        overCardio,
-        overLifts: [...new Set(overLifts)].join(', ') || 'none',
-      }
+    const thisMonday = mondayOf(date)
+    const windowStart = addDays(thisMonday, -7 * (WEEKS - 1)) // 12 weekly buckets
+    const weekIdx = (d: string) => {
+      const i = Math.floor((Date.parse(d.slice(0, 10) + 'T00:00:00Z') - Date.parse(windowStart + 'T00:00:00Z')) / (7 * 86400000))
+      return i >= 0 && i < WEEKS ? i : -1
     }
 
-    const now = window(inThis)
-    const prev = window(inPrev)
+    const [sessionsRes, setsRes, cardioRes, checkinRes] = await Promise.all([
+      supabase.from('planned_sessions').select('completed_at').gte('completed_at', windowStart + 'T00:00:00').not('completed_at', 'is', null),
+      supabase.from('planned_sets').select('logged_at').gte('logged_at', windowStart + 'T00:00:00').not('logged_reps', 'is', null),
+      supabase.from('cardio_logs').select('date, distance_km, minutes, effort, body, amount').gte('date', windowStart),
+      supabase.from('recovery_checkins').select('created_at, muscle_group, recovery, effort, amount').gte('created_at', windowStart + 'T00:00:00'),
+    ])
 
-    const prompt = `You comment on someone's physical training. Be kind but truthful.
-Compare this week against last week.
+    // weekly series (oldest -> newest)
+    const sessions = Array(WEEKS).fill(0)
+    const sets = Array(WEEKS).fill(0)
+    const cardioKm = Array(WEEKS).fill(0)
+    const cardioN = Array(WEEKS).fill(0)
+    for (const s of sessionsRes.data ?? []) { const i = weekIdx(s.completed_at); if (i >= 0) sessions[i]++ }
+    for (const s of setsRes.data ?? []) { const i = weekIdx(s.logged_at); if (i >= 0) sets[i]++ }
+    for (const c of cardioRes.data ?? []) {
+      const i = weekIdx(c.date)
+      if (i >= 0) { cardioKm[i] += Number(c.distance_km ?? 0); cardioN[i]++ }
+    }
 
-This week (last 7 days):
-  gym sessions finished: ${now.sessions} (${now.splits}), hard sets logged: ${now.sets}
-  cardio: ${now.cardioSessions} sessions, ${now.km} km, ${now.min} min
-  flagged "too much": lifts ${now.overLifts}, cardio ${now.overCardio}
+    const activeWeeks = sessions.map((_, i) => sessions[i] + sets[i] + cardioN[i]).filter((n) => n > 0).length
+    if (activeWeeks < 2) return json({ comment: '', noData: true })
 
-Last week (the 7 days before that):
-  gym sessions finished: ${prev.sessions} (${prev.splits}), hard sets logged: ${prev.sets}
-  cardio: ${prev.cardioSessions} sessions, ${prev.km} km, ${prev.min} min
-  flagged "too much": lifts ${prev.overLifts}, cardio ${prev.overCardio}
+    // averages over active weeks, and first-half vs second-half trend
+    const activeAvg = (arr: number[]) => {
+      const active = arr.filter((v, i) => sessions[i] + sets[i] + cardioN[i] > 0)
+      return r1(avg(active))
+    }
+    const half = (arr: number[], side: 0 | 1) => avg(arr.slice(side * 6, side * 6 + 6))
+    const trends = {
+      sessions: trend(half(sessions, 0), half(sessions, 1)),
+      sets: trend(half(sets, 0), half(sets, 1)),
+      cardioKm: trend(half(cardioKm, 0), half(cardioKm, 1)),
+    }
 
-Write 2 to 3 sentences:
-- Name at least one real number and one real comparison (up, down, or steady).
-- If this week is lower, say so plainly but without blame - a lighter week can be
-  smart, and rest is training too. If it's higher, acknowledge the work honestly.
-- If something was flagged "too much", gently note easing there.
-- End with one small, concrete thing to aim for next week.
+    // feedback patterns
+    const AMT = ['could_take_more', 'right', 'stretch', 'over_the_line']
+    const byMuscle: Record<string, Record<string, number>> = {}
+    for (const c of checkinRes.data ?? []) {
+      if (!c.amount) continue
+      byMuscle[c.muscle_group] ??= {}
+      byMuscle[c.muscle_group][c.amount] = (byMuscle[c.muscle_group][c.amount] ?? 0) + 1
+    }
+    const muscleLines = Object.entries(byMuscle).map(([m, counts]) => {
+      const dom = AMT.filter((a) => counts[a]).sort((a, b) => counts[b] - counts[a])[0]
+      const total = Object.values(counts).reduce((a, b) => a + b, 0)
+      return `${m}: mostly "${dom.replace(/_/g, ' ')}" (${counts[dom]}/${total})`
+    })
+    const cardioFeel: Record<string, number> = {}
+    for (const c of cardioRes.data ?? []) {
+      for (const f of [c.effort, c.body, c.amount]) if (f) cardioFeel[f] = (cardioFeel[f] ?? 0) + 1
+    }
+    const cardioFeelLine =
+      Object.entries(cardioFeel).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k.replace(/_/g, ' ')} ×${n}`).join(', ') || 'none logged'
 
-Rules: kind but honest, never flattering or fake-positive. Never use the words
-failed, missed, only, just, should, behind, lazy, or "great job" / "keep it up".
-No exclamation marks, no emoji, no preamble. Reply with the sentences and nothing else.`
+    const prompt = `You read someone's training over time and name the real pattern. Kind but truthful.
+Data covers up to ${WEEKS} weeks; ${activeWeeks} of them had activity.
+
+Weekly series, oldest to newest (${WEEKS} numbers each):
+  gym sessions: [${sessions.join(', ')}]
+  hard sets:    [${sets.join(', ')}]
+  cardio km:    [${cardioKm.map(r1).join(', ')}]
+
+Average per active week: ${activeAvg(sessions)} sessions, ${activeAvg(sets)} hard sets, ${activeAvg(cardioKm)} km cardio.
+Trend (first half vs second half): sessions ${trends.sessions}, hard sets ${trends.sets}, cardio ${trends.cardioKm}.
+
+Feedback you logged:
+  recovery by muscle: ${muscleLines.join('; ') || 'none yet'}
+  cardio felt: ${cardioFeelLine}
+
+Write 2 to 3 sentences that name the clearest PATTERN over these weeks (not a single
+week). Use a real number, average, or trend, and bring in the logged feedback where it
+fits (for example a muscle that keeps saying "over the line", or cardio that trends up).
+If the pattern is a decline or a plateau, say it plainly but without blame - a lighter
+stretch can be smart, and rest is part of training. End with one small, concrete thing
+to aim for.
+
+Rules: kind but honest, never flattering or fake-positive. Never use the words failed,
+missed, only, just, should, behind, lazy, or "great job" / "keep it up". No exclamation
+marks, no emoji, no preamble. If there are just a few weeks of data, say the pattern is
+still forming. Reply with the sentences and nothing else.`
 
     let comment: string | null = null
     for (const model of GEMINI_MODELS) {
@@ -110,9 +149,7 @@ No exclamation marks, no emoji, no preamble. Reply with the sentences and nothin
       if (res.status !== 503 && res.status !== 429) break
     }
     if (!comment) return json({ error: 'AI unavailable' }, 502)
-
-    const noData = now.sessions + now.sets + now.cardioSessions + prev.sessions + prev.sets + prev.cardioSessions === 0
-    return json({ comment, noData })
+    return json({ comment, weeks: activeWeeks })
   } catch (err) {
     return json({ error: String(err) }, 500)
   }

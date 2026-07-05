@@ -43,7 +43,7 @@ export async function flushMessageQueue(): Promise<number> {
   return sent
 }
 
-/** On-demand, kind-but-truthful comment on training, this week vs last. */
+/** On-demand, kind-but-truthful read of the training PATTERN over ~12 weeks. */
 export async function trainingReflection(): Promise<{ comment: string; noData: boolean }> {
   const { data, error } = await supabase.functions.invoke<{ comment?: string; noData?: boolean; error?: string }>(
     'training-reflection',

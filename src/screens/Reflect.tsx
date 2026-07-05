@@ -120,7 +120,7 @@ export default function Reflect() {
     try {
       const { comment, noData } = await trainingReflection()
       if (noData) {
-        setTrainingErr('Nothing logged in the last two weeks yet. Train a little and check back.')
+        setTrainingErr('A pattern needs at least a couple of active weeks. Keep logging and check back.')
       } else {
         setTraining(comment)
         localStorage.setItem(TRAINING_CACHE, JSON.stringify({ date: localDate(), comment }))
@@ -253,11 +253,14 @@ export default function Reflect() {
 
       <section className="reflect-bars training-card">
         <div className="explore-inner">
-          <h2>How’s your training going?</h2>
+          <h2>Training patterns</h2>
           {training && <p className="reflection-body training-body">{training}</p>}
           {trainingErr && <p className="gentle">{trainingErr}</p>}
+          {!training && !trainingErr && (
+            <p className="gentle">A read on your trend over the last ~12 weeks, feedback included.</p>
+          )}
           <button className="training-btn" onClick={askTraining} disabled={trainingBusy}>
-            {trainingBusy ? 'Thinking…' : training ? 'Refresh (this week vs last)' : '✨ Compare this week to last'}
+            {trainingBusy ? 'Reading your history…' : training ? 'Refresh' : '✨ Find my training pattern'}
           </button>
         </div>
       </section>
