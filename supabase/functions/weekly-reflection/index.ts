@@ -50,17 +50,18 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { date, weekday } = userNow()
-    const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
-    const prevStart = addDays(weekStart, -7)
-    const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-    const prevDates = Array.from({ length: 7 }, (_, i) => addDays(prevStart, i))
-    const allDates = [...prevDates, ...weekDates]
-
     const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 10 })
     const results: Record<string, string> = {}
 
     for (const user of usersPage?.users ?? []) {
+      // each user's week runs in their own timezone
+      const { data: us } = await supabase.from('user_settings').select('timezone').eq('user_id', user.id).maybeSingle()
+      const { date, weekday } = userNow(us?.timezone)
+      const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
+      const prevStart = addDays(weekStart, -7)
+      const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+      const prevDates = Array.from({ length: 7 }, (_, i) => addDays(prevStart, i))
+      const allDates = [...prevDates, ...weekDates]
       const { data: routines } = await supabase
         .from('routines')
         .select('id, name, tasks(id, label, tier, scheduled_days)')
@@ -175,7 +176,7 @@ Study Time the same 9am slot where 4 of its 5 completions happened?"`
       results[user.id] = body
     }
 
-    return json({ week_start: weekStart, reflected: Object.keys(results).length })
+    return json({ reflected: Object.keys(results).length })
   } catch (err) {
     console.error('weekly-reflection error:', err)
     return json({ error: String(err) }, 500)

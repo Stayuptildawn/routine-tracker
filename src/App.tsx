@@ -10,6 +10,8 @@ import Gym from './screens/Gym'
 import History from './screens/History'
 import Reflect from './screens/Reflect'
 import Reminders from './screens/Reminders'
+import Settings from './screens/Settings'
+import type { Theme } from './screens/Settings'
 
 // 'reminders' is a sub-view of Now (reached via "See all"), not a sixth tab
 type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect' | 'reminders'
@@ -47,15 +49,13 @@ async function seedIfEmpty() {
   }
 }
 
-type Theme = 'auto' | 'light' | 'dark'
-const THEME_LABEL: Record<Theme, string> = { auto: '🌗 Auto', light: '☀️ Light', dark: '🌙 Dark' }
-
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
   const [seeding, setSeeding] = useState(true)
   const [tab, setTab] = useState<Tab>('now')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     if (theme === 'auto') {
@@ -129,14 +129,14 @@ export default function App() {
             <span className="tab-label">{t.label}</span>
           </button>
         ))}
-        <button
-          className="theme-toggle"
-          onClick={() => setTheme(theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto')}
-          title="Theme: follows system by default"
-        >
-          {THEME_LABEL[theme]}
+        <button className="settings-rail" onClick={() => setSettingsOpen(true)} title="Settings">
+          ⚙️ Settings
         </button>
       </nav>
+      <button className="settings-fab" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
+        ⚙️
+      </button>
+      {settingsOpen && <Settings theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }

@@ -15,6 +15,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { interpretAndApply, describeApplied } from '../_shared/interpret.ts'
+import { userNow } from '../_shared/localtime.ts'
 
 const ok = () => new Response('ok') // Telegram retries anything else - always 200
 
@@ -28,22 +29,6 @@ async function reply(chatId: number, text: string) {
   } catch (err) {
     console.error('sendMessage failed:', err) // best effort - never take the handler down
   }
-}
-
-/** Today's yyyy-mm-dd and ISO weekday (1=Mon) in the user's timezone. */
-function localToday(): { date: string; weekday: number } {
-  let tz = Deno.env.get('USER_TIMEZONE') ?? 'UTC'
-  try {
-    new Intl.DateTimeFormat('en-CA', { timeZone: tz })
-  } catch {
-    console.error(`invalid USER_TIMEZONE "${tz}" - falling back to UTC`)
-    tz = 'UTC' // a UTC date beats a dead bot
-  }
-  const now = new Date()
-  const date = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
-  const day = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(now)
-  const weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(day) + 1
-  return { date, weekday }
 }
 
 Deno.serve(async (req) => {
@@ -91,7 +76,12 @@ Deno.serve(async (req) => {
       return ok()
     }
 
-    const { date, weekday } = localToday()
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('timezone')
+      .eq('user_id', link.user_id)
+      .maybeSingle()
+    const { date, weekday } = userNow(settings?.timezone)
     const result = await interpretAndApply(supabase, link.user_id, text, date, weekday)
 
     if (result.error) {

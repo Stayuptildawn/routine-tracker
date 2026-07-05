@@ -13,7 +13,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'
-import { userNow } from '../_shared/localtime.ts'
+import { addDays, userNow } from '../_shared/localtime.ts'
 
 const WINDOW_MIN = 15 // must match the cron cadence
 const REMINDER_WINDOW_START = 9 * 60 // due-today reminders go out after 09:00 local
@@ -34,7 +34,15 @@ Deno.serve(async (req) => {
       Deno.env.get('VAPID_PRIVATE_KEY')!,
     )
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { date, weekday, minutes } = userNow()
+
+    // each user lives in their own timezone
+    const { data: settingsRows } = await supabase.from('user_settings').select('user_id, timezone')
+    const tzOf = new Map((settingsRows ?? []).map((r) => [r.user_id, r.timezone]))
+    const nowCache = new Map<string, { date: string; weekday: number; minutes: number }>()
+    const nowFor = (userId: string) => {
+      if (!nowCache.has(userId)) nowCache.set(userId, userNow(tzOf.get(userId)))
+      return nowCache.get(userId)!
+    }
 
     const { data: routines } = await supabase
       .from('routines')
@@ -43,6 +51,7 @@ Deno.serve(async (req) => {
 
     let sent = 0
     for (const routine of routines ?? []) {
+      const { date, weekday, minutes } = nowFor(routine.user_id)
       const [h, m] = (routine.anchor_time as string).split(':').map(Number)
       const anchorMin = h * 60 + m
       // fire in the window just after the anchor; one cron tick wide
@@ -95,17 +104,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // due-today reminders: one push each, in the first morning tick.
-    // "Due today", never "overdue" - the invitation framing holds here too.
-    if (minutes >= REMINDER_WINDOW_START && minutes < REMINDER_WINDOW_START + WINDOW_MIN) {
+    // due-today reminders: one push each, in the first morning tick of the
+    // user's own timezone. "Due today", never "overdue".
+    {
+      const utcToday = new Date().toISOString().slice(0, 10)
       const { data: dueReminders } = await supabase
         .from('reminders')
-        .select('id, user_id, raw_text')
-        .eq('due_date', date)
+        .select('id, user_id, raw_text, due_date, nudged_at')
         .in('status', ['auto', 'reassigned'])
-        .or(`nudged_at.is.null,nudged_at.lt.${date}T00:00:00`)
+        .gte('due_date', addDays(utcToday, -1))
+        .lte('due_date', addDays(utcToday, 1))
       const byUser = new Map<string, { id: string; raw_text: string }[]>()
       for (const r of dueReminders ?? []) {
+        const { date, minutes } = nowFor(r.user_id)
+        if (r.due_date !== date) continue // not "today" where this user lives
+        if (minutes < REMINDER_WINDOW_START || minutes >= REMINDER_WINDOW_START + WINDOW_MIN) continue
+        if (r.nudged_at && r.nudged_at >= date + 'T00:00:00') continue // already nudged today
         const list = byUser.get(r.user_id) ?? []
         list.push(r)
         byUser.set(r.user_id, list)
@@ -148,7 +162,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ date, minutes, sent })
+    return json({ sent })
   } catch (err) {
     console.error('send-nudges error:', err)
     return json({ error: String(err) }, 500)
