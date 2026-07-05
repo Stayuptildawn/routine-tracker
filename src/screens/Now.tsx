@@ -256,15 +256,15 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
           rows={2}
         />
         <div className="composer-buttons">
+          <button className="send" onClick={send} disabled={busy || !message.trim()}>
+            {busy ? '…' : 'Send'}
+          </button>
           <button
             className={listening ? 'voice listening' : 'voice'}
             onClick={() => (listening ? recognitionRef.current?.stop() : startVoice())}
             title="Voice input"
           >
             🎤
-          </button>
-          <button className="send" onClick={send} disabled={busy || !message.trim()}>
-            {busy ? '…' : 'Send'}
           </button>
         </div>
       </div>

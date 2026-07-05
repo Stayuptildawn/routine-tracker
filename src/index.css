@@ -295,6 +295,7 @@ select {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-2);
+  margin-bottom: var(--sp-3); /* keep the gear well clear of the composer buttons */
 }
 
 .settings-inline {
