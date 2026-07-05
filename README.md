@@ -47,6 +47,14 @@ more people than just me. So if you have an idea, I'm happy to hear it. And if
 the project is useful to you and you want to help keep it going, suggestions
 and donations are both welcome.
 
+## This app is made for you if:
+
+...you feel, like me, that building an app like this from scratch and washing
+the dishes land at the same spot on the scale, because the size of the task was
+never the hard part, just getting yourself to *execute* it is. If a five-minute
+chore and a five-week project feel equally heavy to start, then this was built
+for us. :)
+
 ## What it does
 
 **One message box, reachable from anywhere.**
