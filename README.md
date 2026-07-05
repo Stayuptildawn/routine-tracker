@@ -165,6 +165,36 @@ per-user timezones, per-user Telegram links, onboarding instead of my seed
 routines. For its actual job — one person, zero dollars — the headroom is
 enormous.
 
+## Is your data safe?
+
+Short version: yes, and I actually checked instead of assuming.
+
+**What holds up.** Every table in the database is locked to its owner. That's
+not the app being polite about it — it's Postgres itself (Row Level Security)
+refusing to hand your rows to anyone else, one layer below the app. So even if
+I wrote a bug that asked for "everyone's reminders," the database would still
+only ever give you yours. I went through every single table and confirmed it,
+including the awkward ones that don't store an owner directly and have to prove
+it through a join. The key that ships inside the app is public on purpose —
+that's just how Supabase works, and it unlocks nothing without you logged in.
+The secrets that actually matter (the AI key, the admin key, the push and bot
+tokens) live only on the server and never touch the code you download. It's
+all over HTTPS, the app never renders raw HTML so the usual injection tricks
+have almost nothing to grab, and the AI only ever touches your own data — so
+even a weird message can't reach past your account.
+
+**Where I'll be honest about the limits.** This is a personal project I host
+myself, not something a security firm has audited. The per-user isolation
+holds up fine at the database level, but a couple of pieces (the Telegram bot)
+still assume it's just me. A few background jobs run with elevated access and
+lean on my code to stay scoped to the right person, which is the one spot that
+needs care rather than trusting the database to catch a slip. And GitHub Pages
+won't let me set a couple of the belt-and-suspenders headers I'd add if I ran
+the server myself.
+
+None of that keeps me up at night for what this is, but I'd rather say it
+plainly than pretend it's Fort Knox.
+
 ## Setup
 
 ### 1. Supabase project
