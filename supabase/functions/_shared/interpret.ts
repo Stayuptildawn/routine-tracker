@@ -198,7 +198,7 @@ User message: "${text}"`
       const { data: log, error } = await supabase
         .from('task_logs')
         .upsert(
-          { task_id: candidate.id, date, status, completed_via: 'ai_text', notes: action.notes ?? null },
+          { task_id: candidate.id, date, status, completed_via: 'ai_text', notes: action.notes ?? null, logged_at: new Date().toISOString() },
           { onConflict: 'task_id,date' },
         )
         .select('id')

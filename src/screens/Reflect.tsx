@@ -21,17 +21,25 @@ const METRICS: { id: Metric; label: string; unit: string }[] = [
   { id: 'cardio', label: '🏃 Cardio', unit: ' km' },
 ]
 
-// every range ends today / this week / this month
+// every range ends now / today / this week / this month
 const FRAMES: { id: Frame; label: string; hint: string }[] = [
-  { id: 'daily', label: 'D', hint: 'last 30 days' },
-  { id: 'weekly', label: 'W', hint: 'last 26 weeks' },
-  { id: 'monthly', label: 'M', hint: 'last 3 years, monthly' },
-  { id: 'half', label: '6M', hint: 'last 3 years in half-years' },
-  { id: 'yearly', label: 'Y', hint: 'the last 12 months' },
+  { id: 'daily', label: 'D', hint: 'last 24 hours' },
+  { id: 'weekly', label: 'W', hint: 'last 7 days' },
+  { id: 'monthly', label: 'M', hint: 'last 32 days' },
+  { id: 'half', label: '6M', hint: 'last 6 months, weekly' },
+  { id: 'yearly', label: 'Y', hint: 'last 12 months' },
 ]
 
+const FRAME_BUCKET: Record<Frame, string> = {
+  daily: 'hour',
+  weekly: 'day',
+  monthly: 'day',
+  half: 'week',
+  yearly: 'month',
+}
+
 interface Slot {
-  key: string // bucket start, yyyy-mm-dd (as the RPC returns it)
+  key: string // bucket start: yyyy-mm-dd, or yyyy-mm-ddThh for hour buckets (UTC)
   label: string // sparse axis label, '' = unlabeled
 }
 
@@ -40,12 +48,29 @@ function buildSlots(frame: Frame): Slot[] {
   const slots: Slot[] = []
   const dm = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`
   if (frame === 'daily') {
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
-      slots.push({ key: localDate(d), label: i % 7 === 0 ? dm(d) : '' })
+    // 24 hourly buckets ending with the current hour; keys in UTC to match
+    // the database's hour truncation, labels in local time
+    const hour = new Date()
+    hour.setMinutes(0, 0, 0)
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(hour)
+      d.setHours(d.getHours() - i)
+      slots.push({ key: d.toISOString().slice(0, 13), label: i % 6 === 0 ? `${d.getHours()}h` : '' })
     }
   } else if (frame === 'weekly') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      slots.push({ key: localDate(d), label: d.toLocaleDateString(undefined, { weekday: 'narrow' }) })
+    }
+  } else if (frame === 'monthly') {
+    for (let i = 31; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      slots.push({ key: localDate(d), label: i % 7 === 3 ? dm(d) : '' })
+    }
+  } else if (frame === 'half') {
+    // ~6 months as Monday-to-Sunday weeks
     const monday = new Date(today)
     monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
     for (let i = 25; i >= 0; i--) {
@@ -53,22 +78,10 @@ function buildSlots(frame: Frame): Slot[] {
       d.setDate(d.getDate() - i * 7)
       slots.push({ key: localDate(d), label: i % 5 === 0 ? dm(d) : '' })
     }
-  } else if (frame === 'monthly') {
-    for (let i = 35; i >= 0; i--) {
-      const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
-      slots.push({ key: localDate(d), label: i % 6 === 0 ? `${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}` : '' })
-    }
-  } else if (frame === 'yearly') {
+  } else {
     for (let i = 11; i >= 0; i--) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
       slots.push({ key: localDate(d), label: d.toLocaleDateString(undefined, { month: 'narrow' }) })
-    }
-  } else {
-    // half-years: the six 6-month blocks containing today, aligned Jan/Jul
-    const startMonth = today.getMonth() < 6 ? 0 : 6
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(today.getFullYear(), startMonth - i * 6, 1)
-      slots.push({ key: localDate(d), label: `${d.getMonth() === 0 ? 'H1' : 'H2'}’${String(d.getFullYear()).slice(2)}` })
     }
   }
   return slots
@@ -91,26 +104,18 @@ export default function Reflect() {
     let cancelled = false
     setExplore(null)
     const slots = buildSlots(frame)
-    const bucket = frame === 'daily' ? 'day' : frame === 'weekly' ? 'week' : 'month'
-    supabase.rpc('explore_buckets', { metric, bucket, start_date: slots[0].key }).then(({ data }) => {
+    const bucket = FRAME_BUCKET[frame]
+    const startTs = frame === 'daily' ? slots[0].key + ':00:00' : slots[0].key + 'T00:00:00'
+    supabase.rpc('explore_buckets', { metric, bucket, start_ts: startTs }).then(({ data }) => {
       if (cancelled) return
-      const byKey = new Map<string, number>(
-        ((data as { b: string; v: number }[]) ?? []).map((r) => [r.b, Number(r.v)]),
-      )
-      let values: number[]
-      if (frame === 'half') {
-        values = slots.map((s) => {
-          const start = new Date(s.key + 'T00:00:00')
-          let sum = 0
-          for (let m = 0; m < 6; m++) {
-            sum += byKey.get(localDate(new Date(start.getFullYear(), start.getMonth() + m, 1))) ?? 0
-          }
-          return sum
-        })
-      } else {
-        values = slots.map((s) => byKey.get(s.key) ?? 0)
+      // the RPC returns naive timestamps; keys match on hour or day precision
+      const cut = frame === 'daily' ? 13 : 10
+      const byKey = new Map<string, number>()
+      for (const r of ((data as { b: string; v: number }[]) ?? [])) {
+        const k = r.b.slice(0, cut)
+        byKey.set(k, (byKey.get(k) ?? 0) + Number(r.v))
       }
-      setExplore({ slots, values })
+      setExplore({ slots, values: slots.map((s) => byKey.get(s.key) ?? 0) })
     })
     return () => {
       cancelled = true

@@ -87,7 +87,10 @@ export async function setTaskStatus(
   try {
     const { error } = await supabase
       .from('task_logs')
-      .upsert({ task_id: taskId, date, status, completed_via: via }, { onConflict: 'task_id,date' })
+      .upsert(
+        { task_id: taskId, date, status, completed_via: via, logged_at: new Date().toISOString() },
+        { onConflict: 'task_id,date' },
+      )
     if (error) throw error
     return 'saved'
   } catch (err) {
@@ -117,7 +120,7 @@ export async function flushTapQueue(): Promise<number> {
       const { error } = await supabase
         .from('task_logs')
         .upsert(
-          { task_id: tap.task_id, date: tap.date, status: tap.status, completed_via: tap.via },
+          { task_id: tap.task_id, date: tap.date, status: tap.status, completed_via: tap.via, logged_at: new Date().toISOString() },
           { onConflict: 'task_id,date' },
         )
       // server rejected it (e.g. the task was deleted meanwhile) - drop it,
