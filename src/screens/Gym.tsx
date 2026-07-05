@@ -501,10 +501,12 @@ export default function Gym() {
         const thisWeek = cardio.filter((c) => mondayOf(c.date) === thisMonday)
         const weekKm = thisWeek.reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
         const weekMin = thisWeek.reduce((n, c) => n + Number(c.minutes ?? 0), 0)
-        // last 8 Monday-to-Sunday weeks, numbered 1..8 (8 = this week),
-        // each bar stacked by activity kind
+        // last 8 Monday-to-Sunday weeks, stacked by activity kind. Labels use
+        // the training block's week numbers (this week = block week N);
+        // weeks from before the block stay unnumbered.
         const KIND_ORDER = ['run', 'walk', 'cycle', 'swim', 'other']
-        const weeks: { num: number; kinds: Map<string, number>; total: number; now: boolean }[] = []
+        const blockMonday = block ? mondayOf(block.start_date) : null
+        const weeks: { num: string; kinds: Map<string, number>; total: number; now: boolean }[] = []
         for (let i = 7; i >= 0; i--) {
           const d = new Date(thisMonday + 'T00:00:00')
           d.setDate(d.getDate() - i * 7)
@@ -518,7 +520,15 @@ export default function Gym() {
             kinds.set(kind, (kinds.get(kind) ?? 0) + km)
           }
           const total = [...kinds.values()].reduce((a, b) => a + b, 0)
-          weeks.push({ num: 8 - i, kinds, total, now: monday === thisMonday })
+          let num = ''
+          if (blockMonday) {
+            const wk =
+              Math.round((new Date(monday + 'T00:00:00').getTime() - new Date(blockMonday + 'T00:00:00').getTime()) / (7 * 86400000)) + 1
+            if (wk >= 1) num = String(wk)
+          } else if (i === 0) {
+            num = 'now'
+          }
+          weeks.push({ num, kinds, total, now: monday === thisMonday })
         }
         const maxKm = Math.max(1, ...weeks.map((w) => w.total))
         const presentKinds = KIND_ORDER.filter((k) => weeks.some((w) => w.kinds.has(k)))
@@ -569,11 +579,11 @@ export default function Gym() {
             {weeks.some((w) => w.total > 0) && (
               <>
                 <div className="run-weeks">
-                  {weeks.map((w) => (
+                  {weeks.map((w, i) => (
                     <div
-                      key={w.num}
+                      key={i}
                       className="reflect-day"
-                      title={`week ${w.num}: ${[...w.kinds.entries()].map(([k, v]) => `${k} ${Math.round(v * 10) / 10}km`).join(', ') || 'nothing'}`}
+                      title={`${w.num ? `block week ${w.num}` : 'before the block'}: ${[...w.kinds.entries()].map(([k, v]) => `${k} ${Math.round(v * 10) / 10}km`).join(', ') || 'nothing'}`}
                     >
                       <div className="bar-wrap run-bar-wrap">
                         <div className={w.now ? 'run-stack now' : 'run-stack'}>
