@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
             .select('split_day, completed_at, week_number')
             .eq('user_id', user.id)
             .gte('completed_at', weekStart + 'T00:00:00'),
-          supabase.from('cardio_logs').select('kind, minutes, distance_km, date').eq('user_id', user.id).gte('date', weekStart),
+          supabase.from('cardio_logs').select('kind, minutes, distance_km, date, effort, body, amount').eq('user_id', user.id).gte('date', weekStart),
           supabase.from('recovery_checkins').select('muscle_group, amount').eq('user_id', user.id).gte('created_at', weekStart + 'T00:00:00'),
           supabase.from('reminders').select('status, created_at, updated_at').eq('user_id', user.id).gte('updated_at', weekStart + 'T00:00:00'),
         ])
@@ -125,6 +125,10 @@ Deno.serve(async (req) => {
       const cardioKm = (cardio ?? []).reduce((n, c) => n + Number(c.distance_km ?? 0), 0)
       const cardioMin = (cardio ?? []).reduce((n, c) => n + Number(c.minutes ?? 0), 0)
       const flags = (checkins ?? []).filter((c) => c.amount === 'over_the_line').map((c) => c.muscle_group)
+      const cardioFeel = (cardio ?? [])
+        .filter((c) => c.effort || c.body || c.amount)
+        .map((c) => `${c.kind}: ${[c.effort, c.body, c.amount].filter(Boolean).join('/')}`)
+        .join('; ')
       const remindersDone = (reminders ?? []).filter((r) => r.status === 'done').length
 
       const prompt = `You write a tiny weekly reflection for someone with AuDHD who tracks daily routines.
@@ -137,6 +141,7 @@ Energy check-ins: ${energyLine || 'none set'}
 Training: ${doneSessions.length} session(s) finished (${doneSessions.map((s) => s.split_day).join(', ') || 'none'})
 Cardio: ${cardioKm > 0 ? `${Math.round(cardioKm * 10) / 10} km` : ''}${cardioMin > 0 ? ` ${Math.round(cardioMin)} min total` : ''}${cardioKm + cardioMin === 0 ? 'none logged' : ''}
 Recovery flags ("too much" answers): ${flags.join(', ') || 'none'}
+Cardio feel (effort/body/amount per entry): ${cardioFeel || 'not asked'}
 Reminders completed: ${remindersDone}
 
 Write EXACTLY two sentences:

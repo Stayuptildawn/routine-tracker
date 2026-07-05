@@ -63,6 +63,9 @@ export interface CardioLog {
   minutes: number | null
   distance_km: number | null
   notes: string | null
+  effort?: string | null // easy | steady | pushed | all_out
+  body?: string | null // fresh | okay | heavy
+  amount?: string | null // could_take_more | right | stretch | over_the_line
 }
 
 export interface AppliedAction {

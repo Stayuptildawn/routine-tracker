@@ -15,6 +15,39 @@ const CARDIO_KINDS = [
   ['swim', '🏊 Swim'],
 ] as const
 
+// the strength check-in questions, adapted to cardio - saved per entry
+const CARDIO_QUESTIONS: { field: 'effort' | 'body' | 'amount'; label: string; options: [string, string][] }[] = [
+  {
+    field: 'effort',
+    label: 'How hard did it feel?',
+    options: [
+      ['easy', 'Easy'],
+      ['steady', 'Steady'],
+      ['pushed', 'Pushed'],
+      ['all_out', 'All out'],
+    ],
+  },
+  {
+    field: 'body',
+    label: 'How was the body?',
+    options: [
+      ['fresh', 'Fresh'],
+      ['okay', 'Okay'],
+      ['heavy', 'Heavy'],
+    ],
+  },
+  {
+    field: 'amount',
+    label: 'How was the amount?',
+    options: [
+      ['could_take_more', 'Could take more'],
+      ['right', 'Right'],
+      ['stretch', 'A stretch'],
+      ['over_the_line', 'Over the line'],
+    ],
+  },
+]
+
 /** minutes over km -> "6:24 /km" */
 function fmtPace(minutes: number | null, km: number | null): string | null {
   if (!minutes || !km || km <= 0) return null
@@ -179,17 +212,38 @@ export default function Gym() {
     if (loggingRun || (!Number.isFinite(km) && !Number.isFinite(min))) return
     setLoggingRun(true)
     try {
-      await supabase.from('cardio_logs').insert({
-        date: localDate(),
-        kind: run.kind,
-        distance_km: Number.isFinite(km) ? km : null,
-        minutes: Number.isFinite(min) ? min : null,
-      })
+      const { data: row } = await supabase
+        .from('cardio_logs')
+        .insert({
+          date: localDate(),
+          kind: run.kind,
+          distance_km: Number.isFinite(km) ? km : null,
+          minutes: Number.isFinite(min) ? min : null,
+        })
+        .select('id')
+        .single()
       setRun({ ...run, km: '', min: '' })
       await load()
+      // offer the check-in right away - each pill saves on tap, closing skips
+      if (row) {
+        setEditCardio({
+          id: row.id,
+          kind: run.kind,
+          km: Number.isFinite(km) ? String(km) : '',
+          min: Number.isFinite(min) ? String(min) : '',
+          notes: '',
+        })
+      }
     } finally {
       setLoggingRun(false)
     }
+  }
+
+  async function setCardioFeel(id: string, field: 'effort' | 'body' | 'amount', value: string) {
+    const current = cardio.find((c) => c.id === id)?.[field]
+    const next = current === value ? null : value // tap again to unset
+    setCardio((prev) => prev.map((c) => (c.id === id ? { ...c, [field]: next } : c)))
+    await supabase.from('cardio_logs').update({ [field]: next }).eq('id', id)
   }
 
   async function saveCardio() {
@@ -517,6 +571,47 @@ export default function Gym() {
               </p>
             )}
 
+            {(() => {
+              const recent = cardio.filter(
+                (c) => Date.now() - new Date(c.date + 'T00:00:00').getTime() < 14 * 86400000,
+              )
+              const over = recent.filter((c) => c.amount === 'over_the_line').length
+              const more = recent.filter((c) => c.amount === 'could_take_more').length
+              if (over >= 2 && !localStorage.getItem('cardio-sugg-over')) {
+                return (
+                  <div className="notice vol-suggestion">
+                    Cardio has said “over the line” a couple of times lately — an easier week is a fine plan.
+                    <button
+                      className="link"
+                      onClick={() => {
+                        localStorage.setItem('cardio-sugg-over', '1')
+                        load()
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )
+              }
+              if (more >= 2 && over === 0 && !localStorage.getItem('cardio-sugg-more')) {
+                return (
+                  <div className="notice vol-suggestion">
+                    Cardio keeps saying “could take more” — want to nudge the distance up a little?
+                    <button
+                      className="link"
+                      onClick={() => {
+                        localStorage.setItem('cardio-sugg-more', '1')
+                        load()
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )
+              }
+              return null
+            })()}
+
             {cardio.slice(0, 12).map((c) => {
               const pace = fmtPace(Number(c.minutes), Number(c.distance_km))
               if (editCardio?.id === c.id) {
@@ -552,12 +647,28 @@ export default function Gym() {
                         onChange={(e) => setEditCardio({ ...editCardio, notes: e.target.value })}
                       />
                     </div>
+                    {CARDIO_QUESTIONS.map((q) => (
+                      <div key={q.field} className="checkin-q">
+                        <span className="energy-label">{q.label}</span>
+                        <div className="checkin-pills">
+                          {q.options.map(([value, label]) => (
+                            <button
+                              key={value}
+                              className={c[q.field] === value ? 'energy-btn active' : 'energy-btn'}
+                              onClick={() => setCardioFeel(c.id, q.field, value)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                     <div className="edit-task-row">
                       <button className="save" onClick={saveCardio}>
                         Save
                       </button>
                       <button className="link" onClick={() => setEditCardio(null)}>
-                        Cancel
+                        Close
                       </button>
                       <button className="danger" onClick={() => deleteCardio(c.id)}>
                         Delete
