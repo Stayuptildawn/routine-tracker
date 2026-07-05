@@ -45,6 +45,12 @@ menus. If the friction of just keeping up with your own life bothers you at
 all, this was made to take that friction away, and that is not a
 neurodivergent-only problem.
 
+I built it around my own brain first, but I'm nowhere near done with it. I'm
+actively expanding it, and I'd like it to fit more people than just me. So if
+you've got an idea, I'm honestly happy to hear it, and if the project is useful
+to you and you want to help keep it going, both suggestions and donations are
+welcome.
+
 ## What it does
 
 **One message box, reachable from anywhere.**
