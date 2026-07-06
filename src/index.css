@@ -1358,6 +1358,11 @@ select option {
   font-size: var(--fs-sm);
 }
 
+.session-date-today {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* ---------- session day view ---------- */
 .session-list {
   flex: 1;

@@ -58,6 +58,10 @@ type CheckinDraft = Partial<Record<'recovery' | 'effort' | 'amount', string>>
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
+/** "Jul 4, 2026" from a yyyy-mm-dd string. */
+const fmtDate = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+
 /** Full-screen day view: every exercise with its set rows, RP-style overview. */
 export default function Session({ session, plans, onExit }: Props) {
   const [sets, setSets] = useState<PlannedSet[]>([])
@@ -91,10 +95,6 @@ export default function Session({ session, plans, onExit }: Props) {
       .channel(`session-${session.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'planned_sets' }, load)
       .subscribe()
-    // stamp the start date so NL logging knows this session is open today
-    if (!session.date) {
-      runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { date: localDate() } }).catch(() => {})
-    }
     // earlier check-in answers come back, so a reopened session never looks
     // unlogged (and saves update, not duplicate)
     supabase
@@ -164,6 +164,19 @@ export default function Session({ session, plans, onExit }: Props) {
       setLastTime(map)
     })
   }, [sets.length > 0, session.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // An empty session (nothing logged yet) is always "today" — restamp it so a
+  // fresh workout is dated the day it's actually done, not the day the card was
+  // first opened, and so NL logging (which routes by date = today) targets it.
+  // Once it has logged sets its date is real and stays put (editable).
+  useEffect(() => {
+    if (!loaded || sets.some((s) => s.logged_at)) return
+    const today = localDate()
+    if (session.date !== today) {
+      setSessionDate(today)
+      runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { date: today } }).catch(() => {})
+    }
+  }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateSessionDate(d: string) {
     if (!d) return
@@ -284,10 +297,14 @@ export default function Session({ session, plans, onExit }: Props) {
           </button>
         </div>
 
-        <label className="session-date">
+        <div className="session-date">
           <span>📅 Workout date</span>
-          <input type="date" value={sessionDate} onChange={(e) => updateSessionDate(e.target.value)} />
-        </label>
+          {handled > 0 ? (
+            <input type="date" value={sessionDate} onChange={(e) => updateSessionDate(e.target.value)} />
+          ) : (
+            <span className="session-date-today">{fmtDate(localDate())}</span>
+          )}
+        </div>
 
         {!loaded ? null : !allDone || reviewing ? (
           <div className="session-list">
