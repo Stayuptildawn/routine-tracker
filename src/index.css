@@ -514,6 +514,37 @@ select option {
   filter: brightness(1.06);
 }
 
+.install-card {
+  text-align: left;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.install-title {
+  font-weight: 700;
+}
+
+.install-body {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.install-later {
+  color: var(--text-dim);
+  padding: var(--sp-2) 0;
+}
+
 /* ---------- composer (the front door) ---------- */
 .composer {
   display: flex;

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import InstallPrompt from './InstallPrompt'
 
 type Mode = 'signin' | 'signup' | 'reset'
 
@@ -35,6 +36,7 @@ export default function Auth() {
   return (
     <div className="auth">
       <h1>Routine Tracker</h1>
+      <InstallPrompt />
       <form onSubmit={submit}>
         <input
           type="email"
