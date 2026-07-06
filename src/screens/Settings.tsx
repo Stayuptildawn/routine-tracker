@@ -184,6 +184,30 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
                   : 'If you were invited by email, set a password here so you can sign back in later.')}
             </p>
           </section>
+
+          <section className="settings-section">
+            <h2>About</h2>
+            <p className="gentle">
+              This app is free software under the{' '}
+              <a
+                className="text-link"
+                href="https://github.com/Stayuptildawn/routine-tracker/blob/main/LICENSE"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                AGPL-3.0
+              </a>
+              . You’re free to read it, run it and change it — and the full source is right here.
+            </p>
+            <a
+              className="text-link"
+              href="https://github.com/Stayuptildawn/routine-tracker"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Source code on GitHub →
+            </a>
+          </section>
         </div>
       </div>
     </div>

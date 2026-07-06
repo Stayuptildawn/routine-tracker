@@ -375,6 +375,16 @@ select option {
   margin-bottom: var(--sp-2);
 }
 
+.text-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.text-link:hover {
+  color: var(--accent-strong);
+}
+
 .settings-section .energy-row {
   margin: 0 0 var(--sp-1);
 }
