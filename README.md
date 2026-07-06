@@ -286,7 +286,7 @@ basically nothing.
 
 ## License
 
-Copyright (C) 2026 Mohammad Soleimani
+Copyright (C) 2026 Mohammad Soleimani Roudi
 
 This program is free software: you can redistribute it and modify it under the
 terms of the [GNU Affero General Public License](LICENSE) (AGPL), version 3 or
