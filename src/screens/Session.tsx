@@ -178,6 +178,17 @@ export default function Session({ session, plans, onExit }: Props) {
     }
   }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // this player is a fixed full-screen overlay; lock the page behind it so
+  // there's only one scrollbar (the set list), not the page's as well.
+  useEffect(() => {
+    const html = document.documentElement
+    const prev = html.style.overflow
+    html.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = prev
+    }
+  }, [])
+
   function updateSessionDate(d: string) {
     if (!d) return
     setSessionDate(d)
