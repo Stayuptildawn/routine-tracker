@@ -364,8 +364,13 @@ export default function Session({ session, plans, onExit }: Props) {
                               />
                             </>
                           )}
-                          <button className={done ? 'set-check done' : 'set-check'} onClick={() => toggleSet(set)}>
-                            ✓
+                          <button
+                            className={done ? 'set-check done' : 'set-check'}
+                            onClick={() => toggleSet(set)}
+                            aria-label={done ? 'Edit set' : 'Log set'}
+                            title={done ? 'Edit set' : 'Log set'}
+                          >
+                            {done ? '✏️' : '✓'}
                           </button>
                         </div>
                       )
