@@ -826,25 +826,23 @@ export default function Gym() {
             {[...volume.entries()].map(([mg, weeks]) => {
               const max = Math.max(1, ...weeks)
               const currentWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
-              const past = weeks.slice(0, currentWeek)
-              const avg = past.length ? Math.round((past.reduce((a, b) => a + b, 0) / past.length) * 10) / 10 : 0
               return (
                 <div key={mg} className="volume-muscle">
                   <span className="volume-label">{mg}</span>
                   <div className="volume-bars">
-                    {weeks.map((n, i) => (
-                      <div key={i} className="volume-col" title={`week ${i + 1}: ${n} sets`}>
-                        <div className="volume-bar-wrap">
-                          <div
-                            className={i + 1 === currentWeek ? 'volume-bar now' : i + 1 > currentWeek ? 'volume-bar future' : 'volume-bar'}
-                            style={{ height: `${(n / max) * 100}%` }}
-                          />
+                    {weeks.map((n, i) => {
+                      const state = i + 1 === currentWeek ? 'now' : i + 1 > currentWeek ? 'future' : ''
+                      return (
+                        <div key={i} className="volume-col" title={`week ${i + 1}: ${n} sets`}>
+                          <span className={`volume-count ${state}`}>{n}</span>
+                          <div className="volume-bar-wrap">
+                            <div className={`volume-bar ${state}`} style={{ height: `${(n / max) * 100}%` }} />
+                          </div>
+                          <span className={`volume-date ${state}`}>{i + 1}</span>
                         </div>
-                        <span className={i + 1 === currentWeek ? 'volume-date now' : 'volume-date'}>{i + 1}</span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
-                  <span className="volume-avg">{avg} avg</span>
                 </div>
               )
             })}

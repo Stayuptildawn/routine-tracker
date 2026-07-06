@@ -1742,8 +1742,26 @@ select option {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
   min-width: 0;
+}
+
+.volume-count {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-count.now {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.volume-count.future {
+  opacity: 0.4;
 }
 
 .volume-date {
@@ -1776,12 +1794,11 @@ select option {
   display: flex;
   gap: 3px;
   align-items: flex-end;
-  height: 44px;
 }
 
 .volume-bar-wrap {
-  flex: 1;
-  height: 100%;
+  width: 100%;
+  height: 44px; /* definite height so the bar's percentage resolves */
   display: flex;
   align-items: flex-end;
   background: var(--surface-2);
@@ -1803,11 +1820,6 @@ select option {
 
 .volume-bar.future {
   opacity: 0.2;
-}
-
-.volume-avg {
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
 }
 
 .vol-suggestion {
