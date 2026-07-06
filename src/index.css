@@ -1340,6 +1340,24 @@ select option {
   padding-left: 0;
 }
 
+.session-date {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.session-date input {
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
 /* ---------- session day view ---------- */
 .session-list {
   flex: 1;

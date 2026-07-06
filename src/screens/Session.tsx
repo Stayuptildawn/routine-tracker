@@ -72,6 +72,9 @@ export default function Session({ session, plans, onExit }: Props) {
   // when the session is already complete, lets the user reopen the set list to
   // edit a logged set instead of being stuck on the finish screen
   const [reviewing, setReviewing] = useState(false)
+  // the day this workout was actually done — editable, since logging is often
+  // retroactive. The Explore chart dates strength sets by this, not save-time.
+  const [sessionDate, setSessionDate] = useState<string>(session.date ?? localDate())
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -175,6 +178,12 @@ export default function Session({ session, plans, onExit }: Props) {
       setLastTime(map)
     })
   }, [sets.length > 0, session.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function updateSessionDate(d: string) {
+    if (!d) return
+    setSessionDate(d)
+    runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { date: d } }).catch(() => {})
+  }
 
   const exercises = [...new Set(sets.map((s) => s.exercise))]
   const handled = sets.filter((s) => s.logged_at).length
@@ -307,6 +316,11 @@ export default function Session({ session, plans, onExit }: Props) {
             exit
           </button>
         </div>
+
+        <label className="session-date">
+          <span>📅 Workout date</span>
+          <input type="date" value={sessionDate} onChange={(e) => updateSessionDate(e.target.value)} />
+        </label>
 
         {!loaded ? null : !allDone || reviewing ? (
           <div className="session-list">
