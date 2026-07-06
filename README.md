@@ -47,7 +47,7 @@ more people than just me. So if you have an idea, I'm happy to hear it. And if
 the project is useful to you and you want to help keep it going, suggestions
 and donations are both welcome.
 
-## This app is made for you if:
+## This app is made for you if
 
 ...you feel, like me, that building an app like this from scratch and washing
 the dishes land at the same spot on the scale, because the size of the task was
@@ -57,21 +57,34 @@ for us. :)
 
 ## What it does
 
-**One message box, reachable from anywhere.**
+**One message box that reads plain language.**
 
-- *"did morning routine except shower"* checks off the whole routine and marks
-  the shower as skipped. *"remind me to email the lawyer by Friday"* becomes a
-  categorized reminder with a due date. *"low energy today"* switches the whole
-  day to minimum mode. Voice input works too.
-- It answers questions without writing anything: *"when did I last refill?"*,
-  *"what did I bench last time?"*.
+You just write what you did (or ask what you want to know) the way you'd say it
+out loud, and the AI works out what you meant. There is no phrasing to memorize
+and no command syntax, since the whole point was to remove that kind of friction,
+not add a new one.
+
+- It reads a whole messy sentence at once, and it can hold several things in one
+  go. *"took my meds, drank water and benched 80 for 5"* lands as a medication
+  check, a water check and a logged set, all from the one message.
+- It gets the parts of how people actually talk, the exceptions and the
+  negations. *"did morning routine except shower"* checks off the whole routine
+  and marks the shower as skipped, and *"skip the run today"* does the opposite
+  of a check without you hunting for a button.
+- It knows the difference between telling it something and asking it something.
+  *"low energy today"* switches the whole day to minimum mode, while *"when did
+  I last refill?"* or *"what did I bench last time?"* just reads your data back
+  to you and writes nothing. *"remind me to email the lawyer by Friday"* becomes
+  a categorized reminder with a due date. Voice input works too, so you can say
+  it instead of typing.
 - The same brain is reachable from a **Telegram bot** (text it from anywhere,
   it replies with what it did) and from Android's **share sheet** (share text
   into the app, it lands in the message box for review).
-- The AI is careful. Confident actions apply instantly with one-tap undo,
-  uncertain ones come back as "Did you mean...?" chips, every action batch is
-  logged and reversible, and the log shows a running accuracy score. Nothing
-  happens silently.
+- It scores its own confidence, so it never bluffs. What it's sure of applies
+  instantly with one-tap undo, the maybes come back as "Did you mean...?" chips
+  you tap to confirm, and anything it's genuinely unsure about does nothing at
+  all. Every batch of actions is logged and reversible, and the log keeps a
+  running accuracy score. Nothing happens silently.
 
 **Routines that adapt to the day.**
 
