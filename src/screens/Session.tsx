@@ -64,8 +64,6 @@ export default function Session({ session, plans, onExit }: Props) {
   const [lastTime, setLastTime] = useState<Map<string, PrevSet[]>>(new Map())
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map())
   const [checkin, setCheckin] = useState<Map<string, CheckinDraft>>(new Map())
-  const [cardioMin, setCardioMin] = useState('')
-  const [existingCardioId, setExistingCardioId] = useState<string | null>(null)
   const [hadSaved, setHadSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -97,8 +95,8 @@ export default function Session({ session, plans, onExit }: Props) {
     if (!session.date) {
       runOp({ table: 'planned_sessions', op: 'update', ids: [session.id], values: { date: localDate() } }).catch(() => {})
     }
-    // earlier check-in answers and the session's cardio come back, so a
-    // reopened session never looks unlogged (and saves update, not duplicate)
+    // earlier check-in answers come back, so a reopened session never looks
+    // unlogged (and saves update, not duplicate)
     supabase
       .from('recovery_checkins')
       .select('muscle_group, recovery, effort, amount')
@@ -114,18 +112,6 @@ export default function Session({ session, plans, onExit }: Props) {
           })
         }
         setCheckin(map)
-        setHadSaved(true)
-      })
-    supabase
-      .from('cardio_logs')
-      .select('id, minutes')
-      .eq('session_id', session.id)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data) return
-        setExistingCardioId(data.id)
-        if (data.minutes != null) setCardioMin(String(data.minutes))
         setHadSaved(true)
       })
     return () => {
@@ -278,25 +264,6 @@ export default function Session({ session, plans, onExit }: Props) {
       // replace this session's answers wholesale - never duplicate
       await runOp({ table: 'recovery_checkins', op: 'delete', match: { session_id: session.id } })
       if (rows.length > 0) await runOp({ table: 'recovery_checkins', op: 'insert', values: rows })
-      const minutes = parseFloat(cardioMin)
-      if (session.cardio && Number.isFinite(minutes) && minutes > 0) {
-        if (existingCardioId) {
-          await runOp({ table: 'cardio_logs', op: 'update', ids: [existingCardioId], values: { minutes } })
-        } else {
-          await runOp({
-            table: 'cardio_logs',
-            op: 'insert',
-            values: {
-              id: crypto.randomUUID(),
-              session_id: session.id,
-              date: localDate(),
-              kind: 'run',
-              minutes,
-              notes: session.cardio,
-            },
-          })
-        }
-      }
     } finally {
       onExit()
     }
@@ -417,7 +384,7 @@ export default function Session({ session, plans, onExit }: Props) {
                 <div className="checkin-head">
                   <span className="checkin-check">✓</span>
                   <h2>{session.split_day} done. Good work.</h2>
-                  {(trained.length > 0 || session.cardio) && (
+                  {trained.length > 0 && (
                     <p className="gentle">
                       {hadSaved
                         ? 'Your earlier answers are loaded — edit freely, leaving saves.'
@@ -425,20 +392,6 @@ export default function Session({ session, plans, onExit }: Props) {
                     </p>
                   )}
                 </div>
-
-                {session.cardio && (
-                  <div className="cardio-offer">
-                    <span className="cardio-label">🏃 {session.cardio}</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      placeholder="min"
-                      value={cardioMin}
-                      onChange={(e) => setCardioMin(e.target.value)}
-                    />
-                    <span className="gentle-inline">leave empty if it didn’t happen</span>
-                  </div>
-                )}
 
                 {trained.map((muscle) => {
                   const draft = checkin.get(muscle) ?? {}

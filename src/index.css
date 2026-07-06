@@ -1691,32 +1691,6 @@ select option {
   color: var(--good);
 }
 
-.cardio-offer {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-3);
-  margin-bottom: var(--sp-3);
-}
-
-.cardio-label {
-  font-weight: 700;
-  font-size: var(--fs-sm);
-}
-
-.cardio-offer input {
-  width: 5rem;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  text-align: center;
-}
-
 .gentle-inline {
   color: var(--text-dim);
   font-size: var(--fs-xs);
