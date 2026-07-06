@@ -8,6 +8,7 @@ import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
+import InstallButton from './InstallButton'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
   low: ['core'],
@@ -238,9 +239,12 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
         <p className="eyebrow">
           {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
-        <button className="settings-inline" onClick={onOpenSettings} title="Settings" aria-label="Settings">
-          ⚙️
-        </button>
+        <div className="now-head-actions">
+          <InstallButton />
+          <button className="settings-inline" onClick={onOpenSettings} title="Settings" aria-label="Settings">
+            ⚙️
+          </button>
+        </div>
       </div>
       <div className="composer">
         <textarea

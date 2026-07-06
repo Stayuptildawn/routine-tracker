@@ -312,6 +312,54 @@ select option {
   margin-bottom: var(--sp-3); /* keep the gear well clear of the composer buttons */
 }
 
+.now-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* install affordance for signed-in mobile users, same fill as the composer
+   send button; sits just left of the settings gear */
+.install-fab {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+}
+
+.install-fab:hover {
+  filter: brightness(1.06);
+}
+
+.install-fab:active {
+  filter: brightness(0.94);
+}
+
+.install-help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.install-help {
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
 .settings-inline {
   padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r-sm);
