@@ -183,6 +183,10 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
                   ? 'The two passwords don’t match yet.'
                   : 'If you were invited by email, set a password here so you can sign back in later.')}
             </p>
+
+            <button className="sign-out" onClick={() => supabase.auth.signOut()}>
+              Sign out
+            </button>
           </section>
 
           <section className="settings-section">

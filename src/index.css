@@ -481,6 +481,23 @@ select option {
   max-width: 26rem;
 }
 
+.sign-out {
+  margin-top: var(--sp-4);
+  width: 100%;
+  max-width: 26rem;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.sign-out:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
 @media (min-width: 900px) {
   .app {
     flex-direction: row;
