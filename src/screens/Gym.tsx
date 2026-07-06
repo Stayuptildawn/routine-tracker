@@ -104,7 +104,7 @@ export default function Gym() {
   const [view, setView] = useState<'strength' | 'cardio'>(
     () => (localStorage.getItem('gym-view') as 'strength' | 'cardio') ?? 'strength',
   )
-  const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; notes: string } | null>(null)
+  const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; notes: string; date: string } | null>(null)
 
   function pickView(v: 'strength' | 'cardio') {
     setView(v)
@@ -253,6 +253,7 @@ export default function Gym() {
         km: Number.isFinite(km) ? String(km) : '',
         min: Number.isFinite(min) ? String(min) : '',
         notes: '',
+        date: entry.date,
       })
     } finally {
       setLoggingRun(false)
@@ -275,6 +276,7 @@ export default function Gym() {
       distance_km: Number.isFinite(km) ? km : null,
       minutes: Number.isFinite(min) ? min : null,
       notes: editCardio.notes.trim() || null,
+      ...(editCardio.date ? { date: editCardio.date } : {}), // don't null a not-null column if cleared
     }
     setCardio((prev) => prev.map((c) => (c.id === editCardio.id ? { ...c, ...values } : c)))
     setEditCardio(null)
@@ -703,6 +705,14 @@ export default function Gym() {
                 return (
                   <div key={c.id} className="edit-task cardio-edit">
                     <div className="edit-task-row">
+                      <input
+                        type="date"
+                        value={editCardio.date}
+                        onChange={(e) => setEditCardio({ ...editCardio, date: e.target.value })}
+                        title="Date"
+                      />
+                    </div>
+                    <div className="edit-task-row">
                       <select value={editCardio.kind} onChange={(e) => setEditCardio({ ...editCardio, kind: e.target.value })}>
                         {CARDIO_KINDS.map(([value, label]) => (
                           <option key={value} value={value}>
@@ -782,6 +792,7 @@ export default function Gym() {
                         km: c.distance_km != null ? String(c.distance_km) : '',
                         min: c.minutes != null ? String(c.minutes) : '',
                         notes: c.notes ?? '',
+                        date: c.date,
                       })
                     }
                   >
