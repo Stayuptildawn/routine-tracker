@@ -826,9 +826,14 @@ export default function Gym() {
             {[...volume.entries()].map(([mg, weeks]) => {
               const max = Math.max(1, ...weeks)
               const currentWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
+              const past = weeks.slice(0, currentWeek)
+              const avg = past.length ? Math.round((past.reduce((a, b) => a + b, 0) / past.length) * 10) / 10 : 0
               return (
                 <div key={mg} className="volume-muscle">
-                  <span className="volume-label">{mg}</span>
+                  <div className="volume-head">
+                    <span className="volume-label">{mg}</span>
+                    <span className="volume-avg">{avg} avg</span>
+                  </div>
                   <div className="volume-bars">
                     {weeks.map((n, i) => {
                       const state = i + 1 === currentWeek ? 'now' : i + 1 > currentWeek ? 'future' : ''
