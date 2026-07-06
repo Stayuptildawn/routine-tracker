@@ -28,6 +28,16 @@ export function pendingOrder(a: Reminder, b: Reminder): number {
   return b.created_at.localeCompare(a.created_at)
 }
 
+/** "12 Jul, 14:32" — when a reminder was cleared (its last status change). */
+function clearedWhen(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 const MAX_TEXT = 300 // long enough for any reminder, short enough to stay a reminder
 
 interface Draft {
@@ -277,6 +287,7 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                     <span className={r.status === 'done' ? 'badge confirmed' : 'badge undone'}>
                       {r.status === 'done' ? 'Done' : 'Dismissed'}
                     </span>
+                    <span className="cleared-when">{clearedWhen(r.updated_at)}</span>
                   </div>
                 </div>
                 <button className="link" onClick={() => restore(r)}>
