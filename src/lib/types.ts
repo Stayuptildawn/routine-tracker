@@ -63,6 +63,7 @@ export interface CardioLog {
   kind: string
   minutes: number | null
   distance_km: number | null
+  avg_hr: number | null
   notes: string | null
   effort?: string | null // easy | steady | pushed | all_out
   body?: string | null // fresh | okay | heavy

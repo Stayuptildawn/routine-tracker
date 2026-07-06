@@ -99,12 +99,12 @@ export default function Gym() {
   const [editingPlan, setEditingPlan] = useState(false)
   const [cardioBase, setCardioBase] = useState<number | null>(null) // null=loading
   const [baseDraft, setBaseDraft] = useState('')
-  const [run, setRun] = useState({ kind: 'run', km: '', min: '' })
+  const [run, setRun] = useState({ kind: 'run', km: '', min: '', hr: '' })
   const [loggingRun, setLoggingRun] = useState(false)
   const [view, setView] = useState<'strength' | 'cardio'>(
     () => (localStorage.getItem('gym-view') as 'strength' | 'cardio') ?? 'strength',
   )
-  const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; notes: string; date: string } | null>(null)
+  const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; hr: string; notes: string; date: string } | null>(null)
 
   function pickView(v: 'strength' | 'cardio') {
     setView(v)
@@ -229,6 +229,7 @@ export default function Gym() {
   async function logRun() {
     const km = parseFloat(run.km)
     const min = parseFloat(run.min)
+    const hr = parseInt(run.hr, 10)
     if (loggingRun || (!Number.isFinite(km) && !Number.isFinite(min))) return
     setLoggingRun(true)
     try {
@@ -240,10 +241,11 @@ export default function Gym() {
         kind: run.kind,
         distance_km: Number.isFinite(km) ? km : null,
         minutes: Number.isFinite(min) ? min : null,
+        avg_hr: Number.isFinite(hr) ? hr : null,
         notes: null,
       }
       const result = await runOp({ table: 'cardio_logs', op: 'insert', values: entry as unknown as Record<string, unknown> })
-      setRun({ ...run, km: '', min: '' })
+      setRun({ ...run, km: '', min: '', hr: '' })
       if (result === 'saved') await load()
       else setCardio((prev) => [entry, ...prev]) // optimistic while offline
       // offer the check-in right away - each pill saves on tap, closing skips
@@ -252,6 +254,7 @@ export default function Gym() {
         kind: run.kind,
         km: Number.isFinite(km) ? String(km) : '',
         min: Number.isFinite(min) ? String(min) : '',
+        hr: Number.isFinite(hr) ? String(hr) : '',
         notes: '',
         date: entry.date,
       })
@@ -271,10 +274,12 @@ export default function Gym() {
     if (!editCardio) return
     const km = parseFloat(editCardio.km)
     const min = parseFloat(editCardio.min)
+    const hr = parseInt(editCardio.hr, 10)
     const values = {
       kind: editCardio.kind,
       distance_km: Number.isFinite(km) ? km : null,
       minutes: Number.isFinite(min) ? min : null,
+      avg_hr: Number.isFinite(hr) ? hr : null,
       notes: editCardio.notes.trim() || null,
       ...(editCardio.date ? { date: editCardio.date } : {}), // don't null a not-null column if cleared
     }
@@ -609,6 +614,13 @@ export default function Gym() {
                 placeholder="min"
                 value={run.min}
                 onChange={(e) => setRun({ ...run, min: e.target.value })}
+              />
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="bpm"
+                value={run.hr}
+                onChange={(e) => setRun({ ...run, hr: e.target.value })}
                 onKeyDown={(e) => e.key === 'Enter' && logRun()}
               />
               <button className="run-log-btn" onClick={logRun} disabled={loggingRun}>
@@ -734,6 +746,13 @@ export default function Gym() {
                         value={editCardio.min}
                         onChange={(e) => setEditCardio({ ...editCardio, min: e.target.value })}
                       />
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        placeholder="bpm"
+                        value={editCardio.hr}
+                        onChange={(e) => setEditCardio({ ...editCardio, hr: e.target.value })}
+                      />
                     </div>
                     <div className="edit-task-row">
                       <input
@@ -782,6 +801,7 @@ export default function Gym() {
                     {c.distance_km && c.minutes ? ' · ' : ''}
                     {c.minutes ? `${c.minutes} min` : ''}
                     {pace ? ` · ${pace}` : ''}
+                    {c.avg_hr ? ` · ${c.avg_hr} bpm` : ''}
                   </span>
                   <button
                     className="link run-edit"
@@ -791,6 +811,7 @@ export default function Gym() {
                         kind: c.kind,
                         km: c.distance_km != null ? String(c.distance_km) : '',
                         min: c.minutes != null ? String(c.minutes) : '',
+                        hr: c.avg_hr != null ? String(c.avg_hr) : '',
                         notes: c.notes ?? '',
                         date: c.date,
                       })

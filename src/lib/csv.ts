@@ -117,9 +117,9 @@ export async function exportReminders() {
 export async function exportCardioLogs() {
   const { data, error } = await supabase.from('cardio_logs').select('*').order('date')
   if (error) throw error
-  type Row = { date: string; kind: string; minutes: number | null; distance_km: number | null; notes: string | null }
-  const rows = ((data as Row[]) ?? []).map((c) => [c.date, c.kind, c.minutes ?? '', c.distance_km ?? '', c.notes ?? ''])
-  download('cardio-logs.csv', [['date', 'kind', 'minutes', 'distance_km', 'notes'], ...rows])
+  type Row = { date: string; kind: string; minutes: number | null; distance_km: number | null; avg_hr: number | null; notes: string | null }
+  const rows = ((data as Row[]) ?? []).map((c) => [c.date, c.kind, c.minutes ?? '', c.distance_km ?? '', c.avg_hr ?? '', c.notes ?? ''])
+  download('cardio-logs.csv', [['date', 'kind', 'minutes', 'distance_km', 'avg_hr', 'notes'], ...rows])
 }
 
 /** The whole workout logbook, sets flattened to "60kg×8 60kg×8". */
