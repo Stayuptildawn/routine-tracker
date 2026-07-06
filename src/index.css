@@ -1335,6 +1335,11 @@ select option {
   padding-left: 0;
 }
 
+.session-review-back {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
 /* ---------- session day view ---------- */
 .session-list {
   flex: 1;
@@ -1720,6 +1725,13 @@ select option {
 
 .checkin-buttons {
   margin-top: var(--sp-2);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.checkin-buttons .player-done {
+  align-self: stretch;
 }
 
 /* ---------- block wrap-up ---------- */

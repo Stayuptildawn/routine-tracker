@@ -69,6 +69,9 @@ export default function Session({ session, plans, onExit }: Props) {
   const [hadSaved, setHadSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  // when the session is already complete, lets the user reopen the set list to
+  // edit a logged set instead of being stuck on the finish screen
+  const [reviewing, setReviewing] = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -305,8 +308,13 @@ export default function Session({ session, plans, onExit }: Props) {
           </button>
         </div>
 
-        {!loaded ? null : !allDone ? (
+        {!loaded ? null : !allDone || reviewing ? (
           <div className="session-list">
+            {allDone && reviewing && (
+              <button className="link session-review-back" onClick={() => setReviewing(false)}>
+                ← done editing, back to finish
+              </button>
+            )}
             {exercises.map((exercise) => {
               const exSets = sets.filter((s) => s.exercise === exercise)
               const plan = plans.find((p) => p.exercise === exercise)
@@ -453,6 +461,9 @@ export default function Session({ session, plans, onExit }: Props) {
                 <div className="player-buttons checkin-buttons">
                   <button className="player-done" onClick={saveAndClose} disabled={saving}>
                     {saving ? '…' : 'Save & close'}
+                  </button>
+                  <button className="link" onClick={() => setReviewing(true)}>
+                    ✏️ Edit a logged set
                   </button>
                 </div>
               </div>
