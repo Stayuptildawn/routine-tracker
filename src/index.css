@@ -498,6 +498,26 @@ select option {
   color: var(--text);
 }
 
+.sign-out-confirm {
+  margin-top: var(--sp-4);
+  max-width: 26rem;
+}
+
+.sign-out-confirm .gentle {
+  margin: 0 0 var(--sp-2);
+}
+
+.sign-out-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sign-out-actions .sign-out {
+  margin-top: 0;
+  width: auto;
+}
+
 @media (min-width: 900px) {
   .app {
     flex-direction: row;

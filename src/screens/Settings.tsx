@@ -39,6 +39,7 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
   const [pw2, setPw2] = useState('')
   const [pwMsg, setPwMsg] = useState<string | null>(null)
   const [pwBusy, setPwBusy] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
 
   useEffect(() => {
     supabase
@@ -184,9 +185,23 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
                   : 'If you were invited by email, set a password here so you can sign back in later.')}
             </p>
 
-            <button className="sign-out" onClick={() => supabase.auth.signOut()}>
-              Sign out
-            </button>
+            {confirmSignOut ? (
+              <div className="sign-out-confirm">
+                <p className="gentle">Sign out{email ? ` of ${email}` : ''}?</p>
+                <div className="sign-out-actions">
+                  <button className="sign-out" onClick={() => supabase.auth.signOut()}>
+                    Yes, sign out
+                  </button>
+                  <button className="link" onClick={() => setConfirmSignOut(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="sign-out" onClick={() => setConfirmSignOut(true)}>
+                Sign out
+              </button>
+            )}
           </section>
 
           <section className="settings-section">
