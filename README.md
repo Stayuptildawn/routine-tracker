@@ -283,3 +283,16 @@ freeform log, so the composer, the Telegram bot and the session player all
 write the same rows. The day's tasks are injected straight into the prompt as
 candidates, which at personal scale works better than embeddings and costs
 basically nothing.
+
+## License
+
+Copyright (C) 2026 Mohammad Soleimani
+
+This program is free software: you can redistribute it and modify it under the
+terms of the [GNU Affero General Public License](LICENSE) (AGPL), version 3 or
+later. It comes with no warranty.
+
+I picked the AGPL on purpose. It's the one license that also covers hosting, so
+if someone runs a changed version of this as a web service, they have to share
+their source too. Given the whole reason I built this (no paywalls, keep it free
+for the next person), that felt like the honest choice.
