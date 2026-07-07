@@ -3,9 +3,11 @@ import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
 import { trainingReflection } from '../lib/actions'
+import { getCache, setCache } from '../lib/cache'
 import Skeleton from '../components/Skeleton'
 
 const TRAINING_CACHE = 'training-reflection'
+const CACHE_TTL = 5 * 60_000
 
 interface DayStat {
   date: string
@@ -19,9 +21,9 @@ type Metric = 'tasks' | 'sets' | 'cardio'
 type Frame = 'daily' | 'weekly' | 'monthly' | 'half' | 'yearly'
 
 const METRICS: { id: Metric; label: string; unit: string }[] = [
-  { id: 'tasks', label: '✅ Tasks', unit: '' },
-  { id: 'sets', label: '🏋️ Sets', unit: '' },
-  { id: 'cardio', label: '🏃 Cardio', unit: ' km' },
+  { id: 'tasks', label: '\u2705 Tasks', unit: '' },
+  { id: 'sets', label: '\ud83c�\ufe0f Sets', unit: '' },
+  { id: 'cardio', label: '\ud83c� Cardio', unit: ' km' },
 ]
 
 // every range ends now / today / this week / this month
@@ -126,7 +128,7 @@ export default function Reflect() {
         localStorage.setItem(TRAINING_CACHE, JSON.stringify({ date: localDate(), comment }))
       }
     } catch {
-      setTrainingErr("Couldn't reach the AI just now — try again in a minute.")
+      setTrainingErr("Couldn't reach the AI just now \u2014 try again in a minute.")
     } finally {
       setTrainingBusy(false)
     }
@@ -165,6 +167,12 @@ export default function Reflect() {
   }, [])
 
   useEffect(() => {
+    const cached = getCache('reflect', CACHE_TTL)
+    if (cached) {
+      setDays(cached.days)
+      setLoaded(true)
+      return
+    }
     const from = new Date()
     from.setDate(from.getDate() - 6)
     const fromDate = localDate(from)
@@ -195,6 +203,7 @@ export default function Reflect() {
           skipped: dayLogs.filter((l) => l.status === 'skipped').length,
         })
       }
+      setCache('reflect', { days: stats })
       setDays(stats)
       setLoaded(true)
     })
@@ -208,7 +217,7 @@ export default function Reflect() {
     <div className="reflect">
       <h1>This week, gently</h1>
       <p className="gentle">
-        Patterns, not judgment. No streaks here — a quiet day is information, not failure.
+        Patterns, not judgment. No streaks here \u2014 a quiet day is information, not failure.
       </p>
       {reflection && (() => {
         const monday = new Date()
@@ -236,19 +245,19 @@ export default function Reflect() {
       {!loaded ? null : totalDone > 0 ? (
         <div className="reflect-notes">
           <p>
-            You completed <strong>{totalDone}</strong> things this week — tasks, gym sessions and
+            You completed <strong>{totalDone}</strong> things this week \u2014 tasks, gym sessions and
             cardio all count.
             {strongest && strongest.done > 0 && <> {strongest.dayName} was your strongest day.</>}
           </p>
           {days.reduce((n, d) => n + d.skipped, 0) > 0 && (
             <p>
-              You consciously skipped {days.reduce((n, d) => n + d.skipped, 0)} — that’s
+              You consciously skipped {days.reduce((n, d) => n + d.skipped, 0)} \u2014 that's
               self-management, not slacking.
             </p>
           )}
         </div>
       ) : (
-        <p className="gentle">Nothing logged yet this week. Whenever you’re ready.</p>
+        <p className="gentle">Nothing logged yet this week. Whenever you're ready.</p>
       )}
 
       <section className="reflect-bars training-card">
@@ -260,7 +269,7 @@ export default function Reflect() {
             <p className="gentle">A read on your trend over the last ~12 weeks, feedback included.</p>
           )}
           <button className="training-btn" onClick={askTraining} disabled={trainingBusy}>
-            {trainingBusy ? 'Reading your history…' : training ? 'Refresh' : '✨ Find my training pattern'}
+            {trainingBusy ? 'Reading your history\u2026' : training ? 'Refresh' : '\u2728 Find my training pattern'}
           </button>
         </div>
       </section>
@@ -273,7 +282,7 @@ export default function Reflect() {
               {' '}
               {FRAMES.find((f) => f.id === frame)?.hint}
               {explore
-                ? ` · ${metric === 'cardio' ? `${Math.round(explore.values.reduce((a, b) => a + b, 0) * 10) / 10} km` : `${Math.round(explore.values.reduce((a, b) => a + b, 0))} total`}`
+                ? ` \u00b7 ${metric === 'cardio' ? `${Math.round(explore.values.reduce((a, b) => a + b, 0) * 10) / 10} km` : `${Math.round(explore.values.reduce((a, b) => a + b, 0))} total`}`
                 : ''}
             </span>
           </h2>
@@ -297,7 +306,7 @@ export default function Reflect() {
                 const vs = explore.values
                 const f = (v: number) => (metric === 'cardio' ? Math.round(v * 10) / 10 : Math.round(v * 10) / 10)
                 const unit = metric === 'cardio' ? ' km' : ''
-                return `Min ${f(Math.min(...vs))}${unit} · Max ${f(Math.max(...vs))}${unit} · Avg ${f(vs.reduce((a, b) => a + b, 0) / vs.length)}${unit}`
+                return `Min ${f(Math.min(...vs))}${unit} \u00b7 Max ${f(Math.max(...vs))}${unit} \u00b7 Avg ${f(vs.reduce((a, b) => a + b, 0) / vs.length)}${unit}`
               })()}
             </p>
           )}
@@ -321,7 +330,7 @@ export default function Reflect() {
               })()}
             </div>
           ) : (
-            <p className="gentle">Loading…</p>
+            <p className="gentle">Loading\u2026</p>
           )}
         </div>
       </section>
@@ -329,22 +338,22 @@ export default function Reflect() {
       <p className="gentle export-row">
         Your data is yours:
         <button className="link" onClick={() => exportTaskLogs()}>
-          ⬇ tasks CSV
+          \u2b07 tasks CSV
         </button>
         <button className="link" onClick={() => exportWorkoutLogs()}>
-          ⬇ workouts CSV
+          \u2b07 workouts CSV
         </button>
         <button className="link" onClick={() => exportCardioLogs()}>
-          ⬇ cardio CSV
+          \u2b07 cardio CSV
         </button>
         <button className="link" onClick={() => exportTrainingSets()}>
-          ⬇ training CSV
+          \u2b07 training CSV
         </button>
         <button className="link" onClick={() => exportCheckins()}>
-          ⬇ check-ins CSV
+          \u2b07 check-ins CSV
         </button>
         <button className="link" onClick={() => exportReminders()}>
-          ⬇ reminders CSV
+          \u2b07 reminders CSV
         </button>
       </p>
     </div>
