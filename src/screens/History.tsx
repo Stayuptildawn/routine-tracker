@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { describeAction, undoAiAction } from '../lib/actions'
 import type { AiAction } from '../lib/types'
+import { getCache, setCache } from '../lib/cache'
 import Skeleton from '../components/Skeleton'
 
 const STATUS_LABEL: Record<AiAction['status'], string> = {
@@ -10,19 +11,31 @@ const STATUS_LABEL: Record<AiAction['status'], string> = {
   undone: 'Undone',
 }
 
+const CACHE_TTL = 2 * 60_000
+
 export default function History() {
   const [items, setItems] = useState<AiAction[]>([])
   const [counts, setCounts] = useState<{ kept: number; undone: number } | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   const load = useCallback(async () => {
+    const cached = getCache('history', CACHE_TTL)
+    if (cached) {
+      setItems(cached.items)
+      setCounts(cached.counts)
+      setLoaded(true)
+      return
+    }
     const [{ data }, keptRes, undoneRes] = await Promise.all([
       supabase.from('ai_actions').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('ai_actions').select('id', { count: 'exact', head: true }).in('status', ['applied', 'confirmed']),
       supabase.from('ai_actions').select('id', { count: 'exact', head: true }).eq('status', 'undone'),
     ])
-    setItems((data as AiAction[]) ?? [])
-    setCounts({ kept: keptRes.count ?? 0, undone: undoneRes.count ?? 0 })
+    const items = (data as AiAction[]) ?? []
+    const counts = { kept: keptRes.count ?? 0, undone: undoneRes.count ?? 0 }
+    setItems(items)
+    setCounts(counts)
+    setCache('history', { items, counts })
     setLoaded(true)
   }, [])
 
