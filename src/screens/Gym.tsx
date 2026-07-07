@@ -6,6 +6,7 @@ import { recoveryAdjustments, startBlock } from '../lib/blocks'
 import { runOp } from '../lib/offline'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM, cardioTargetForWeek } from '../lib/cardioPlan'
+import { getCache, setCache } from '../lib/cache'
 import Session from './Session'
 import Skeleton from '../components/Skeleton'
 
@@ -15,7 +16,7 @@ const CARDIO_KINDS = [
   ['run', '🏃 Run'],
   ['walk', '🚶 Walk'],
   ['cycle', '🚴 Cycle'],
-  ['swim', '🏊 Swim'],
+  ['swim', '🏔 Swim'],
 ] as const
 
 // the strength check-in questions, adapted to cardio - saved per entry
@@ -50,6 +51,8 @@ const CARDIO_QUESTIONS: { field: 'effort' | 'body' | 'amount'; label: string; op
     ],
   },
 ]
+
+const CACHE_TTL = 2 * 60_000
 
 /** minutes over km -> "6:24 /km" */
 function fmtPace(minutes: number | null, km: number | null): string | null {
@@ -120,6 +123,16 @@ export default function Gym() {
   const [loaded, setLoaded] = useState(false)
 
   const load = useCallback(async () => {
+    const cached = getCache('gym', CACHE_TTL)
+    if (cached) {
+      setLogs(cached.logs)
+      setPlans(cached.plans)
+      setBlock(cached.block)
+      setSessions(cached.sessions)
+      setCardio(cached.cardio)
+      setLoaded(true)
+      return
+    }
     const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
@@ -128,13 +141,15 @@ export default function Gym() {
       supabase.from('training_blocks').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
     ])
-    setCardio((cardioAllRes.data as CardioLog[]) ?? [])
+    const cardioData = (cardioAllRes.data as CardioLog[]) ?? []
     const logRows = (logsRes.data as WorkoutLog[]) ?? []
     const planRows = (plansRes.data as WorkoutPlan[]) ?? []
+    setCardio(cardioData)
     setLogs(logRows)
     setPlans(planRows)
     const blockRow = blockRes.data as TrainingBlock | null
     setBlock(blockRow)
+    let sessRows: PlannedSession[] = []
     if (blockRow) {
       const { data: sess } = await supabase
         .from('planned_sessions')
@@ -142,7 +157,7 @@ export default function Gym() {
         .eq('block_id', blockRow.id)
         .order('week_number')
         .order('day_number')
-      const sessRows = (sess as PlannedSession[]) ?? []
+      sessRows = (sess as PlannedSession[]) ?? []
       setSessions(sessRows)
       const [setsRes, checkinRes] = await Promise.all([
         supabase
@@ -179,6 +194,7 @@ export default function Gym() {
     if (start) setWeek(weekFromStart(start))
     setCardioBase(settingsRes.data?.cardio_target_km ?? DEFAULT_BASE_KM)
     setBaseDraft(String(settingsRes.data?.cardio_target_km ?? DEFAULT_BASE_KM))
+    setCache('gym', { logs: logRows, plans: planRows, block: blockRow, sessions: sessRows, cardio: cardioData })
     setLoaded(true)
   }, [])
 
