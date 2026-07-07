@@ -6,6 +6,7 @@ import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, und
 import { describeDue, pendingOrder } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
+import { getCache, setCache } from '../lib/cache'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 import InstallButton from './InstallButton'
@@ -23,6 +24,8 @@ interface UndoState {
 
 // an anchored routine "activates" within this many minutes of its anchor_time
 const ANCHOR_WINDOW = 120
+// write-heavy screen with a live realtime subscription: keep TTL short
+const CACHE_TTL = 30_000
 
 function fmtEta(diff: number): string {
   const abs = Math.abs(diff)
@@ -61,6 +64,14 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
   }, [])
 
   const load = useCallback(async () => {
+    const cached = getCache('now', CACHE_TTL)
+    if (cached) {
+      setRoutines(cached.routines)
+      setLogs(new Map(cached.logs.map((l) => [l.task_id, l])))
+      setReminders(cached.reminders)
+      setLoaded(true)
+      return
+    }
     const [routinesRes, logsRes, stateRes, remindersRes] = await Promise.all([
       supabase
         .from('routines')
@@ -71,10 +82,14 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
       supabase.from('daily_state').select('energy').eq('date', today).maybeSingle(),
       supabase.from('reminders').select('*').in('status', ['auto', 'reassigned']),
     ])
-    setRoutines((routinesRes.data as Routine[]) ?? [])
-    setLogs(new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l])))
+    const routinesData = (routinesRes.data as Routine[]) ?? []
+    const logsData = (logsRes.data as TaskLog[]) ?? []
+    const remindersData = ((remindersRes.data as Reminder[]) ?? []).sort(pendingOrder)
+    setRoutines(routinesData)
+    setLogs(new Map(logsData.map((l) => [l.task_id, l])))
     setEnergy((stateRes.data?.energy as Energy) ?? null)
-    setReminders(((remindersRes.data as Reminder[]) ?? []).sort(pendingOrder))
+    setReminders(remindersData)
+    setCache('now', { routines: routinesData, logs: logsData, reminders: remindersData })
     setLoaded(true)
   }, [today])
 
@@ -297,7 +312,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
             className={energy === level ? 'energy-btn active' : 'energy-btn'}
             onClick={() => pickEnergy(level)}
           >
-            {level === 'low' ? '🪫 Low' : level === 'medium' ? '🔋 Medium' : '⚡ High'}
+            {level === 'low' ? '🪴 Low' : level === 'medium' ? '🔋 Medium' : '⚡ High'}
           </button>
         ))}
       </div>
