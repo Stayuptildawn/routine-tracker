@@ -3,10 +3,12 @@ import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
 import { setTaskStatus } from '../lib/actions'
+import { getCache, setCache } from '../lib/cache'
 import Skeleton from '../components/Skeleton'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIERS: Tier[] = ['core', 'standard', 'bonus']
+const CACHE_TTL = 2 * 60_000
 
 /** Dates (yyyy-mm-dd) for Monday..Sunday of the current week. */
 function currentWeekDates(): string[] {
@@ -49,6 +51,13 @@ export default function Week() {
   const today = localDate()
 
   const load = useCallback(async () => {
+    const cached = getCache('week', CACHE_TTL)
+    if (cached) {
+      setRoutines(cached.routines)
+      setLogs(cached.logs)
+      setLoaded(true)
+      return
+    }
     const [routinesRes, logsRes] = await Promise.all([
       supabase
         .from('routines')
@@ -56,8 +65,11 @@ export default function Week() {
         .order('sort_order'),
       supabase.from('task_logs').select('*').in('date', currentWeekDates()),
     ])
-    setRoutines((routinesRes.data as Routine[]) ?? [])
-    setLogs((logsRes.data as TaskLog[]) ?? [])
+    const routinesData = (routinesRes.data as Routine[]) ?? []
+    const logsData = (logsRes.data as TaskLog[]) ?? []
+    setRoutines(routinesData)
+    setLogs(logsData)
+    setCache('week', { routines: routinesData, logs: logsData })
     setLoaded(true)
   }, [])
 
