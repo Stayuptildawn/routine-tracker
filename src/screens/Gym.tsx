@@ -60,7 +60,7 @@ function fmtPace(minutes: number | null, km: number | null): string | null {
   const perKm = minutes / km
   const m = Math.floor(perKm)
   const s = Math.round((perKm - m) * 60)
-  return `${m}:${String(s).padStart(2, '0')} /km`
+  return `${m}:${String(s).padStart(2, '00')} /km`
 }
 
 /** Monday (yyyy-mm-dd) of the week containing the given date string. */
@@ -122,8 +122,8 @@ export default function Gym() {
   const [week, setWeek] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  const load = useCallback(async () => {
-    const cached = getCache('gym', CACHE_TTL)
+  const load = useCallback(async (force = false) => {
+    const cached = !force && getCache('gym', CACHE_TTL)
     if (cached) {
       setLogs(cached.logs)
       setPlans(cached.plans)
@@ -220,7 +220,7 @@ export default function Gym() {
       await supabase
         .from('user_settings')
         .upsert({ program_start: programStartForWeek(1), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-      await load()
+      await load(true)
     } finally {
       setStarting(false)
     }
@@ -262,7 +262,7 @@ export default function Gym() {
       }
       const result = await runOp({ table: 'cardio_logs', op: 'insert', values: entry as unknown as Record<string, unknown> })
       setRun({ ...run, km: '', min: '', hr: '' })
-      if (result === 'saved') await load()
+      if (result === 'saved') await load(true)
       else setCardio((prev) => [entry, ...prev]) // optimistic while offline
       // offer the check-in right away - each pill saves on tap, closing skips
       setEditCardio({
@@ -301,19 +301,19 @@ export default function Gym() {
     }
     setCardio((prev) => prev.map((c) => (c.id === editCardio.id ? { ...c, ...values } : c)))
     setEditCardio(null)
-    if ((await runOp({ table: 'cardio_logs', op: 'update', ids: [editCardio.id], values })) === 'saved') load()
+    if ((await runOp({ table: 'cardio_logs', op: 'update', ids: [editCardio.id], values })) === 'saved') load(true)
   }
 
   async function deleteCardio(id: string) {
     if (!window.confirm('Remove this cardio entry?')) return
     await supabase.from('cardio_logs').delete().eq('id', id)
     setEditCardio(null)
-    load()
+    load(true)
   }
 
   async function updatePlan(id: string, patch: Partial<WorkoutPlan>) {
     await supabase.from('workout_plans').update(patch).eq('id', id)
-    load()
+    load(true)
   }
 
   async function movePlan(p: WorkoutPlan, dir: -1 | 1) {
@@ -324,13 +324,13 @@ export default function Gym() {
       supabase.from('workout_plans').update({ sort_order: other.sort_order }).eq('id', p.id),
       supabase.from('workout_plans').update({ sort_order: p.sort_order }).eq('id', other.id),
     ])
-    load()
+    load(true)
   }
 
   async function deletePlan(p: WorkoutPlan) {
     if (!window.confirm(`Remove "${p.exercise}" from the plan? (Already-generated sessions keep it.)`)) return
     await supabase.from('workout_plans').delete().eq('id', p.id)
-    load()
+    load(true)
   }
 
   async function useTemplate() {
@@ -338,7 +338,7 @@ export default function Gym() {
     setSettingUp(true)
     try {
       await seedWorkoutTemplate()
-      await load()
+      await load(true)
     } finally {
       setSettingUp(false)
     }
@@ -358,7 +358,7 @@ export default function Gym() {
         muscle_group: scratch.muscle,
         schemes: { '1-2': scratch.scheme, '3-4': scratch.scheme, '5-6': scratch.scheme },
       })
-      await load()
+      await load(true)
       setSplit(session)
       setEditingPlan(true)
     } finally {
@@ -379,7 +379,7 @@ export default function Gym() {
       schemes: { '1-2': newEx.scheme, '3-4': newEx.scheme, '5-6': newEx.scheme },
     })
     setNewEx({ ...newEx, name: '' })
-    load()
+    load(true)
   }
 
   const phase = week === null ? null : PHASES.find((p) => week <= p.maxWeek) ?? null
@@ -441,7 +441,7 @@ export default function Gym() {
       {view === 'strength' && (
         <p className="gentle">
           Sets, weights, reps — logged in a session, or from the Now tab:{' '}
-          <em>“bench 60kg 3x8, felt easy”</em>.
+          <em>"bench 60kg 3x8, felt easy"</em>.
         </p>
       )}
 
@@ -517,7 +517,7 @@ export default function Gym() {
           <p className="gentle">
             {nextTweaks
               ? `From your recovery check-ins: ${nextTweaks} — applied when the next block generates.`
-              : 'Your check-ins read as “right” across the board — the next block keeps the written volumes.'}
+              : 'Your check-ins read as "right" across the board — the next block keeps the written volumes.'}
           </p>
           <button className="start-session" onClick={() => beginBlock(nextBlockNumber)} disabled={starting}>
             {starting
@@ -578,7 +578,7 @@ export default function Gym() {
               <span className="routine-progress">
                 {weekKm > 0 || weekMin > 0
                   ? ` this week: ${weekKm > 0 ? `${Math.round(weekKm * 10) / 10} km` : ''}${weekKm > 0 && weekMin > 0 ? ' · ' : ''}${weekMin > 0 ? `${Math.round(weekMin)} min` : ''}`
-                  : ' nothing yet this week — that’s allowed'}
+                  : ' nothing yet this week — that\'s allowed'}
               </span>
             </h2>
 
@@ -695,7 +695,7 @@ export default function Gym() {
               if (over >= 2 && !localStorage.getItem('cardio-sugg-over')) {
                 return (
                   <div className="notice vol-suggestion">
-                    Cardio has said “over the line” a couple of times lately — an easier week is a fine plan.
+                    Cardio has said "over the line" a couple of times lately — an easier week is a fine plan.
                     <button
                       className="link"
                       onClick={() => {
@@ -711,7 +711,7 @@ export default function Gym() {
               if (more >= 2 && over === 0 && !localStorage.getItem('cardio-sugg-more')) {
                 return (
                   <div className="notice vol-suggestion">
-                    Cardio keeps saying “could take more” — want to nudge the distance up a little?
+                    Cardio keeps saying "could take more" — want to nudge the distance up a little?
                     <button
                       className="link"
                       onClick={() => {
@@ -841,7 +841,7 @@ export default function Gym() {
             })}
             {cardio.length === 0 && (
               <p className="gentle">
-                Log above, tell the composer <em>“ran 5k in 32 min”</em>, or finish a Pull session — they all land here.
+                Log above, tell the composer <em>"ran 5k in 32 min"</em>, or finish a Pull session — they all land here.
               </p>
             )}
           </section>
@@ -850,7 +850,7 @@ export default function Gym() {
 
       {view === 'strength' && overLine.map((mg) => (
         <div key={mg} className="notice vol-suggestion">
-          {mg} has said “over the line” a couple of times lately — want one set fewer next week? (Edit the plan
+          {mg} has said "over the line" a couple of times lately — want one set fewer next week? (Edit the plan
           below; the current week stays as planned.)
           <button
             className="link"
@@ -1115,7 +1115,7 @@ export default function Gym() {
           plans={plans}
           onExit={() => {
             setActive(null)
-            load()
+            load(true)
           }}
         />
       )}
