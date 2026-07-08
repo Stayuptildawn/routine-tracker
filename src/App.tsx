@@ -4,7 +4,6 @@ import { supabase, configured } from './lib/supabase'
 import { SEED_ROUTINES } from './lib/seedData'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import { flushOps } from './lib/offline'
-import { clearCache } from './lib/cache'
 import Auth from './screens/Auth'
 import SetPassword from './screens/SetPassword'
 import Now from './screens/Now'
@@ -77,7 +76,6 @@ export default function App() {
       setReady(true)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (!s) clearCache()
       setSession(s)
       // invite/reset links land here: force a password set before the app
       if (event === 'PASSWORD_RECOVERY') setRecovering(true)

@@ -15,7 +15,7 @@ export default function History() {
   const [counts, setCounts] = useState<{ kept: number; undone: number } | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  const load = useCallback(async (force = false) => {
+  const load = useCallback(async () => {
     const [{ data }, keptRes, undoneRes] = await Promise.all([
       supabase.from('ai_actions').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('ai_actions').select('id', { count: 'exact', head: true }).in('status', ['applied', 'confirmed']),
@@ -34,7 +34,7 @@ export default function History() {
     const what = item.actions.map(describeAction).join(', ')
     if (!window.confirm(`Undo everything this message did?\n\n${what}\n\nThe changes will be reverted.`)) return
     await undoAiAction(item.id, item.actions)
-    load(true)
+    load()
   }
 
   return (
@@ -49,7 +49,7 @@ export default function History() {
       )}
       {items.map((item) => (
         <div key={item.id} className={`ai-item ${item.status}`}>
-          <div className="ai-raw">"{item.raw_text}"</div>
+          <div className="ai-raw">“{item.raw_text}”</div>
           <div className="ai-did">
             {item.actions.map((a, i) => (
               <div key={i}>{describeAction(a)}</div>

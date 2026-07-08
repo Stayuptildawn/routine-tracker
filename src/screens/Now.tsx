@@ -6,7 +6,6 @@ import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, und
 import { describeDue, pendingOrder } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
-import { getCache, setCache } from '../lib/cache'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 import InstallButton from './InstallButton'
@@ -24,8 +23,6 @@ interface UndoState {
 
 // an anchored routine "activates" within this many minutes of its anchor_time
 const ANCHOR_WINDOW = 120
-// write-heavy screen with a live realtime subscription: keep TTL short
-const CACHE_TTL = 30_000
 
 function fmtEta(diff: number): string {
   const abs = Math.abs(diff)
@@ -63,15 +60,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
     getNudgeState().then(setNudges)
   }, [])
 
-  const load = useCallback(async (force = false) => {
-    const cached = !force && getCache('now', CACHE_TTL)
-    if (cached) {
-      setRoutines(cached.routines)
-      setLogs(new Map(cached.logs.map((l) => [l.task_id, l])))
-      setReminders(cached.reminders)
-      setLoaded(true)
-      return
-    }
+  const load = useCallback(async () => {
     const [routinesRes, logsRes, stateRes, remindersRes] = await Promise.all([
       supabase
         .from('routines')
@@ -82,14 +71,10 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
       supabase.from('daily_state').select('energy').eq('date', today).maybeSingle(),
       supabase.from('reminders').select('*').in('status', ['auto', 'reassigned']),
     ])
-    const routinesData = (routinesRes.data as Routine[]) ?? []
-    const logsData = (logsRes.data as TaskLog[]) ?? []
-    const remindersData = ((remindersRes.data as Reminder[]) ?? []).sort(pendingOrder)
-    setRoutines(routinesData)
-    setLogs(new Map(logsData.map((l) => [l.task_id, l])))
+    setRoutines((routinesRes.data as Routine[]) ?? [])
+    setLogs(new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l])))
     setEnergy((stateRes.data?.energy as Energy) ?? null)
-    setReminders(remindersData)
-    setCache('now', { routines: routinesData, logs: logsData, reminders: remindersData })
+    setReminders(((remindersRes.data as Reminder[]) ?? []).sort(pendingOrder))
     setLoaded(true)
   }, [today])
 
@@ -130,7 +115,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
       return map
     })
     // when queued offline, keep the optimistic state - a reload would revert it
-    if ((await setTaskStatus(task.id, next)) === 'saved') load(true)
+    if ((await setTaskStatus(task.id, next)) === 'saved') load()
   }
 
   async function send() {
@@ -155,7 +140,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
         } else if (result.applied.length === 0 && result.suggestions.length === 0 && !result.answers?.length) {
           setNotice('Nothing matched — try naming the task, or add it as a reminder.')
         }
-        load(true)
+        load()
       }
     } catch (err) {
       setNotice(`Couldn't reach the AI: ${String(err)}`)
@@ -167,14 +152,14 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
   async function confirmSuggestion(s: Suggestion) {
     await setTaskStatus(s.task_id, s.status, 'ai_text')
     setSuggestions((prev) => prev.filter((x) => x.task_id !== s.task_id))
-    load(true)
+    load()
   }
 
   async function runUndo() {
     if (!undo) return
     await undoAiAction(undo.aiActionId, undo.response.applied)
     setUndo(null)
-    load(true)
+    load()
   }
 
   function startVoice() {
@@ -312,7 +297,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
             className={energy === level ? 'energy-btn active' : 'energy-btn'}
             onClick={() => pickEnergy(level)}
           >
-            {level === 'low' ? '🪴 Low' : level === 'medium' ? '🔋 Medium' : '⚡ High'}
+            {level === 'low' ? '🪫 Low' : level === 'medium' ? '🔋 Medium' : '⚡ High'}
           </button>
         ))}
       </div>
@@ -439,7 +424,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
       )}
 
       {loaded && sections.length === 0 && (
-        <p className="gentle">Nothing scheduled right now. That's allowed.</p>
+        <p className="gentle">Nothing scheduled right now. That’s allowed.</p>
       )}
 
       {loaded && (nudges === 'on' || nudges === 'off') && (

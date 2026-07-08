@@ -6,7 +6,6 @@ import { recoveryAdjustments, startBlock } from '../lib/blocks'
 import { runOp } from '../lib/offline'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM, cardioTargetForWeek } from '../lib/cardioPlan'
-import { getCache, setCache } from '../lib/cache'
 import Session from './Session'
 import Skeleton from '../components/Skeleton'
 
@@ -16,7 +15,7 @@ const CARDIO_KINDS = [
   ['run', '🏃 Run'],
   ['walk', '🚶 Walk'],
   ['cycle', '🚴 Cycle'],
-  ['swim', '🏔 Swim'],
+  ['swim', '🏊 Swim'],
 ] as const
 
 // the strength check-in questions, adapted to cardio - saved per entry
@@ -52,15 +51,13 @@ const CARDIO_QUESTIONS: { field: 'effort' | 'body' | 'amount'; label: string; op
   },
 ]
 
-const CACHE_TTL = 2 * 60_000
-
 /** minutes over km -> "6:24 /km" */
 function fmtPace(minutes: number | null, km: number | null): string | null {
   if (!minutes || !km || km <= 0) return null
   const perKm = minutes / km
   const m = Math.floor(perKm)
   const s = Math.round((perKm - m) * 60)
-  return `${m}:${String(s).padStart(2, '00')} /km`
+  return `${m}:${String(s).padStart(2, '0')} /km`
 }
 
 /** Monday (yyyy-mm-dd) of the week containing the given date string. */
@@ -122,17 +119,7 @@ export default function Gym() {
   const [week, setWeek] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  const load = useCallback(async (force = false) => {
-    const cached = !force && getCache('gym', CACHE_TTL)
-    if (cached) {
-      setLogs(cached.logs)
-      setPlans(cached.plans)
-      setBlock(cached.block)
-      setSessions(cached.sessions)
-      setCardio(cached.cardio)
-      setLoaded(true)
-      return
-    }
+  const load = useCallback(async () => {
     const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
@@ -141,15 +128,13 @@ export default function Gym() {
       supabase.from('training_blocks').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
     ])
-    const cardioData = (cardioAllRes.data as CardioLog[]) ?? []
+    setCardio((cardioAllRes.data as CardioLog[]) ?? [])
     const logRows = (logsRes.data as WorkoutLog[]) ?? []
     const planRows = (plansRes.data as WorkoutPlan[]) ?? []
-    setCardio(cardioData)
     setLogs(logRows)
     setPlans(planRows)
     const blockRow = blockRes.data as TrainingBlock | null
     setBlock(blockRow)
-    let sessRows: PlannedSession[] = []
     if (blockRow) {
       const { data: sess } = await supabase
         .from('planned_sessions')
@@ -157,7 +142,7 @@ export default function Gym() {
         .eq('block_id', blockRow.id)
         .order('week_number')
         .order('day_number')
-      sessRows = (sess as PlannedSession[]) ?? []
+      const sessRows = (sess as PlannedSession[]) ?? []
       setSessions(sessRows)
       const [setsRes, checkinRes] = await Promise.all([
         supabase
@@ -194,7 +179,6 @@ export default function Gym() {
     if (start) setWeek(weekFromStart(start))
     setCardioBase(settingsRes.data?.cardio_target_km ?? DEFAULT_BASE_KM)
     setBaseDraft(String(settingsRes.data?.cardio_target_km ?? DEFAULT_BASE_KM))
-    setCache('gym', { logs: logRows, plans: planRows, block: blockRow, sessions: sessRows, cardio: cardioData })
     setLoaded(true)
   }, [])
 
@@ -220,7 +204,7 @@ export default function Gym() {
       await supabase
         .from('user_settings')
         .upsert({ program_start: programStartForWeek(1), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-      await load(true)
+      await load()
     } finally {
       setStarting(false)
     }
@@ -262,7 +246,7 @@ export default function Gym() {
       }
       const result = await runOp({ table: 'cardio_logs', op: 'insert', values: entry as unknown as Record<string, unknown> })
       setRun({ ...run, km: '', min: '', hr: '' })
-      if (result === 'saved') await load(true)
+      if (result === 'saved') await load()
       else setCardio((prev) => [entry, ...prev]) // optimistic while offline
       // offer the check-in right away - each pill saves on tap, closing skips
       setEditCardio({
@@ -301,19 +285,19 @@ export default function Gym() {
     }
     setCardio((prev) => prev.map((c) => (c.id === editCardio.id ? { ...c, ...values } : c)))
     setEditCardio(null)
-    if ((await runOp({ table: 'cardio_logs', op: 'update', ids: [editCardio.id], values })) === 'saved') load(true)
+    if ((await runOp({ table: 'cardio_logs', op: 'update', ids: [editCardio.id], values })) === 'saved') load()
   }
 
   async function deleteCardio(id: string) {
     if (!window.confirm('Remove this cardio entry?')) return
     await supabase.from('cardio_logs').delete().eq('id', id)
     setEditCardio(null)
-    load(true)
+    load()
   }
 
   async function updatePlan(id: string, patch: Partial<WorkoutPlan>) {
     await supabase.from('workout_plans').update(patch).eq('id', id)
-    load(true)
+    load()
   }
 
   async function movePlan(p: WorkoutPlan, dir: -1 | 1) {
@@ -324,13 +308,13 @@ export default function Gym() {
       supabase.from('workout_plans').update({ sort_order: other.sort_order }).eq('id', p.id),
       supabase.from('workout_plans').update({ sort_order: p.sort_order }).eq('id', other.id),
     ])
-    load(true)
+    load()
   }
 
   async function deletePlan(p: WorkoutPlan) {
     if (!window.confirm(`Remove "${p.exercise}" from the plan? (Already-generated sessions keep it.)`)) return
     await supabase.from('workout_plans').delete().eq('id', p.id)
-    load(true)
+    load()
   }
 
   async function useTemplate() {
@@ -338,7 +322,7 @@ export default function Gym() {
     setSettingUp(true)
     try {
       await seedWorkoutTemplate()
-      await load(true)
+      await load()
     } finally {
       setSettingUp(false)
     }
@@ -358,7 +342,7 @@ export default function Gym() {
         muscle_group: scratch.muscle,
         schemes: { '1-2': scratch.scheme, '3-4': scratch.scheme, '5-6': scratch.scheme },
       })
-      await load(true)
+      await load()
       setSplit(session)
       setEditingPlan(true)
     } finally {
@@ -379,7 +363,7 @@ export default function Gym() {
       schemes: { '1-2': newEx.scheme, '3-4': newEx.scheme, '5-6': newEx.scheme },
     })
     setNewEx({ ...newEx, name: '' })
-    load(true)
+    load()
   }
 
   const phase = week === null ? null : PHASES.find((p) => week <= p.maxWeek) ?? null
@@ -441,7 +425,7 @@ export default function Gym() {
       {view === 'strength' && (
         <p className="gentle">
           Sets, weights, reps — logged in a session, or from the Now tab:{' '}
-          <em>"bench 60kg 3x8, felt easy"</em>.
+          <em>“bench 60kg 3x8, felt easy”</em>.
         </p>
       )}
 
@@ -517,7 +501,7 @@ export default function Gym() {
           <p className="gentle">
             {nextTweaks
               ? `From your recovery check-ins: ${nextTweaks} — applied when the next block generates.`
-              : 'Your check-ins read as "right" across the board — the next block keeps the written volumes.'}
+              : 'Your check-ins read as “right” across the board — the next block keeps the written volumes.'}
           </p>
           <button className="start-session" onClick={() => beginBlock(nextBlockNumber)} disabled={starting}>
             {starting
@@ -578,7 +562,7 @@ export default function Gym() {
               <span className="routine-progress">
                 {weekKm > 0 || weekMin > 0
                   ? ` this week: ${weekKm > 0 ? `${Math.round(weekKm * 10) / 10} km` : ''}${weekKm > 0 && weekMin > 0 ? ' · ' : ''}${weekMin > 0 ? `${Math.round(weekMin)} min` : ''}`
-                  : ' nothing yet this week — that\'s allowed'}
+                  : ' nothing yet this week — that’s allowed'}
               </span>
             </h2>
 
@@ -695,7 +679,7 @@ export default function Gym() {
               if (over >= 2 && !localStorage.getItem('cardio-sugg-over')) {
                 return (
                   <div className="notice vol-suggestion">
-                    Cardio has said "over the line" a couple of times lately — an easier week is a fine plan.
+                    Cardio has said “over the line” a couple of times lately — an easier week is a fine plan.
                     <button
                       className="link"
                       onClick={() => {
@@ -711,7 +695,7 @@ export default function Gym() {
               if (more >= 2 && over === 0 && !localStorage.getItem('cardio-sugg-more')) {
                 return (
                   <div className="notice vol-suggestion">
-                    Cardio keeps saying "could take more" — want to nudge the distance up a little?
+                    Cardio keeps saying “could take more” — want to nudge the distance up a little?
                     <button
                       className="link"
                       onClick={() => {
@@ -841,7 +825,7 @@ export default function Gym() {
             })}
             {cardio.length === 0 && (
               <p className="gentle">
-                Log above, tell the composer <em>"ran 5k in 32 min"</em>, or finish a Pull session — they all land here.
+                Log above, tell the composer <em>“ran 5k in 32 min”</em>, or finish a Pull session — they all land here.
               </p>
             )}
           </section>
@@ -850,7 +834,7 @@ export default function Gym() {
 
       {view === 'strength' && overLine.map((mg) => (
         <div key={mg} className="notice vol-suggestion">
-          {mg} has said "over the line" a couple of times lately — want one set fewer next week? (Edit the plan
+          {mg} has said “over the line” a couple of times lately — want one set fewer next week? (Edit the plan
           below; the current week stays as planned.)
           <button
             className="link"
@@ -1115,7 +1099,7 @@ export default function Gym() {
           plans={plans}
           onExit={() => {
             setActive(null)
-            load(true)
+            load()
           }}
         />
       )}
