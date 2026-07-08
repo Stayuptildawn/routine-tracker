@@ -50,8 +50,8 @@ export default function Week() {
   const weekDates = currentWeekDates()
   const today = localDate()
 
-  const load = useCallback(async () => {
-    const cached = getCache('week', CACHE_TTL)
+  const load = useCallback(async (force = false) => {
+    const cached = !force && getCache('week', CACHE_TTL)
     if (cached) {
       setRoutines(cached.routines)
       setLogs(cached.logs)
@@ -92,7 +92,7 @@ export default function Week() {
         { id: '', task_id: task.id, date, status: next, completed_via: 'manual', notes: null },
       ]
     })
-    if ((await setTaskStatus(task.id, next, 'manual', date)) === 'saved') load()
+    if ((await setTaskStatus(task.id, next, 'manual', date)) === 'saved') load(true)
   }
 
   async function addTask(routineId: string) {
@@ -103,7 +103,7 @@ export default function Week() {
     await supabase.from('tasks').insert({ routine_id: routineId, label, sort_order: maxOrder + 1 })
     setNewLabel('')
     setNewTaskFor(null)
-    load()
+    load(true)
   }
 
   async function addRoutine() {
@@ -113,36 +113,36 @@ export default function Week() {
     await supabase.from('routines').insert({ name, sort_order: maxOrder + 1 })
     setNewRoutine('')
     setAddingRoutine(false)
-    load()
+    load(true)
   }
 
   async function renameRoutine(id: string) {
     const name = nameDraft.trim()
     if (name) await supabase.from('routines').update({ name }).eq('id', id)
     setEditing(null)
-    load()
+    load(true)
   }
 
   async function setAnchor(routineId: string, value: string) {
     await supabase.from('routines').update({ anchor_time: value || null }).eq('id', routineId)
-    load()
+    load(true)
   }
 
   async function setActive(routineId: string, active: boolean) {
     await supabase.from('routines').update({ active }).eq('id', routineId)
-    load()
+    load(true)
   }
 
   async function deleteRoutine(routine: Routine) {
     if (!window.confirm(`Delete "${routine.name}" and all its tasks and history?`)) return
     await supabase.from('routines').delete().eq('id', routine.id)
     setEditing(null)
-    load()
+    load(true)
   }
 
   async function updateTask(taskId: string, patch: Partial<Pick<Task, 'label' | 'tier' | 'scheduled_days'>>) {
     await supabase.from('tasks').update(patch).eq('id', taskId)
-    load()
+    load(true)
   }
 
   function toggleDay(task: Task, day: number) {
@@ -156,7 +156,7 @@ export default function Week() {
   async function deleteTask(task: Task) {
     if (!window.confirm(`Delete task "${task.label}"?`)) return
     await supabase.from('tasks').delete().eq('id', task.id)
-    load()
+    load(true)
   }
 
   return (
@@ -227,7 +227,7 @@ export default function Week() {
                       clear
                     </button>
                   ) : (
-                    <span className="gentle anchor-hint">optional — “around when?”</span>
+                    <span className="gentle anchor-hint">optional — "around when?"</span>
                   )}
                 </div>
                 {tasks.map((task) => (

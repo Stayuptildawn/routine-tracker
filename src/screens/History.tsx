@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { describeAction, undoAiAction } from '../lib/actions'
 import type { AiAction } from '../lib/types'
-import { getCache, setCache } from '../lib/cache'
 import Skeleton from '../components/Skeleton'
 
 const STATUS_LABEL: Record<AiAction['status'], string> = {
@@ -11,31 +10,19 @@ const STATUS_LABEL: Record<AiAction['status'], string> = {
   undone: 'Undone',
 }
 
-const CACHE_TTL = 2 * 60_000
-
 export default function History() {
   const [items, setItems] = useState<AiAction[]>([])
   const [counts, setCounts] = useState<{ kept: number; undone: number } | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  const load = useCallback(async () => {
-    const cached = getCache('history', CACHE_TTL)
-    if (cached) {
-      setItems(cached.items)
-      setCounts(cached.counts)
-      setLoaded(true)
-      return
-    }
+  const load = useCallback(async (force = false) => {
     const [{ data }, keptRes, undoneRes] = await Promise.all([
       supabase.from('ai_actions').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('ai_actions').select('id', { count: 'exact', head: true }).in('status', ['applied', 'confirmed']),
       supabase.from('ai_actions').select('id', { count: 'exact', head: true }).eq('status', 'undone'),
     ])
-    const items = (data as AiAction[]) ?? []
-    const counts = { kept: keptRes.count ?? 0, undone: undoneRes.count ?? 0 }
-    setItems(items)
-    setCounts(counts)
-    setCache('history', { items, counts })
+    setItems((data as AiAction[]) ?? [])
+    setCounts({ kept: keptRes.count ?? 0, undone: undoneRes.count ?? 0 })
     setLoaded(true)
   }, [])
 
@@ -47,7 +34,7 @@ export default function History() {
     const what = item.actions.map(describeAction).join(', ')
     if (!window.confirm(`Undo everything this message did?\n\n${what}\n\nThe changes will be reverted.`)) return
     await undoAiAction(item.id, item.actions)
-    load()
+    load(true)
   }
 
   return (
@@ -62,7 +49,7 @@ export default function History() {
       )}
       {items.map((item) => (
         <div key={item.id} className={`ai-item ${item.status}`}>
-          <div className="ai-raw">“{item.raw_text}”</div>
+          <div className="ai-raw">"{item.raw_text}"</div>
           <div className="ai-did">
             {item.actions.map((a, i) => (
               <div key={i}>{describeAction(a)}</div>

@@ -63,8 +63,8 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
     getNudgeState().then(setNudges)
   }, [])
 
-  const load = useCallback(async () => {
-    const cached = getCache('now', CACHE_TTL)
+  const load = useCallback(async (force = false) => {
+    const cached = !force && getCache('now', CACHE_TTL)
     if (cached) {
       setRoutines(cached.routines)
       setLogs(new Map(cached.logs.map((l) => [l.task_id, l])))
@@ -130,7 +130,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
       return map
     })
     // when queued offline, keep the optimistic state - a reload would revert it
-    if ((await setTaskStatus(task.id, next)) === 'saved') load()
+    if ((await setTaskStatus(task.id, next)) === 'saved') load(true)
   }
 
   async function send() {
@@ -155,7 +155,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
         } else if (result.applied.length === 0 && result.suggestions.length === 0 && !result.answers?.length) {
           setNotice('Nothing matched — try naming the task, or add it as a reminder.')
         }
-        load()
+        load(true)
       }
     } catch (err) {
       setNotice(`Couldn't reach the AI: ${String(err)}`)
@@ -167,14 +167,14 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
   async function confirmSuggestion(s: Suggestion) {
     await setTaskStatus(s.task_id, s.status, 'ai_text')
     setSuggestions((prev) => prev.filter((x) => x.task_id !== s.task_id))
-    load()
+    load(true)
   }
 
   async function runUndo() {
     if (!undo) return
     await undoAiAction(undo.aiActionId, undo.response.applied)
     setUndo(null)
-    load()
+    load(true)
   }
 
   function startVoice() {
@@ -439,7 +439,7 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
       )}
 
       {loaded && sections.length === 0 && (
-        <p className="gentle">Nothing scheduled right now. That’s allowed.</p>
+        <p className="gentle">Nothing scheduled right now. That's allowed.</p>
       )}
 
       {loaded && (nudges === 'on' || nudges === 'off') && (
