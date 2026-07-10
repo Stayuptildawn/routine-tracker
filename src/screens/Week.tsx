@@ -67,8 +67,9 @@ export default function Week({ visible }: { visible: boolean }) {
     if (visible) load()
   }, [visible, load])
 
-  const logFor = (taskId: string, date: string) =>
-    logs.find((l) => l.task_id === taskId && l.date === date)
+  // the grid asks for (task, date) once per cell - index instead of scanning
+  const logIndex = new Map(logs.map((l) => [`${l.task_id}|${l.date}`, l]))
+  const logFor = (taskId: string, date: string) => logIndex.get(`${taskId}|${date}`)
 
   async function cycleCell(task: Task, date: string) {
     const next = NEXT_STATUS[logFor(task.id, date)?.status ?? 'pending']

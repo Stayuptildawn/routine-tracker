@@ -61,22 +61,17 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [recovering, setRecovering] = useState(false)
 
-  // installed-PWA back (Android button, iOS swipe): overlays get first go via
-  // their own handlers; this fallback closes Settings, then returns to Now,
-  // and always swallows the press so back never leaves the app
-  const backRef = useRef({ tab, settingsOpen })
-  backRef.current = { tab, settingsOpen }
+  // installed-PWA back (Android button, iOS swipe): open overlays close
+  // themselves via useOverlay; this fallback returns to Now, and always
+  // swallows the press so back never leaves the app
+  const tabRef = useRef(tab)
+  tabRef.current = tab
   useEffect(() => {
     armBackGuard()
     return onBackButton(() => {
-      if (backRef.current.settingsOpen) {
-        setSettingsOpen(false)
-        return true
-      }
-      if (backRef.current.tab !== 'now') {
+      if (tabRef.current !== 'now') {
         setTab('now')
         window.scrollTo(0, 0)
-        return true
       }
       return true
     })

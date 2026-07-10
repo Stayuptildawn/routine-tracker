@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { onBackButton } from '../lib/backButton'
-import { useFocusTrap } from '../lib/focusTrap'
+import { useOverlay } from '../lib/overlay'
 import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
@@ -202,24 +201,11 @@ export default function Session({ session, plans, onExit }: Props) {
   const allDone = loaded && sets.length > 0 && handled === sets.length
   const currentExercise = exercises.find((e) => sets.some((s) => s.exercise === e && !s.logged_at))
 
-  // leaving a finished session saves the check-in - exit must never lose data
+  // leaving a finished session saves the check-in - exit must never lose data.
+  // Escape and the installed-PWA back button leave the same safe way.
   const leaveRef = useRef<() => void>(onExit)
   leaveRef.current = allDone ? saveAndClose : onExit
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && leaveRef.current()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
-  // installed-PWA back leaves the session the same safe way Escape does
-  useEffect(
-    () =>
-      onBackButton(() => {
-        leaveRef.current()
-        return true
-      }),
-    [],
-  )
+  const trapRef = useOverlay<HTMLDivElement>(() => leaveRef.current())
 
   function draftFor(set: PlannedSet): Draft {
     return drafts.get(set.id) ?? { weight: '', reps: '' }
@@ -304,8 +290,6 @@ export default function Session({ session, plans, onExit }: Props) {
       onExit()
     }
   }
-
-  const trapRef = useFocusTrap<HTMLDivElement>()
 
   return (
     <div ref={trapRef} className="player session" role="dialog" aria-modal="true" aria-label={`${session.split_day} session`}>

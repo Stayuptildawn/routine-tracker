@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { onBackButton } from '../lib/backButton'
-import { useFocusTrap } from '../lib/focusTrap'
+import { useState } from 'react'
+import { useOverlay } from '../lib/overlay'
 import type { Task, TaskLog } from '../lib/types'
 
 interface PlayerProps {
@@ -22,23 +21,8 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
   // which task to show next; falls back to the first pending one
   const [preferredId, setPreferredId] = useState<string | null>(focusTaskId ?? null)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onExit()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onExit])
-
-  // installed-PWA back closes the player like the exit link
-  const exitRef = useRef(onExit)
-  exitRef.current = onExit
-  useEffect(
-    () =>
-      onBackButton(() => {
-        exitRef.current()
-        return true
-      }),
-    [],
-  )
+  // Escape and the installed-PWA back button close the player like the exit link
+  const trapRef = useOverlay<HTMLDivElement>(onExit)
 
   const pending = tasks.filter((t) => !handled(logs, t))
   const current = pending.find((t) => t.id === preferredId) ?? pending[0]
@@ -51,8 +35,6 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
     setPreferredId(after?.id ?? null)
     onStatus(current, status)
   }
-
-  const trapRef = useFocusTrap<HTMLDivElement>()
 
   return (
     <div ref={trapRef} className="player" role="dialog" aria-modal="true" aria-label={`${routineName} player`}>

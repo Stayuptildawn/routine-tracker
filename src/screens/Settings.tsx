@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useFocusTrap } from '../lib/focusTrap'
+import { useOverlay } from '../lib/overlay'
 
 export type Theme = 'auto' | 'light' | 'dark'
 
@@ -55,9 +55,6 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
       setEmail(data.user?.email ?? '')
       setCreatedAt(data.user?.created_at ?? '')
     })
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveTz(value: string) {
@@ -86,7 +83,8 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
     setPwMsg(error ? error.message : 'Password saved. Use it to sign in next time.')
   }
 
-  const trapRef = useFocusTrap<HTMLDivElement>()
+  // Escape and the installed-PWA back button close Settings like the close link
+  const trapRef = useOverlay<HTMLDivElement>(onClose)
 
   return (
     <div ref={trapRef} className="player settings-screen" role="dialog" aria-modal="true" aria-label="Settings">
