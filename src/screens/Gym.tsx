@@ -7,7 +7,7 @@ import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
 import Session from './Session'
 import GymCardio from './GymCardio'
-import PlanEditor, { MUSCLE_GROUPS } from './PlanEditor'
+import PlanEditor, { MUSCLE_GROUPS, composeScheme } from './PlanEditor'
 import type { BlockApplyDiff } from './PlanEditor'
 import Skeleton from '../components/Skeleton'
 
@@ -46,7 +46,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   // whichever was open last
   const [view, setView] = useState<'strength' | 'cardio'>('strength')
 
-  const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', scheme: '3 x 10-12' })
+  const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', sets: '3', reps: '10-12' })
   const [settingUp, setSettingUp] = useState(false)
   const [starting, setStarting] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState<number | null>(null) // which block's start is awaiting a yes
@@ -241,13 +241,14 @@ export default function Gym({ visible }: { visible: boolean }) {
     if (settingUp || !session || !exercise) return
     setSettingUp(true)
     try {
+      const scheme = composeScheme(scratch.sets, scratch.reps) || '3 x 10-12'
       await supabase.from('workout_plans').insert({
         block: 1,
         split_day: session,
         sort_order: 1,
         exercise,
         muscle_group: scratch.muscle,
-        schemes: { '1-2': scratch.scheme, '3-4': scratch.scheme, '5-6': scratch.scheme },
+        schemes: { '1-2': scheme, '3-4': scheme, '5-6': scheme },
       })
       await load()
       setSplit(session)
@@ -553,10 +554,21 @@ export default function Gym({ visible }: { visible: boolean }) {
                 <option key={m}>{m}</option>
               ))}
             </select>
+          </div>
+          <div className="add-task scheme-field">
             <input
-              placeholder="3 x 10-12"
-              value={scratch.scheme}
-              onChange={(e) => setScratch({ ...scratch, scheme: e.target.value })}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={10}
+              value={scratch.sets}
+              onChange={(e) => setScratch({ ...scratch, sets: e.target.value })}
+            />
+            <span className="scheme-x">sets ×</span>
+            <input
+              placeholder="reps, e.g. 10-12"
+              value={scratch.reps}
+              onChange={(e) => setScratch({ ...scratch, reps: e.target.value })}
             />
           </div>
           <button

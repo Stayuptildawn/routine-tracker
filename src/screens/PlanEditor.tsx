@@ -5,6 +5,21 @@ import type { PlannedSession, TrainingBlock, WorkoutPlan } from '../lib/types'
 export const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
 export const PHASE_KEYS = ['1-2', '3-4', '5-6']
 
+/** "4 x 8-10" -> sets "4", reps "8-10". Text without a leading count (e.g.
+ *  "Rest") lands whole in reps so nothing a user typed ever disappears. */
+export function parseScheme(s: string): { sets: string; reps: string } {
+  const m = (s ?? '').match(/^\s*(\d+)\s*[x×]\s*(.*)$/i)
+  if (m) return { sets: m[1], reps: m[2].trim() }
+  return { sets: '', reps: (s ?? '').trim() }
+}
+
+/** The inverse: two fields back into the stored "N x reps" string. */
+export function composeScheme(sets: string, reps: string): string {
+  const n = parseInt(sets, 10)
+  if (Number.isFinite(n) && n > 0) return reps.trim() ? `${n} x ${reps.trim()}` : `${n} x`
+  return reps.trim()
+}
+
 /** What a Save changed structurally in the running block's plan - Gym uses it
  *  to offer "apply to this block's remaining sessions too?". */
 export interface BlockApplyDiff {
@@ -243,15 +258,29 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
               </button>
             </div>
             <div className="edit-task-row scheme-row">
-              {PHASE_KEYS.map((k) => (
-                <input
-                  key={k}
-                  value={r.schemes[k] ?? ''}
-                  placeholder={`wk ${k}`}
-                  title={`Weeks ${k}: the first number is the set count — e.g. 4 x 8-10 = 4 sets`}
-                  onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: e.target.value } })}
-                />
-              ))}
+              {PHASE_KEYS.map((k) => {
+                const parsed = parseScheme(r.schemes[k] ?? '')
+                return (
+                  <div key={k} className="scheme-field">
+                    <span className="scheme-wk">wk {k}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={10}
+                      placeholder="0"
+                      value={parsed.sets}
+                      onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(e.target.value, parsed.reps) } })}
+                    />
+                    <span className="scheme-x">sets ×</span>
+                    <input
+                      placeholder="reps, e.g. 8-10"
+                      value={parsed.reps}
+                      onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(parsed.sets, e.target.value) } })}
+                    />
+                  </div>
+                )
+              })}
             </div>
             <div className="edit-task-row">
               <input

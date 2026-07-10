@@ -2162,6 +2162,42 @@ select option {
   color: #c96a5a;
 }
 
+/* plan editor: sets × reps entry, one labeled line per phase */
+.scheme-row {
+  flex-wrap: wrap;
+}
+
+.scheme-field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1 1 100%;
+}
+
+.scheme-wk {
+  min-width: 4.2rem;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.scheme-field input[type='number'] {
+  width: 4.2rem;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.scheme-x {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.scheme-field input:not([type='number']) {
+  flex: 1;
+  min-width: 0;
+}
+
 /* plan editor: a row marked for deletion, undoable until Save */
 .plan-deleted {
   align-items: center;
