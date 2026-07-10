@@ -2133,6 +2133,35 @@ select option {
   white-space: nowrap;
 }
 
+/* plan editor: the two decisions that matter must be unmissable */
+.plan-edit-actions {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: var(--sp-2) 0;
+  background: var(--surface);
+}
+
+.plan-edit-actions .save {
+  flex: 1;
+  min-height: 46px;
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.plan-edit-actions .cancel {
+  flex: 1;
+  min-height: 46px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.plan-edit-actions .cancel:hover {
+  color: #c96a5a;
+}
+
 /* plan editor: a row marked for deletion, undoable until Save */
 .plan-deleted {
   align-items: center;

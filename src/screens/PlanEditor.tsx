@@ -191,10 +191,10 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
     <div className="edit-panel">
       <div className="edit-task-row plan-edit-actions">
         <button className="save" onClick={save} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'Saving…' : '✓ Save changes'}
         </button>
-        <button className="link" onClick={onCancel} disabled={saving}>
-          Cancel
+        <button className="cancel" onClick={onCancel} disabled={saving}>
+          ✕ Cancel
         </button>
       </div>
       <p className="gentle">
@@ -248,6 +248,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
                   key={k}
                   value={r.schemes[k] ?? ''}
                   placeholder={`wk ${k}`}
+                  title={`Weeks ${k}: the first number is the set count — e.g. 4 x 8-10 = 4 sets`}
                   onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: e.target.value } })}
                 />
               ))}
