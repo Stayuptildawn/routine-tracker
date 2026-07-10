@@ -299,6 +299,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
           <button
             key={level}
             className={energy === level ? 'energy-btn active' : 'energy-btn'}
+            aria-pressed={energy === level}
             onClick={() => pickEnergy(level)}
           >
             {level === 'low' ? '🪫 Low' : level === 'medium' ? '🔋 Medium' : '⚡ High'}

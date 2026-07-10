@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { onBackButton } from '../lib/backButton'
+import { useFocusTrap } from '../lib/focusTrap'
 import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
@@ -304,8 +305,10 @@ export default function Session({ session, plans, onExit }: Props) {
     }
   }
 
+  const trapRef = useFocusTrap<HTMLDivElement>()
+
   return (
-    <div className="player session" role="dialog" aria-label={`${session.split_day} session`}>
+    <div ref={trapRef} className="player session" role="dialog" aria-modal="true" aria-label={`${session.split_day} session`}>
       <div className="player-rail" aria-hidden="true">
         <div className="player-rail-fill" style={{ width: `${sets.length ? (handled / sets.length) * 100 : 0}%` }} />
       </div>

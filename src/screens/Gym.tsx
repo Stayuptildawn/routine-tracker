@@ -7,6 +7,7 @@ import { runOp } from '../lib/offline'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM, cardioTargetForWeek } from '../lib/cardioPlan'
 import Session from './Session'
+import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 
 const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
@@ -106,14 +107,12 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [view, setView] = useState<'strength' | 'cardio'>('strength')
   const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; hr: string; notes: string; date: string } | null>(null)
 
-  function pickView(v: 'strength' | 'cardio') {
-    setView(v)
-  }
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [newSession, setNewSession] = useState('')
   const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [settingUp, setSettingUp] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [confirmBlock, setConfirmBlock] = useState<number | null>(null) // which block's start is awaiting a yes
   const [split, setSplit] = useState<string | null>(null)
   const [week, setWeek] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -189,14 +188,6 @@ export default function Gym({ visible }: { visible: boolean }) {
   async function beginBlock(blockNumber: number) {
     if (starting || plans.length === 0) return
     const adjustments = await recoveryAdjustments()
-    const tweaks = [...adjustments.entries()].map(([m, d]) => `${m} ${d > 0 ? '+1' : '−1'} set`).join(', ')
-    const tweakNote = tweaks
-      ? ` Your recovery check-ins suggest: ${tweaks} (applied per exercise, never below 2 sets).`
-      : ''
-    const warning = block && !sessions.every((s) => s.completed_at)
-      ? ` The current ${block.name} isn't finished — the new block becomes the active one (nothing is deleted).`
-      : ''
-    if (!window.confirm(`Generate Block ${blockNumber}: 6 weeks of sessions and sets from the plan?${tweakNote}${warning}`)) return
     setStarting(true)
     try {
       await startBlock(plans, blockNumber, adjustments)
@@ -289,7 +280,6 @@ export default function Gym({ visible }: { visible: boolean }) {
   }
 
   async function deleteCardio(id: string) {
-    if (!window.confirm('Remove this cardio entry?')) return
     await supabase.from('cardio_logs').delete().eq('id', id)
     setEditCardio(null)
     load()
@@ -330,7 +320,6 @@ export default function Gym({ visible }: { visible: boolean }) {
   }
 
   async function deletePlan(p: WorkoutPlan) {
-    if (!window.confirm(`Remove "${p.exercise}" from the plan? (Already-generated sessions keep it.)`)) return
     await supabase.from('workout_plans').delete().eq('id', p.id)
     load()
   }
@@ -433,10 +422,18 @@ export default function Gym({ visible }: { visible: boolean }) {
     <div className="gym">
       <h1>Workout</h1>
       <div className="energy-row seg-row">
-        <button className={view === 'strength' ? 'energy-btn active' : 'energy-btn'} onClick={() => pickView('strength')}>
+        <button
+          className={view === 'strength' ? 'energy-btn active' : 'energy-btn'}
+          aria-pressed={view === 'strength'}
+          onClick={() => setView('strength')}
+        >
           🏋️ Strength
         </button>
-        <button className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'} onClick={() => pickView('cardio')}>
+        <button
+          className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'}
+          aria-pressed={view === 'cardio'}
+          onClick={() => setView('cardio')}
+        >
           🏃 Cardio
         </button>
       </div>
@@ -521,18 +518,59 @@ export default function Gym({ visible }: { visible: boolean }) {
               ? `From your recovery check-ins: ${nextTweaks} — applied when the next block generates.`
               : 'Your check-ins read as “right” across the board — the next block keeps the written volumes.'}
           </p>
-          <button className="start-session" onClick={() => beginBlock(nextBlockNumber)} disabled={starting}>
-            {starting
-              ? 'Generating…'
-              : `▶ Start Block ${nextBlockNumber}${nextBlockNumber === 2 ? ' — Upper/Lower' : ''}${nextBlockNumber === (block.block ?? 1) ? ' (repeat)' : ''}, recovery-informed`}
-          </button>
+          {confirmBlock === nextBlockNumber ? (
+            <>
+              <button
+                className="start-session"
+                onClick={() => {
+                  setConfirmBlock(null)
+                  beginBlock(nextBlockNumber)
+                }}
+                disabled={starting}
+              >
+                {starting ? 'Generating…' : `Yes — generate Block ${nextBlockNumber}: 6 weeks of sessions and sets`}
+              </button>
+              <button className="link" onClick={() => setConfirmBlock(null)}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button className="start-session" onClick={() => setConfirmBlock(nextBlockNumber)} disabled={starting}>
+              {starting
+                ? 'Generating…'
+                : `▶ Start Block ${nextBlockNumber}${nextBlockNumber === 2 ? ' — Upper/Lower' : ''}${nextBlockNumber === (block.block ?? 1) ? ' (repeat)' : ''}, recovery-informed`}
+            </button>
+          )}
         </section>
       )}
 
       {view === 'strength' && loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
-        <button className="start-session lone" onClick={() => beginBlock(planBlock)} disabled={starting}>
-          {starting ? 'Generating…' : `▶ Start Block ${planBlock} (6 weeks from the plan)`}
-        </button>
+        confirmBlock === planBlock ? (
+          <div className="start-block-confirm">
+            {block && !sessions.every((s) => s.completed_at) && (
+              <p className="gentle">
+                The current {block.name} isn't finished — the new block becomes the active one (nothing is deleted).
+              </p>
+            )}
+            <button
+              className="start-session lone"
+              onClick={() => {
+                setConfirmBlock(null)
+                beginBlock(planBlock)
+              }}
+              disabled={starting}
+            >
+              {starting ? 'Generating…' : `Yes — generate Block ${planBlock}: 6 weeks of sessions and sets`}
+            </button>
+            <button className="link" onClick={() => setConfirmBlock(null)}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button className="start-session lone" onClick={() => setConfirmBlock(planBlock)} disabled={starting}>
+            {starting ? 'Generating…' : `▶ Start Block ${planBlock} (6 weeks from the plan)`}
+          </button>
+        )
       )}
 
       {view === 'cardio' && loaded && (() => {
@@ -802,9 +840,12 @@ export default function Gym({ visible }: { visible: boolean }) {
                       <button className="link" onClick={() => setEditCardio(null)}>
                         Close
                       </button>
-                      <button className="danger" onClick={() => deleteCardio(c.id)}>
-                        Delete
-                      </button>
+                      <ConfirmButton
+                        className="danger"
+                        label="Delete"
+                        confirmLabel="delete this entry?"
+                        onConfirm={() => deleteCardio(c.id)}
+                      />
                     </div>
                   </div>
                 )
@@ -1040,9 +1081,13 @@ export default function Gym({ visible }: { visible: boolean }) {
                     <button className="danger" disabled={i === splitPlans.length - 1} onClick={() => movePlan(p, 1)}>
                       ↓
                     </button>
-                    <button className="danger" onClick={() => deletePlan(p)}>
-                      ✕
-                    </button>
+                    <ConfirmButton
+                      className="danger"
+                      label="✕"
+                      confirmLabel="remove?"
+                      title={`Remove "${p.exercise}" from the plan — already-generated sessions keep it`}
+                      onConfirm={() => deletePlan(p)}
+                    />
                   </div>
                   <div className="edit-task-row scheme-row">
                     {PHASE_KEYS.map((k) => (

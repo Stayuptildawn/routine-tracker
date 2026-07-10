@@ -7,6 +7,18 @@ const base = process.env.VITE_BASE_PATH ?? '/'
 
 export default defineConfig({
   base,
+  build: {
+    rollupOptions: {
+      output: {
+        // vendor code changes far less often than app code - splitting it out
+        // keeps the app chunk small and lets updates re-download less
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

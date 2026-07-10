@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { onBackButton } from '../lib/backButton'
+import { useFocusTrap } from '../lib/focusTrap'
 import type { Task, TaskLog } from '../lib/types'
 
 interface PlayerProps {
@@ -51,8 +52,10 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
     onStatus(current, status)
   }
 
+  const trapRef = useFocusTrap<HTMLDivElement>()
+
   return (
-    <div className="player" role="dialog" aria-label={`${routineName} player`}>
+    <div ref={trapRef} className="player" role="dialog" aria-modal="true" aria-label={`${routineName} player`}>
       <div className="player-rail" aria-hidden="true">
         <div className="player-rail-fill" style={{ width: `${(doneCount / tasks.length) * 100}%` }} />
       </div>

@@ -162,11 +162,14 @@ export default function App() {
           <Reflect visible={tab === 'reflect'} />
         </div>
       </main>
-      <nav className="tabbar">
-        {TABS.map((t) => (
+      <nav className="tabbar" aria-label="Main">
+        {TABS.map((t) => {
+          const current = tab === t.id || (tab === 'reminders' && t.id === 'now')
+          return (
           <button
             key={t.id}
-            className={tab === t.id || (tab === 'reminders' && t.id === 'now') ? 'tab active' : 'tab'}
+            className={current ? 'tab active' : 'tab'}
+            aria-current={current ? 'page' : undefined}
             onClick={() => {
               setTab(t.id)
               window.scrollTo(0, 0)
@@ -175,7 +178,8 @@ export default function App() {
             <span className="tab-icon">{t.icon}</span>
             <span className="tab-label">{t.label}</span>
           </button>
-        ))}
+          )
+        })}
         <button className="settings-rail" onClick={() => setSettingsOpen(true)} title="Settings">
           ⚙️ Settings
         </button>

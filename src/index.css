@@ -2125,6 +2125,14 @@ select option {
   background: var(--surface-3);
 }
 
+/* two-tap destructive buttons: armed state after the first tap */
+.confirm-armed,
+.confirm-armed:hover {
+  background: #c96a5a;
+  color: #fff;
+  white-space: nowrap;
+}
+
 .delete-routine {
   align-self: flex-start;
   font-size: var(--fs-sm);

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
 import { setTaskStatus } from '../lib/actions'
+import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -123,7 +124,6 @@ export default function Week({ visible }: { visible: boolean }) {
   }
 
   async function deleteRoutine(routine: Routine) {
-    if (!window.confirm(`Delete "${routine.name}" and all its tasks and history?`)) return
     await supabase.from('routines').delete().eq('id', routine.id)
     setEditing(null)
     load()
@@ -143,7 +143,6 @@ export default function Week({ visible }: { visible: boolean }) {
   }
 
   async function deleteTask(task: Task) {
-    if (!window.confirm(`Delete task "${task.label}"?`)) return
     await supabase.from('tasks').delete().eq('id', task.id)
     load()
   }
@@ -247,9 +246,13 @@ export default function Week({ visible }: { visible: boolean }) {
                           </option>
                         ))}
                       </select>
-                      <button className="danger" onClick={() => deleteTask(task)}>
-                        ✕
-                      </button>
+                      <ConfirmButton
+                        className="danger"
+                        label="✕"
+                        confirmLabel="delete?"
+                        title={`Delete "${task.label}"`}
+                        onConfirm={() => deleteTask(task)}
+                      />
                     </div>
                     <div className="day-picker">
                       {DAY_NAMES.map((d, i) => (
@@ -275,9 +278,12 @@ export default function Week({ visible }: { visible: boolean }) {
                   />
                   <button onClick={() => addTask(routine.id)}>Add</button>
                 </div>
-                <button className="danger delete-routine" onClick={() => deleteRoutine(routine)}>
-                  Delete this routine
-                </button>
+                <ConfirmButton
+                  className="danger delete-routine"
+                  label="Delete this routine"
+                  confirmLabel="Really delete — tasks and history too?"
+                  onConfirm={() => deleteRoutine(routine)}
+                />
               </div>
             ) : tasks.length > 0 ? (
               <div className="week-grid-wrap">

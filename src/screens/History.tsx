@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { describeAction, undoAiAction } from '../lib/actions'
 import type { AiAction } from '../lib/types'
+import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 
 const STATUS_LABEL: Record<AiAction['status'], string> = {
@@ -32,8 +33,6 @@ export default function History({ visible }: { visible: boolean }) {
   }, [visible, load])
 
   async function undo(item: AiAction) {
-    const what = item.actions.map(describeAction).join(', ')
-    if (!window.confirm(`Undo everything this message did?\n\n${what}\n\nThe changes will be reverted.`)) return
     await undoAiAction(item.id, item.actions)
     load()
   }
@@ -60,9 +59,13 @@ export default function History({ visible }: { visible: boolean }) {
             <span className={`badge ${item.status}`}>{STATUS_LABEL[item.status]}</span>
             <span className="ai-time">{new Date(item.created_at).toLocaleString()}</span>
             {item.status !== 'undone' && (
-              <button className="link" onClick={() => undo(item)}>
-                Undo
-              </button>
+              <ConfirmButton
+                className="link"
+                label="Undo"
+                confirmLabel="revert all of this?"
+                title="Reverts everything this message did (listed above)"
+                onConfirm={() => undo(item)}
+              />
             )}
           </div>
         </div>

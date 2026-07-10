@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useFocusTrap } from '../lib/focusTrap'
 
 export type Theme = 'auto' | 'light' | 'dark'
 
@@ -85,8 +86,10 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
     setPwMsg(error ? error.message : 'Password saved. Use it to sign in next time.')
   }
 
+  const trapRef = useFocusTrap<HTMLDivElement>()
+
   return (
-    <div className="player settings-screen" role="dialog" aria-label="Settings">
+    <div ref={trapRef} className="player settings-screen" role="dialog" aria-modal="true" aria-label="Settings">
       <div className="player-inner">
         <div className="player-top">
           <span className="eyebrow">Settings</span>
@@ -103,6 +106,7 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
                 <button
                   key={value}
                   className={theme === value ? 'energy-btn active' : 'energy-btn'}
+                  aria-pressed={theme === value}
                   onClick={() => onTheme(value)}
                 >
                   {label}
