@@ -72,19 +72,30 @@ Deno.serve(async (req) => {
       if (i >= 0) { cardioKm[i] += Number(c.distance_km ?? 0); cardioN[i]++ }
     }
 
-    const activeWeeks = sessions.map((_, i) => sessions[i] + sets[i] + cardioN[i]).filter((n) => n > 0).length
+    const activity = sessions.map((_, i) => sessions[i] + sets[i] + cardioN[i])
+    const activeWeeks = activity.filter((n) => n > 0).length
     if (activeWeeks < 2) return json({ comment: '', noData: true })
 
+    // the window starts when logging did - empty weeks from before the app
+    // was in use are unknown time, not rest, and comparing against them reads
+    // as a false spike ("you're overreaching, take a break") to the model
+    const firstActive = activity.findIndex((n) => n > 0)
+    const span = WEEKS - firstActive
+    const wSessions = sessions.slice(firstActive)
+    const wSets = sets.slice(firstActive)
+    const wCardioKm = cardioKm.slice(firstActive)
+    const wActivity = activity.slice(firstActive)
+
     // averages over active weeks, and first-half vs second-half trend
-    const activeAvg = (arr: number[]) => {
-      const active = arr.filter((v, i) => sessions[i] + sets[i] + cardioN[i] > 0)
-      return r1(avg(active))
+    const activeAvg = (arr: number[]) => r1(avg(arr.filter((_, i) => wActivity[i] > 0)))
+    const half = (arr: number[], side: 0 | 1) => {
+      const mid = Math.ceil(arr.length / 2)
+      return avg(side === 0 ? arr.slice(0, mid) : arr.slice(mid))
     }
-    const half = (arr: number[], side: 0 | 1) => avg(arr.slice(side * 6, side * 6 + 6))
     const trends = {
-      sessions: trend(half(sessions, 0), half(sessions, 1)),
-      sets: trend(half(sets, 0), half(sets, 1)),
-      cardioKm: trend(half(cardioKm, 0), half(cardioKm, 1)),
+      sessions: trend(half(wSessions, 0), half(wSessions, 1)),
+      sets: trend(half(wSets, 0), half(wSets, 1)),
+      cardioKm: trend(half(wCardioKm, 0), half(wCardioKm, 1)),
     }
 
     // feedback patterns
@@ -108,14 +119,15 @@ Deno.serve(async (req) => {
       Object.entries(cardioFeel).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k.replace(/_/g, ' ')} ×${n}`).join(', ') || 'none logged'
 
     const prompt = `You read someone's training over time and name the real pattern. Kind but truthful.
-Data covers up to ${WEEKS} weeks; ${activeWeeks} of them had activity.
+Logging began ${span} week(s) ago - anything before that is simply unknown, NOT rest,
+NOT a decline, and never a reason to suggest backing off. ${activeWeeks} of those weeks had activity.
 
-Weekly series, oldest to newest (${WEEKS} numbers each):
-  gym sessions: [${sessions.join(', ')}]
-  hard sets:    [${sets.join(', ')}]
-  cardio km:    [${cardioKm.map(r1).join(', ')}]
+Weekly series since logging began, oldest to newest (${span} numbers each):
+  gym sessions: [${wSessions.join(', ')}]
+  hard sets:    [${wSets.join(', ')}]
+  cardio km:    [${wCardioKm.map(r1).join(', ')}]
 
-Average per active week: ${activeAvg(sessions)} sessions, ${activeAvg(sets)} hard sets, ${activeAvg(cardioKm)} km cardio.
+Average per active week: ${activeAvg(wSessions)} sessions, ${activeAvg(wSets)} hard sets, ${activeAvg(wCardioKm)} km cardio.
 Trend (first half vs second half): sessions ${trends.sessions}, hard sets ${trends.sets}, cardio ${trends.cardioKm}.
 
 Feedback you logged:

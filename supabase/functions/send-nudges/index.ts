@@ -17,6 +17,7 @@ import { addDays, userNow } from '../_shared/localtime.ts'
 
 const WINDOW_MIN = 15 // must match the cron cadence
 const REMINDER_WINDOW_START = 9 * 60 // due-today reminders go out after 09:00 local
+const REFLECT_PUSH_MIN = 21 * 60 + 30 // 21:30 local - half an hour before the nightly reflection reads the day
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -159,6 +160,46 @@ Deno.serve(async (req) => {
             .from('reminders')
             .update({ nudged_at: new Date().toISOString() })
             .in('id', items.map((r) => r.id))
+        }
+      }
+    }
+
+    // pre-reflection heads-up: one push per user per day at 21:30 local, so
+    // the day is fully logged before the 22:00 reflection reads it
+    {
+      const { data: allSubs } = await supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth')
+      const subsByUser = new Map<string, NonNullable<typeof allSubs>>()
+      for (const s of allSubs ?? []) {
+        const list = subsByUser.get(s.user_id) ?? []
+        list.push(s)
+        subsByUser.set(s.user_id, list)
+      }
+      for (const [userId, subs] of subsByUser) {
+        const { date, minutes } = nowFor(userId)
+        if (minutes < REFLECT_PUSH_MIN || minutes >= REFLECT_PUSH_MIN + WINDOW_MIN) continue
+        // dedupe: first insert wins, a second run the same day gets a conflict
+        const { error: dupe } = await supabase.from('reflect_nudges_sent').insert({ user_id: userId, date })
+        if (dupe) continue
+        const payload = JSON.stringify({
+          title: 'Routine Tracker',
+          body: "Tonight's reflection reads the day at 22:00 — a good moment to log anything still floating around.",
+          tag: 'reflect-nudge', // replaces, never stacks
+        })
+        for (const sub of subs) {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload,
+            )
+            sent++
+          } catch (err: unknown) {
+            const status = (err as { statusCode?: number }).statusCode
+            if (status === 404 || status === 410) {
+              await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+            } else {
+              console.error('reflect push failed:', status, err)
+            }
+          }
         }
       }
     }

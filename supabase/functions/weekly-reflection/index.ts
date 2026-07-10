@@ -1,6 +1,9 @@
-// weekly-reflection: Sunday evening, two specific sentences about the week.
-// Triggered by pg_cron -> net.http_post; deploy with verify_jwt OFF -
-// authenticated by the x-cron-secret header instead.
+// weekly-reflection: two specific sentences about the week so far. pg_cron
+// fires this every 15 minutes; each user gets a fresh reflection twice a day
+// in THEIR timezone - a morning pass (09:00) and a closing pass (22:00, after
+// the pre-reflection nudge has reminded them to log the day). Deploy with
+// verify_jwt OFF - authenticated by the x-cron-secret header instead. A
+// manual run can pass {"force": true} to skip the time windows.
 //
 // Runs with the service role: every query scopes by user_id explicitly.
 //
@@ -43,20 +46,28 @@ async function askGemini(prompt: string): Promise<string | null> {
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+const MORNING_MIN = 9 * 60 // 09:00 local - the week-so-far card refreshes
+const NIGHT_MIN = 22 * 60 // 22:00 local - the closing pass, after the day is logged
+const WINDOW_MIN = 15 // must match the cron cadence
+
 Deno.serve(async (req) => {
   if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
     return new Response('forbidden', { status: 403 })
   }
 
   try {
+    // cron sends no body; a manual run can send {"force": true}
+    const { force } = await req.json().catch(() => ({ force: false }))
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 10 })
     const results: Record<string, string> = {}
 
     for (const user of usersPage?.users ?? []) {
-      // each user's week runs in their own timezone
+      // each user's day runs in their own timezone, read fresh every tick
       const { data: us } = await supabase.from('user_settings').select('timezone').eq('user_id', user.id).maybeSingle()
-      const { date, weekday } = userNow(us?.timezone)
+      const { date, weekday, minutes } = userNow(us?.timezone)
+      const inWindow = (m: number) => minutes >= m && minutes < m + WINDOW_MIN
+      if (!force && !inWindow(MORNING_MIN) && !inWindow(NIGHT_MIN)) continue
       const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
       const prevStart = addDays(weekStart, -7)
       const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -85,6 +96,16 @@ Deno.serve(async (req) => {
           supabase.from('reminders').select('status, created_at, updated_at').eq('user_id', user.id).gte('updated_at', weekStart + 'T00:00:00'),
         ])
 
+      // an empty week has nothing to reflect on - skip the AI call entirely
+      const weekHasData =
+        (logs ?? []).some((l) => weekDates.includes(l.date)) || (sessions ?? []).length > 0 || (cardio ?? []).length > 0
+      if (!weekHasData) continue
+
+      // cold start: if last week has no logs at all, they hadn't started
+      // logging yet - comparing against that emptiness reads as a huge spike
+      // and produces nonsense advice ("maybe rest"), so drop the comparison
+      const prevHadData = (logs ?? []).some((l) => prevDates.includes(l.date))
+
       // per-routine: done/scheduled this week vs last, plus which days landed
       const routineLines: string[] = []
       for (const r of routines ?? []) {
@@ -111,7 +132,7 @@ Deno.serve(async (req) => {
         const prev = stat(prevDates)
         if (now.scheduled === 0) continue
         routineLines.push(
-          `- ${r.name}: ${now.done}/${now.scheduled} this week (last week ${prev.done}/${prev.scheduled}); days with completions: ${[...now.daysHit].join(' ') || 'none'}`,
+          `- ${r.name}: ${now.done}/${now.scheduled} this week${prevHadData ? ` (last week ${prev.done}/${prev.scheduled})` : ''}; days with completions: ${[...now.daysHit].join(' ') || 'none'}`,
         )
       }
 
@@ -134,9 +155,14 @@ Deno.serve(async (req) => {
       const remindersDone = (reminders ?? []).filter((r) => r.status === 'done').length
 
       const prompt = `You write a tiny weekly reflection for someone with AuDHD who tracks daily routines.
-Week ${weekStart} to ${weekDates[6]}. Their data:
-
-Routines (done/scheduled, with last week for comparison):
+Week ${weekStart} to ${weekDates[6]}, seen as of ${date}. Their data:
+${prevHadData ? '' : `
+IMPORTANT: they started logging THIS WEEK. There is no earlier data - the time before
+is unknown, not zero, not rest. Never compare to previous weeks, never call this week
+a jump or increase, and never suggest easing off because of it. This week is the
+opening baseline.
+`}
+Routines (done/scheduled${prevHadData ? ', with last week for comparison' : ''}):
 ${routineLines.join('\n') || 'nothing scheduled'}
 
 Energy check-ins: ${energyLine || 'none set'}
