@@ -1,8 +1,16 @@
-# Routine Tracker
+<h1 align="center">Routine Tracker</h1>
 
-An AuDHD-friendly routine tracker I built for myself. You just type (or say)
-*"took my meds and drank water"* and it ticks the right boxes for you.
+<p align="center"><em>A routine tracker that works with your brain, whatever it's like.</em></p>
+
+<p align="center">
+An AuDHD-friendly routine tracker I built for myself. You just type (or say)<br>
+<em>"took my meds and drank water"</em> and it ticks the right boxes for you.<br>
 Self-hosted and free to run, no subscription.
+</p>
+
+<p align="center"><sub>React · Supabase · Gemini · installable PWA · AGPL-3.0</sub></p>
+
+<!-- screenshots row goes here: docs/screenshots/{now,workout,reflect}.png -->
 
 ## Why I built this
 
@@ -49,15 +57,15 @@ and donations are both welcome.
 
 ## This app is made for you if
 
-...you feel, like me, that building an app like this from scratch and washing
-the dishes land at the same spot on the scale, because the size of the task was
-never the hard part, just getting yourself to *execute* it is. If a five-minute
-chore and a five-week project feel equally heavy to start, then this was built
-for us. :)
+> ...you feel, like me, that building an app like this from scratch and washing
+> the dishes land at the same spot on the scale, because the size of the task was
+> never the hard part, just getting yourself to *execute* it is. If a five-minute
+> chore and a five-week project feel equally heavy to start, then this was built
+> for us. :)
 
 ## What it does
 
-**One message box that reads plain language.**
+### ☀️ One message box that reads plain language
 
 You just write what you did (or ask what you want to know) the way you'd say it
 out loud, and the AI works out what you meant. There is no phrasing to memorize
@@ -86,7 +94,7 @@ not add a new one.
   all. Every batch of actions is logged and reversible, and the log keeps a
   running accuracy score. Nothing happens silently.
 
-**Routines that adapt to the day.**
+### 📅 Routines that adapt to the day
 
 - Tasks have tiers (core / standard / bonus). On a low-energy day you only see
   the core minimum, and completing that still counts as a full win.
@@ -104,7 +112,7 @@ not add a new one.
 - No streaks, no shame. Skips show up neutral, blanks stay blank, past days can
   be corrected from the week grid, and taps work offline (they queue and sync).
 
-**A full training module.**
+### 🏋️ A full training module
 
 - Your program lives as **training blocks** (6-week PPL then Upper/Lower,
   rep-wave periodization, an injury-safe execution cue on every exercise).
@@ -119,23 +127,39 @@ not add a new one.
   edit.
 - A **volume picture** (hard sets per muscle per week) and a **cardio view**
   with quick logging, weekly distance, and pace — runs, walks, cycles, swims.
+- The plan is fully yours to edit: exercises, sessions, form cues, and sets ×
+  reps per phase as plain fields (no format to memorize). Nothing saves until
+  you press Save — Cancel really cancels, deletes are undoable until then —
+  and if you change the plan mid-block, the app asks whether the running
+  block's remaining sessions should pick it up or leave it for the next one.
 
-**Reflection, gently.**
+### 🌱 Reflection, gently
 
 - Weekly bars count everything you did — tasks, gym sessions, cardio — with
   patterns instead of pass/fail.
 - An **Explore chart**: tasks, hard sets or cardio km over the last 24 hours
   (hourly), 7 days, 32 days, 6 months or 12 months, with min/max/avg.
-- Every Sunday evening the AI writes two sentences about your week: one
-  pattern it noticed, one permission-based suggestion. Words like "failed" and
-  "missed" are banned at the prompt level and checked again after.
+- Twice a day — a morning pass and a closing pass at night, in your own
+  timezone — the AI writes two sentences about your week so far: one pattern
+  it noticed, one permission-based suggestion. Words like "failed" and
+  "missed" are banned at the prompt level and checked again after. It also
+  knows when you've just started logging, so your first week is treated as a
+  baseline instead of being compared against empty history.
+- Half an hour before the nightly reflection, one push reminds you to log
+  anything still floating around, so the reflection reads a complete day.
 - Your data is yours: one-tap CSV export of tasks, workouts, training sets,
   cardio, recovery check-ins and reminders.
 
-**And the basics done right.** Installable PWA, realtime sync across devices,
-offline queues for messages, taps and gym logging, a settings screen with
-theme (auto/light/dark) and per-user timezone, fully editable routines,
-tasks and training plans.
+### ⚙️ And the basics done right
+
+Installable PWA, realtime sync across devices,
+offline queues for messages, taps and gym logging. Tab switches are instant
+(screens stay mounted and refresh quietly in the background), and in the
+installed app the hardware back button behaves like a native app's: it closes
+whatever is open, then returns to the day, and never throws you out. No
+browser popups anywhere — destructive taps confirm in-app, dialogs trap
+keyboard focus properly. A settings screen with theme (auto/light/dark) and
+per-user timezone, fully editable routines, tasks and training plans.
 
 ## Design
 
@@ -171,9 +195,9 @@ are, in the order they'd break:
 2. **Supabase Realtime: 200 concurrent connections.** An open app holds one
    or two, so about **100–150 simultaneously open apps**.
 3. **Everything else is far away.** Edge Functions allow 500K
-   invocations/month (the nudge cron uses ~3K), the 500MB database is years
-   of personal data (a whole 6-week training block is ~700 tiny rows), and
-   GitHub Pages barely notices a 450KB app.
+   invocations/month (the two 15-minute crons use ~6K), the 500MB database
+   is years of personal data (a whole 6-week training block is ~700 tiny
+   rows), and GitHub Pages barely notices a 450KB app.
 
 If you enabled Gemini billing, the AI cost is about $0.0002 per message (~100
 messages a day is well under $1/month), and the ceiling moves to Realtime
@@ -243,16 +267,21 @@ CLI uploads automatically (the dashboard paste-editor can't).
   `USER_TIMEZONE` (IANA name), deploy `telegram-webhook` with
   `--no-verify-jwt`, register the webhook with `secret_token`, then DM the
   bot `/link <your-code>`.
-- **Weekly AI reflection**: set a `CRON_SECRET` secret, deploy
-  `weekly-reflection` with `--no-verify-jwt`, enable the `pg_cron` and
-  `pg_net` extensions, and schedule a Sunday-evening `net.http_post` to it
-  with an `x-cron-secret` header.
+- **AI reflections**: set a `CRON_SECRET` secret, deploy `weekly-reflection`
+  with `--no-verify-jwt`, enable the `pg_cron` and `pg_net` extensions, and
+  schedule a `net.http_post` to it **every 15 minutes** with an
+  `x-cron-secret` header. The function itself decides when to actually write:
+  twice a day per user (morning and night), in that user's timezone. One
+  gotcha that cost me an afternoon: pass `timeout_milliseconds := 20000` in
+  the `net.http_post` call — pg_net's default is 5 seconds, which kills the
+  function exactly when it has real work to do.
 - **Push nudges**: generate keys with `npx web-push generate-vapid-keys`, set
   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a mailto:) and
   `CRON_SECRET` secrets, add the public key as a `VITE_VAPID_PUBLIC_KEY`
   repo secret, deploy `send-nudges` with `--no-verify-jwt`, and schedule it
-  every 15 minutes like the reflection. iOS needs the PWA installed to the
-  home screen.
+  every 15 minutes like the reflection (same 20-second timeout). It covers
+  the anchor nudges, due-today reminders and the pre-reflection reminder at
+  21:30. iOS needs the PWA installed to the home screen.
 
 ### 3. Local dev
 
