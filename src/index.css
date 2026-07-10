@@ -2133,6 +2133,18 @@ select option {
   white-space: nowrap;
 }
 
+/* plan editor: a row marked for deletion, undoable until Save */
+.plan-deleted {
+  align-items: center;
+}
+
+.plan-deleted-name {
+  flex: 1;
+  padding: var(--sp-2);
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
 .delete-routine {
   align-self: flex-start;
   font-size: var(--fs-sm);

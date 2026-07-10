@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan } from '../lib/types'
-import { recoveryAdjustments, startBlock } from '../lib/blocks'
+import { phaseKey, recoveryAdjustments, setCount, startBlock } from '../lib/blocks'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
 import Session from './Session'
 import GymCardio from './GymCardio'
-import ConfirmButton from '../components/ConfirmButton'
+import PlanEditor, { MUSCLE_GROUPS } from './PlanEditor'
+import type { BlockApplyDiff } from './PlanEditor'
 import Skeleton from '../components/Skeleton'
-
-const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
-const PHASE_KEYS = ['1-2', '3-4', '5-6']
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
   { key: '1-2', name: 'Accumulation', maxWeek: 2 },
@@ -48,15 +46,25 @@ export default function Gym({ visible }: { visible: boolean }) {
   // whichever was open last
   const [view, setView] = useState<'strength' | 'cardio'>('strength')
 
-  const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
-  const [newSession, setNewSession] = useState('')
   const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [settingUp, setSettingUp] = useState(false)
   const [starting, setStarting] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState<number | null>(null) // which block's start is awaiting a yes
+  const [blockApply, setBlockApply] = useState<BlockApplyDiff | null>(null) // saved plan changes awaiting "this block too?"
+  const [applying, setApplying] = useState(false)
+
+  // load() consults these so a background refresh never overwrites what the
+  // user is looking at (or editing)
+  const selectionInit = useRef(false)
+  const planBlockRef = useRef(1)
+  const splitRef = useRef<string | null>(null)
+  const editingRef = useRef(false)
   const [split, setSplit] = useState<string | null>(null)
   const [week, setWeek] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
+  planBlockRef.current = planBlock
+  splitRef.current = split
+  editingRef.current = editingPlan
 
   const load = useCallback(async () => {
     const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes] = await Promise.all([
@@ -104,14 +112,23 @@ export default function Gym({ visible }: { visible: boolean }) {
           .map(([mg]) => mg),
       )
     }
-    // plan card follows the active block; falls back to the highest seeded one
+    // plan card follows the active block on FIRST load only - after that the
+    // user's picks stick, so a refresh mid-edit never yanks the tab away
     const shownBlock = blockRow?.block ?? Math.max(1, ...planRows.map((p) => p.block))
-    setPlanBlock(shownBlock)
-    // default to the split after the last logged one, in plan rotation order
-    const rotation = [...new Set(planRows.filter((p) => p.block === shownBlock).map((p) => p.split_day))]
-    const lastSplit = logRows.find((l) => l.split_day)?.split_day
-    const nextIdx = lastSplit ? (rotation.indexOf(lastSplit) + 1) % rotation.length : 0
-    setSplit(rotation[nextIdx] ?? rotation[0] ?? null)
+    const keepBlock =
+      selectionInit.current && planRows.some((p) => p.block === planBlockRef.current)
+        ? planBlockRef.current
+        : shownBlock
+    setPlanBlock(keepBlock)
+    const rotation = [...new Set(planRows.filter((p) => p.block === keepBlock).map((p) => p.split_day))]
+    const prevSplit = splitRef.current
+    if (!(selectionInit.current && prevSplit && (rotation.includes(prevSplit) || editingRef.current))) {
+      // default to the split after the last logged one, in plan rotation order
+      const lastSplit = logRows.find((l) => l.split_day)?.split_day
+      const nextIdx = lastSplit ? (rotation.indexOf(lastSplit) + 1) % rotation.length : 0
+      setSplit(rotation[nextIdx] ?? rotation[0] ?? null)
+    }
+    selectionInit.current = true
     // one clock: the active block's start wins; the picked program_start and
     // the first-ever log are fallbacks for block-less use
     const start = blockRow?.start_date ?? settingsRes.data?.program_start ?? firstRes.data?.date
@@ -155,43 +172,56 @@ export default function Gym({ visible }: { visible: boolean }) {
       .upsert({ cardio_target_km: v, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   }
 
-  async function updatePlan(id: string, patch: Partial<WorkoutPlan>) {
-    await supabase.from('workout_plans').update(patch).eq('id', id)
-    // a rename or muscle fix reaches the running block's not-yet-logged sets
-    // too (sets match plans by exercise name) - logged sets keep the name
-    // they were performed under, and scheme edits still shape only the next block
-    const prev = plans.find((p) => p.id === id)
-    if (prev && block && prev.block === block.block && (patch.exercise || patch.muscle_group)) {
-      const sessionIds = sessions.filter((s) => s.split_day === prev.split_day).map((s) => s.id)
-      if (sessionIds.length > 0) {
-        const values: Record<string, string> = {}
-        if (patch.exercise) values.exercise = patch.exercise
-        if (patch.muscle_group) values.muscle_group = patch.muscle_group
-        await supabase
-          .from('planned_sets')
-          .update(values)
-          .eq('exercise', prev.exercise)
-          .is('logged_at', null)
-          .in('session_id', sessionIds)
+  /** The "apply to this block too?" yes-branch: added exercises get sets
+   *  appended to every not-yet-completed session of their split (right count
+   *  for each week's phase); removed exercises lose their unlogged sets.
+   *  Logged history is never touched and the week counter stays put. */
+  async function applyToRunningBlock() {
+    if (!blockApply || !block || applying) return
+    setApplying(true)
+    try {
+      for (const r of blockApply.removed) {
+        const ids = sessions.filter((s) => s.split_day === r.split_day).map((s) => s.id)
+        if (ids.length > 0) {
+          await supabase.from('planned_sets').delete().eq('exercise', r.exercise).is('logged_at', null).in('session_id', ids)
+        }
       }
+      if (blockApply.added.length > 0) {
+        const targets = sessions.filter((s) => !s.completed_at)
+        const { data: existing } = targets.length
+          ? await supabase.from('planned_sets').select('session_id, sort_order').in('session_id', targets.map((s) => s.id))
+          : { data: [] }
+        const maxOrder = new Map<string, number>()
+        for (const row of existing ?? []) maxOrder.set(row.session_id, Math.max(maxOrder.get(row.session_id) ?? 0, row.sort_order))
+        const sets: Record<string, unknown>[] = []
+        for (const a of blockApply.added) {
+          for (const s of targets.filter((x) => x.split_day === a.split_day)) {
+            const scheme = a.schemes?.[phaseKey(s.week_number)] ?? null
+            const count = setCount(scheme)
+            let order = maxOrder.get(s.id) ?? 0
+            for (let n = 1; n <= count; n++) {
+              sets.push({
+                session_id: s.id,
+                sort_order: ++order,
+                exercise: a.exercise,
+                muscle_group: a.muscle_group,
+                set_number: n,
+                target_scheme: scheme,
+              })
+            }
+            maxOrder.set(s.id, order)
+          }
+        }
+        for (let i = 0; i < sets.length; i += 200) {
+          const { error } = await supabase.from('planned_sets').insert(sets.slice(i, i + 200))
+          if (error) throw error
+        }
+      }
+      setBlockApply(null)
+      load()
+    } finally {
+      setApplying(false)
     }
-    load()
-  }
-
-  async function movePlan(p: WorkoutPlan, dir: -1 | 1) {
-    const list = plans.filter((x) => x.split_day === p.split_day && x.block === p.block)
-    const other = list[list.indexOf(p) + dir]
-    if (!other) return
-    await Promise.all([
-      supabase.from('workout_plans').update({ sort_order: other.sort_order }).eq('id', p.id),
-      supabase.from('workout_plans').update({ sort_order: p.sort_order }).eq('id', other.id),
-    ])
-    load()
-  }
-
-  async function deletePlan(p: WorkoutPlan) {
-    await supabase.from('workout_plans').delete().eq('id', p.id)
-    load()
   }
 
   async function useTemplate() {
@@ -225,22 +255,6 @@ export default function Gym({ visible }: { visible: boolean }) {
     } finally {
       setSettingUp(false)
     }
-  }
-
-  async function addPlan() {
-    const name = newEx.name.trim()
-    if (!name || !split) return
-    const maxOrder = Math.max(0, ...plans.map((p) => p.sort_order ?? 0))
-    await supabase.from('workout_plans').insert({
-      block: planBlock,
-      split_day: split,
-      sort_order: maxOrder + 1,
-      exercise: name,
-      muscle_group: newEx.muscle,
-      schemes: { '1-2': newEx.scheme, '3-4': newEx.scheme, '5-6': newEx.scheme },
-    })
-    setNewEx({ ...newEx, name: '' })
-    load()
   }
 
   const phase = week === null ? null : PHASES.find((p) => week <= p.maxWeek) ?? null
@@ -563,9 +577,11 @@ export default function Gym({ visible }: { visible: boolean }) {
               The plan
               <span className="routine-progress">{phase ? ` ${phase.name}` : week !== null && week > 6 ? ' deload / Block 2 soon' : ''}</span>
             </h2>
-            <button className="link" onClick={() => setEditingPlan(!editingPlan)}>
-              {editingPlan ? 'Done' : 'Edit'}
-            </button>
+            {!editingPlan && (
+              <button className="link" onClick={() => setEditingPlan(true)}>
+                Edit
+              </button>
+            )}
           </div>
           {availableBlocks.length > 1 && (
             <div className="energy-row plan-row">
@@ -573,6 +589,8 @@ export default function Gym({ visible }: { visible: boolean }) {
                 <button
                   key={b}
                   className={b === planBlock ? 'energy-btn active' : 'energy-btn'}
+                  disabled={editingPlan}
+                  title={editingPlan ? 'Save or cancel the edit first' : undefined}
                   onClick={() => {
                     setPlanBlock(b)
                     const firstSplit = plans.find((p) => p.block === b)?.split_day ?? null
@@ -598,14 +616,16 @@ export default function Gym({ visible }: { visible: boolean }) {
               ))}
             </div>
           )}
-          <div className="energy-row plan-row">
-            <span className="energy-label">Session</span>
-            {(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => (
-              <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
+          {!editingPlan && (
+            <div className="energy-row plan-row">
+              <span className="energy-label">Session</span>
+              {(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => (
+                <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           {!editingPlan &&
             splitPlans.map((p) => (
               <div key={p.id} className="gym-entry">
@@ -615,103 +635,43 @@ export default function Gym({ visible }: { visible: boolean }) {
               </div>
             ))}
           {editingPlan && (
-            <div className="edit-panel">
-              <p className="gentle">
-                Names, muscles and notes update this block's remaining sets too — set counts and schemes shape the
-                next block.
-              </p>
-              {splitPlans.map((p, i) => (
-                <div key={p.id} className="edit-task">
-                  <div className="edit-task-row">
-                    <input
-                      defaultValue={p.exercise}
-                      onBlur={(e) => {
-                        const v = e.target.value.trim()
-                        if (v && v !== p.exercise) updatePlan(p.id, { exercise: v })
-                      }}
-                    />
-                    <select
-                      value={p.muscle_group ?? 'Other'}
-                      onChange={(e) => updatePlan(p.id, { muscle_group: e.target.value })}
-                    >
-                      {MUSCLE_GROUPS.map((m) => (
-                        <option key={m}>{m}</option>
-                      ))}
-                    </select>
-                    <button className="danger" disabled={i === 0} onClick={() => movePlan(p, -1)}>
-                      ↑
-                    </button>
-                    <button className="danger" disabled={i === splitPlans.length - 1} onClick={() => movePlan(p, 1)}>
-                      ↓
-                    </button>
-                    <ConfirmButton
-                      className="danger"
-                      label="✕"
-                      confirmLabel="remove?"
-                      title={`Remove "${p.exercise}" from the plan — already-generated sessions keep it`}
-                      onConfirm={() => deletePlan(p)}
-                    />
-                  </div>
-                  <div className="edit-task-row scheme-row">
-                    {PHASE_KEYS.map((k) => (
-                      <input
-                        key={k}
-                        defaultValue={p.schemes?.[k] ?? ''}
-                        placeholder={`wk ${k}`}
-                        onBlur={(e) => {
-                          const v = e.target.value.trim()
-                          if (v !== (p.schemes?.[k] ?? '')) updatePlan(p.id, { schemes: { ...p.schemes, [k]: v } })
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <div className="edit-task-row">
-                    <input
-                      defaultValue={p.safety_note ?? ''}
-                      placeholder="🛡 note / form cue (shown in sessions)"
-                      onBlur={(e) => {
-                        const v = e.target.value.trim()
-                        if (v !== (p.safety_note ?? '')) updatePlan(p.id, { safety_note: v || null })
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className="add-task">
-                <input
-                  value={newSession}
-                  onChange={(e) => setNewSession(e.target.value)}
-                  placeholder="New session name (e.g. Upper C)"
-                />
-                <button
-                  onClick={() => {
-                    const v = newSession.trim()
-                    if (!v) return
-                    setSplit(v)
-                    setNewSession('')
-                  }}
-                >
-                  Add session
-                </button>
-              </div>
-              <div className="add-task">
-                <input
-                  value={newEx.name}
-                  onChange={(e) => setNewEx({ ...newEx, name: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && addPlan()}
-                  placeholder={`New exercise for ${split ?? '…'}`}
-                />
-                <select value={newEx.muscle} onChange={(e) => setNewEx({ ...newEx, muscle: e.target.value })}>
-                  {MUSCLE_GROUPS.map((m) => (
-                    <option key={m}>{m}</option>
-                  ))}
-                </select>
-                <button onClick={addPlan}>Add</button>
-              </div>
-            </div>
+            <PlanEditor
+              origin={blockPlans}
+              planBlock={planBlock}
+              activeBlock={block}
+              sessions={sessions}
+              initialSplit={split}
+              onCancel={() => setEditingPlan(false)}
+              onSaved={(editSplit, diff) => {
+                setEditingPlan(false)
+                if (editSplit) setSplit(editSplit)
+                if (diff) setBlockApply(diff)
+                load()
+              }}
+            />
           )}
           {splitCardio && !editingPlan && <p className="gentle plan-cardio">Cardio: {splitCardio}</p>}
         </section>
+      )}
+
+      {view === 'strength' && blockApply && block && (
+        <div className="notice vol-suggestion block-apply">
+          <span>
+            {[
+              blockApply.added.length > 0 ? `Added: ${blockApply.added.map((a) => a.exercise).join(', ')}` : null,
+              blockApply.removed.length > 0 ? `Removed: ${blockApply.removed.map((r) => r.exercise).join(', ')}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            {' — '}put this into {block.name}'s remaining sessions too, or only from the next block?
+          </span>
+          <button className="link" onClick={applyToRunningBlock} disabled={applying}>
+            {applying ? 'Applying…' : 'Apply to this block'}
+          </button>
+          <button className="link" onClick={() => setBlockApply(null)} disabled={applying}>
+            Next block only
+          </button>
+        </div>
       )}
 
       {view === 'strength' &&
