@@ -270,25 +270,26 @@ export default function Session({ session, plans, onExit }: Props) {
     await markComplete(after)
   }
 
-  async function saveAndClose() {
+  function saveAndClose() {
     if (saving) return
     setSaving(true)
-    try {
-      const rows = [...checkin.entries()]
-        .filter(([, v]) => v.recovery || v.effort || v.amount)
-        .map(([muscle_group, v]) => ({
-          session_id: session.id,
-          muscle_group,
-          recovery: v.recovery ?? null,
-          effort: v.effort ?? null,
-          amount: v.amount ?? null,
-        }))
+    const rows = [...checkin.entries()]
+      .filter(([, v]) => v.recovery || v.effort || v.amount)
+      .map(([muscle_group, v]) => ({
+        session_id: session.id,
+        muscle_group,
+        recovery: v.recovery ?? null,
+        effort: v.effort ?? null,
+        amount: v.amount ?? null,
+      }))
+    // exit NOW - waiting on the network here made the iOS back gesture feel
+    // stuck for seconds. runOp queues offline, so the check-in still lands.
+    onExit()
+    void (async () => {
       // replace this session's answers wholesale - never duplicate
       await runOp({ table: 'recovery_checkins', op: 'delete', match: { session_id: session.id } })
       if (rows.length > 0) await runOp({ table: 'recovery_checkins', op: 'insert', values: rows })
-    } finally {
-      onExit()
-    }
+    })()
   }
 
   return (

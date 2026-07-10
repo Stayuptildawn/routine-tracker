@@ -33,17 +33,30 @@ function isStandalone(): boolean {
 }
 
 let armed = false
+let refillTimer: ReturnType<typeof setTimeout> | undefined
+
+function refillGuards() {
+  const depth = (history.state as { guard?: number } | null)?.guard ?? -1
+  for (let i = depth + 1; i < BUFFER; i++) history.pushState({ guard: i }, '')
+}
 
 export function armBackGuard() {
   if (armed || !isStandalone()) return
   armed = true
-  for (let i = 0; i < BUFFER; i++) history.pushState({ guard: i }, '')
+  refillGuards()
   window.addEventListener('popstate', (e) => {
-    // refill before handling so a rapid second press still lands on a guard
-    const depth = (e.state as { guard?: number } | null)?.guard ?? -1
-    for (let i = depth + 1; i < BUFFER; i++) history.pushState({ guard: i }, '')
+    // the UI response comes first, so the target screen paints immediately
     for (let i = handlers.length - 1; i >= 0; i--) {
-      if (handlers[i]()) return
+      if (handlers[i]()) break
     }
+    // iOS animates swipe-back with a SNAPSHOT of the page, and mutating
+    // history while that transition is still settling leaves the stale
+    // snapshot frozen on screen for seconds. So the sentinel refill waits a
+    // beat - unless this pop landed on the real base entry, where one more
+    // press would leave the app: there the refill must be immediate.
+    clearTimeout(refillTimer)
+    const depth = (e.state as { guard?: number } | null)?.guard ?? -1
+    if (depth < 0) refillGuards()
+    else refillTimer = setTimeout(refillGuards, 400)
   })
 }
