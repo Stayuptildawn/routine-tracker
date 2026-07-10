@@ -10,7 +10,7 @@ const STATUS_LABEL: Record<AiAction['status'], string> = {
   undone: 'Undone',
 }
 
-export default function History() {
+export default function History({ visible }: { visible: boolean }) {
   const [items, setItems] = useState<AiAction[]>([])
   const [counts, setCounts] = useState<{ kept: number; undone: number } | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -26,9 +26,10 @@ export default function History() {
     setLoaded(true)
   }, [])
 
+  // refresh whenever the tab is shown - silent, the old data stays on screen
   useEffect(() => {
-    load()
-  }, [load])
+    if (visible) load()
+  }, [visible, load])
 
   async function undo(item: AiAction) {
     const what = item.actions.map(describeAction).join(', ')

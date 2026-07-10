@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
@@ -95,7 +95,7 @@ interface Reflection {
   body: string
 }
 
-export default function Reflect() {
+export default function Reflect({ visible }: { visible: boolean }) {
   const [days, setDays] = useState<DayStat[]>([])
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -132,9 +132,16 @@ export default function Reflect() {
     }
   }
 
+  const lastExploreQuery = useRef('')
+
   useEffect(() => {
+    if (!visible) return
     let cancelled = false
-    setExplore(null)
+    // blank the chart only when the query changed; a plain tab revisit
+    // keeps the old bars on screen while fresh numbers load behind them
+    const query = `${metric}:${frame}`
+    if (query !== lastExploreQuery.current) setExplore(null)
+    lastExploreQuery.current = query
     const slots = buildSlots(frame)
     const bucket = FRAME_BUCKET[frame]
     const startTs = frame === 'daily' ? slots[0].key + ':00:00' : slots[0].key + 'T00:00:00'
@@ -152,9 +159,10 @@ export default function Reflect() {
     return () => {
       cancelled = true
     }
-  }, [metric, frame])
+  }, [visible, metric, frame])
 
   useEffect(() => {
+    if (!visible) return
     supabase
       .from('reflections')
       .select('week_start, body')
@@ -162,9 +170,10 @@ export default function Reflect() {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => setReflection(data as Reflection | null))
-  }, [])
+  }, [visible])
 
   useEffect(() => {
+    if (!visible) return
     const from = new Date()
     from.setDate(from.getDate() - 6)
     const fromDate = localDate(from)
@@ -198,7 +207,7 @@ export default function Reflect() {
       setDays(stats)
       setLoaded(true)
     })
-  }, [])
+  }, [visible])
 
   const totalDone = days.reduce((n, d) => n + d.done, 0)
   const max = Math.max(1, ...days.map((d) => d.done))

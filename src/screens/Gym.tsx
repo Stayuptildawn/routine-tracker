@@ -85,7 +85,7 @@ function weekFromStart(start: string): number {
   return Math.max(1, Math.floor(days / 7) + 1)
 }
 
-export default function Gym() {
+export default function Gym({ visible }: { visible: boolean }) {
   const [logs, setLogs] = useState<WorkoutLog[]>([])
   const [plans, setPlans] = useState<WorkoutPlan[]>([])
   const [block, setBlock] = useState<TrainingBlock | null>(null)
@@ -101,14 +101,13 @@ export default function Gym() {
   const [baseDraft, setBaseDraft] = useState('')
   const [run, setRun] = useState({ kind: 'run', km: '', min: '', hr: '' })
   const [loggingRun, setLoggingRun] = useState(false)
-  const [view, setView] = useState<'strength' | 'cardio'>(
-    () => (localStorage.getItem('gym-view') as 'strength' | 'cardio') ?? 'strength',
-  )
+  // always opens on Strength - the primary view - rather than remembering
+  // whichever was open last
+  const [view, setView] = useState<'strength' | 'cardio'>('strength')
   const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; hr: string; notes: string; date: string } | null>(null)
 
   function pickView(v: 'strength' | 'cardio') {
     setView(v)
-    localStorage.setItem('gym-view', v)
   }
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [newSession, setNewSession] = useState('')
@@ -182,9 +181,10 @@ export default function Gym() {
     setLoaded(true)
   }, [])
 
+  // refresh whenever the tab is shown - silent, the old data stays on screen
   useEffect(() => {
-    load()
-  }, [load])
+    if (visible) load()
+  }, [visible, load])
 
   async function beginBlock(blockNumber: number) {
     if (starting || plans.length === 0) return
@@ -297,6 +297,24 @@ export default function Gym() {
 
   async function updatePlan(id: string, patch: Partial<WorkoutPlan>) {
     await supabase.from('workout_plans').update(patch).eq('id', id)
+    // a rename or muscle fix reaches the running block's not-yet-logged sets
+    // too (sets match plans by exercise name) - logged sets keep the name
+    // they were performed under, and scheme edits still shape only the next block
+    const prev = plans.find((p) => p.id === id)
+    if (prev && block && prev.block === block.block && (patch.exercise || patch.muscle_group)) {
+      const sessionIds = sessions.filter((s) => s.split_day === prev.split_day).map((s) => s.id)
+      if (sessionIds.length > 0) {
+        const values: Record<string, string> = {}
+        if (patch.exercise) values.exercise = patch.exercise
+        if (patch.muscle_group) values.muscle_group = patch.muscle_group
+        await supabase
+          .from('planned_sets')
+          .update(values)
+          .eq('exercise', prev.exercise)
+          .is('logged_at', null)
+          .in('session_id', sessionIds)
+      }
+    }
     load()
   }
 
@@ -994,7 +1012,10 @@ export default function Gym() {
             ))}
           {editingPlan && (
             <div className="edit-panel">
-              <p className="gentle">Edits shape the next block — already-generated sessions stay as they are.</p>
+              <p className="gentle">
+                Names, muscles and notes update this block's remaining sets too — set counts and schemes shape the
+                next block.
+              </p>
               {splitPlans.map((p, i) => (
                 <div key={p.id} className="edit-task">
                   <div className="edit-task-row">
@@ -1035,6 +1056,16 @@ export default function Gym() {
                         }}
                       />
                     ))}
+                  </div>
+                  <div className="edit-task-row">
+                    <input
+                      defaultValue={p.safety_note ?? ''}
+                      placeholder="🛡 note / form cue (shown in sessions)"
+                      onBlur={(e) => {
+                        const v = e.target.value.trim()
+                        if (v !== (p.safety_note ?? '')) updatePlan(p.id, { safety_note: v || null })
+                      }}
+                    />
                   </div>
                 </div>
               ))}

@@ -35,7 +35,7 @@ const NEXT_STATUS: Record<string, LogStatus> = {
   skipped: 'pending',
 }
 
-export default function Week() {
+export default function Week({ visible }: { visible: boolean }) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<TaskLog[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -61,9 +61,10 @@ export default function Week() {
     setLoaded(true)
   }, [])
 
+  // refresh whenever the tab is shown - silent, the old data stays on screen
   useEffect(() => {
-    load()
-  }, [load])
+    if (visible) load()
+  }, [visible, load])
 
   const logFor = (taskId: string, date: string) =>
     logs.find((l) => l.task_id === taskId && l.date === date)
@@ -160,43 +161,50 @@ export default function Week() {
           <section key={routine.id} className={paused ? 'week-routine paused' : 'week-routine'}>
             <div className="routine-header">
               {isEditing ? (
+                // the name is the only draft state here (task edits below save
+                // as you type), so the pair is Save (commit + close) and
+                // Cancel (discard + close) - never two buttons that both close
                 <div className="rename-row">
                   <input
                     value={nameDraft}
                     onChange={(e) => setNameDraft(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && renameRoutine(routine.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') renameRoutine(routine.id)
+                      if (e.key === 'Escape') setEditing(null)
+                    }}
                     autoFocus
                   />
-                  <button className="save" onClick={() => renameRoutine(routine.id)}>
+                  <button className="save" onClick={() => renameRoutine(routine.id)} disabled={!nameDraft.trim()}>
                     Save
+                  </button>
+                  <button className="link" onClick={() => setEditing(null)}>
+                    Cancel
                   </button>
                 </div>
               ) : (
-                <h2>
-                  {routine.name}
-                  {paused && <span className="routine-progress"> paused</span>}
-                </h2>
+                <>
+                  <h2>
+                    {routine.name}
+                    {paused && <span className="routine-progress"> paused</span>}
+                  </h2>
+                  <button
+                    className={paused ? 'link activate' : 'link'}
+                    onClick={() => setActive(routine.id, paused)}
+                    title={paused ? 'Show on the Now tab again' : 'Hide from the Now tab (keeps all history)'}
+                  >
+                    {paused ? 'Activate' : 'Pause'}
+                  </button>
+                  <button
+                    className="link"
+                    onClick={() => {
+                      setEditing(routine.id)
+                      setNameDraft(routine.name)
+                    }}
+                  >
+                    Edit
+                  </button>
+                </>
               )}
-              <button
-                className={paused ? 'link activate' : 'link'}
-                onClick={() => setActive(routine.id, paused)}
-                title={paused ? 'Show on the Now tab again' : 'Hide from the Now tab (keeps all history)'}
-              >
-                {paused ? 'Activate' : 'Pause'}
-              </button>
-              <button
-                className="link"
-                onClick={() => {
-                  if (isEditing) {
-                    setEditing(null)
-                  } else {
-                    setEditing(routine.id)
-                    setNameDraft(routine.name)
-                  }
-                }}
-              >
-                {isEditing ? 'Done' : 'Edit'}
-              </button>
             </div>
 
             {isEditing ? (

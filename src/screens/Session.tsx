@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { onBackButton } from '../lib/backButton'
 import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
@@ -208,6 +209,16 @@ export default function Session({ session, plans, onExit }: Props) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // installed-PWA back leaves the session the same safe way Escape does
+  useEffect(
+    () =>
+      onBackButton(() => {
+        leaveRef.current()
+        return true
+      }),
+    [],
+  )
 
   function draftFor(set: PlannedSet): Draft {
     return drafts.get(set.id) ?? { weight: '', reps: '' }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { onBackButton } from '../lib/backButton'
 import type { Task, TaskLog } from '../lib/types'
 
 interface PlayerProps {
@@ -25,6 +26,18 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onExit])
+
+  // installed-PWA back closes the player like the exit link
+  const exitRef = useRef(onExit)
+  exitRef.current = onExit
+  useEffect(
+    () =>
+      onBackButton(() => {
+        exitRef.current()
+        return true
+      }),
+    [],
+  )
 
   const pending = tasks.filter((t) => !handled(logs, t))
   const current = pending.find((t) => t.id === preferredId) ?? pending[0]

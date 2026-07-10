@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, configured } from './lib/supabase'
 import { SEED_ROUTINES } from './lib/seedData'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import { flushOps } from './lib/offline'
+import { armBackGuard, onBackButton } from './lib/backButton'
 import Auth from './screens/Auth'
 import SetPassword from './screens/SetPassword'
 import Now from './screens/Now'
@@ -59,6 +60,27 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [recovering, setRecovering] = useState(false)
+
+  // installed-PWA back (Android button, iOS swipe): overlays get first go via
+  // their own handlers; this fallback closes Settings, then returns to Now,
+  // and always swallows the press so back never leaves the app
+  const backRef = useRef({ tab, settingsOpen })
+  backRef.current = { tab, settingsOpen }
+  useEffect(() => {
+    armBackGuard()
+    return onBackButton(() => {
+      if (backRef.current.settingsOpen) {
+        setSettingsOpen(false)
+        return true
+      }
+      if (backRef.current.tab !== 'now') {
+        setTab('now')
+        window.scrollTo(0, 0)
+        return true
+      }
+      return true
+    })
+  }, [])
 
   useEffect(() => {
     if (theme === 'auto') {
@@ -118,22 +140,37 @@ export default function App() {
   if (recovering) return <SetPassword onDone={() => setRecovering(false)} />
   if (seeding) return <div className="center-note">Setting up your routines…</div>
 
+  // screens stay mounted so switching back is instant (state survives,
+  // no refetch flash); each refreshes itself in the background when shown
   return (
     <div className="app">
       <main className="content">
-        {tab === 'now' && <Now onOpenReminders={() => setTab('reminders')} onOpenSettings={() => setSettingsOpen(true)} />}
+        <div hidden={tab !== 'now'}>
+          <Now visible={tab === 'now'} onOpenReminders={() => setTab('reminders')} onOpenSettings={() => setSettingsOpen(true)} />
+        </div>
         {tab === 'reminders' && <Reminders onBack={() => setTab('now')} />}
-        {tab === 'week' && <Week />}
-        {tab === 'gym' && <Gym />}
-        {tab === 'history' && <History />}
-        {tab === 'reflect' && <Reflect />}
+        <div hidden={tab !== 'week'}>
+          <Week visible={tab === 'week'} />
+        </div>
+        <div hidden={tab !== 'gym'}>
+          <Gym visible={tab === 'gym'} />
+        </div>
+        <div hidden={tab !== 'history'}>
+          <History visible={tab === 'history'} />
+        </div>
+        <div hidden={tab !== 'reflect'}>
+          <Reflect visible={tab === 'reflect'} />
+        </div>
       </main>
       <nav className="tabbar">
         {TABS.map((t) => (
           <button
             key={t.id}
             className={tab === t.id || (tab === 'reminders' && t.id === 'now') ? 'tab active' : 'tab'}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id)
+              window.scrollTo(0, 0)
+            }}
           >
             <span className="tab-icon">{t.icon}</span>
             <span className="tab-label">{t.label}</span>

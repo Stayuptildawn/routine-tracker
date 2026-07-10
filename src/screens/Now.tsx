@@ -30,7 +30,7 @@ function fmtEta(diff: number): string {
   return diff > 0 ? `in ${t}` : diff < 0 ? `${t} ago` : 'now'
 }
 
-export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminders: () => void; onOpenSettings: () => void }) {
+export default function Now({ visible, onOpenReminders, onOpenSettings }: { visible: boolean; onOpenReminders: () => void; onOpenSettings: () => void }) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<Map<string, TaskLog>>(new Map())
   const [reminders, setReminders] = useState<Reminder[]>([])
@@ -78,8 +78,12 @@ export default function Now({ onOpenReminders, onOpenSettings }: { onOpenReminde
     setLoaded(true)
   }, [today])
 
+  // refresh whenever the tab is shown - silent, the old data stays on screen
   useEffect(() => {
-    load()
+    if (visible) load()
+  }, [visible, load])
+
+  useEffect(() => {
     const channel = supabase
       .channel('now-view')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_logs' }, load)
