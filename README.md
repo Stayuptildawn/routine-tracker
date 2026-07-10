@@ -10,7 +10,16 @@ Self-hosted and free to run, no subscription.
 
 <p align="center"><sub>React · Supabase · Gemini · installable PWA · AGPL-3.0</sub></p>
 
-<!-- screenshots row goes here: docs/screenshots/{now,workout,reflect}.png -->
+<p align="center">
+  <img src="docs/screenshots/now.jpg" width="32%" alt="The Now tab: one message box, energy pills, and the day's routines">
+  <img src="docs/screenshots/workout.jpg" width="32%" alt="The Workout tab: a 6-week training block grid and weekly volume bars">
+  <img src="docs/screenshots/reflect.jpg" width="32%" alt="The Reflect tab: an AI-written note about the week and daily bars">
+</p>
+<p align="center">
+  <img src="docs/screenshots/session.jpg" width="32%" alt="The session player: sets with last time's numbers pre-filled and a safety cue">
+  <img src="docs/screenshots/week.jpg" width="32%" alt="The Week tab: a done/skipped grid per routine — a record, not a scorecard">
+  <img src="docs/screenshots/cardio.jpg" width="32%" alt="The Cardio view: weekly target rail, quick logging, and per-run pace">
+</p>
 
 ## Why I built this
 
@@ -94,6 +103,10 @@ not add a new one.
   all. Every batch of actions is logged and reversible, and the log keeps a
   running accuracy score. Nothing happens silently.
 
+<p align="center">
+  <img src="docs/screenshots/ailog.jpg" width="40%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
+</p>
+
 ### 📅 Routines that adapt to the day
 
 - Tasks have tiers (core / standard / bonus). On a low-energy day you only see
@@ -111,6 +124,10 @@ not add a new one.
   when you are") — at most once per routine per day, and never "you missed".
 - No streaks, no shame. Skips show up neutral, blanks stay blank, past days can
   be corrected from the week grid, and taps work offline (they queue and sync).
+
+<p align="center">
+  <img src="docs/screenshots/weekeditor.jpg" width="40%" alt="Editing a routine: rename with Save/Cancel, tiers, and day-of-week pills per task">
+</p>
 
 ### 🏋️ A full training module
 
@@ -132,6 +149,11 @@ not add a new one.
   you press Save — Cancel really cancels, deletes are undoable until then —
   and if you change the plan mid-block, the app asks whether the running
   block's remaining sessions should pick it up or leave it for the next one.
+
+<p align="center">
+  <img src="docs/screenshots/checkin.jpg" width="40%" alt="After a session: an optional recovery check-in per muscle, three quick questions">
+  <img src="docs/screenshots/planeditor.jpg" width="40%" alt="The plan editor: draft-based Save/Cancel and sets × reps per phase as plain fields">
+</p>
 
 ### 🌱 Reflection, gently
 
