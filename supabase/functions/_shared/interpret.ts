@@ -26,7 +26,7 @@ const responseSchema = {
         properties: {
           type: {
             type: 'STRING',
-            enum: ['check_task', 'log_workout', 'log_cardio', 'create_reminder', 'set_energy', 'query_last_done', 'query_last_workout'],
+            enum: ['check_task', 'log_workout', 'log_cardio', 'create_reminder', 'complete_reminder', 'set_energy', 'query_last_done', 'query_last_workout', 'query_reminders'],
           },
           task_id: { type: 'STRING' },
           status: { type: 'STRING', enum: ['done', 'partial', 'skipped'] },
@@ -44,9 +44,16 @@ const responseSchema = {
           due_date: { type: 'STRING' },
           due_time: { type: 'STRING' },
           due_in_minutes: { type: 'NUMBER' },
+          reminder_id: { type: 'STRING' },
+          reminder_status: { type: 'STRING', enum: ['done', 'dismissed'] },
+          days_ago: { type: 'NUMBER' },
           kind: { type: 'STRING', enum: ['run', 'walk', 'cycle', 'swim', 'other'] },
           minutes: { type: 'NUMBER' },
           distance_km: { type: 'NUMBER' },
+          avg_hr: { type: 'NUMBER' },
+          effort: { type: 'STRING', enum: ['easy', 'steady', 'pushed', 'all_out'] },
+          body: { type: 'STRING', enum: ['fresh', 'okay', 'heavy'] },
+          amount: { type: 'STRING', enum: ['could_take_more', 'right', 'stretch', 'over_the_line'] },
           level: { type: 'STRING', enum: ['low', 'medium', 'high'] },
           notes: { type: 'STRING' },
         },
@@ -107,6 +114,15 @@ export async function interpretAndApply(
   }
   const categories = (routines ?? []).map((r: any) => r.name).join(', ')
 
+  // open reminders, so "bought the sunscreen" can clear the matching one
+  const { data: pendingReminders } = await supabase
+    .from('reminders')
+    .select('id, raw_text, status, due_date, due_time')
+    .eq('user_id', userId)
+    .in('status', ['auto', 'reassigned'])
+    .order('created_at', { ascending: false })
+    .limit(30)
+
   const prompt = `You are the input parser for an AuDHD-friendly routine tracker.
 Parse the user's message into zero or more actions. The message may contain several intents at once.
 
@@ -115,7 +131,10 @@ ${candidates.map((c) => `- task_id=${c.id} | ${c.routine} | ${c.label} | current
 
 Routine categories for reminders: ${categories}, Other
 
-All tasks, any day (ONLY for query_last_done questions):
+Open reminders (only ever reference these exact reminder_id values):
+${(pendingReminders ?? []).map((r: any) => `- reminder_id=${r.id} | ${r.raw_text}${r.due_date ? ` | due ${r.due_date}${r.due_time ? ' ' + String(r.due_time).slice(0, 5) : ''}` : ''}`).join('\n') || '(none)'}
+
+All tasks, any day (for query_last_done questions and past-day check_task):
 ${allTasks.map((t) => `- task_id=${t.id} | ${t.label}`).join('\n')}
 
 Rules:
@@ -123,11 +142,15 @@ Rules:
   e.g. "meds" matches a medication task). status "done" unless the user says partial/skipped.
   "did X except Y" means all tasks of routine X are done and Y is skipped.
   Set confidence 0-1 for how certain the match is.
+  For a PAST day ("did the dishes yesterday") set days_ago (1 = yesterday, max 7) and match
+  against the all-tasks list.
 - log_workout: gym set logging like "bench 60kg 3x8" -> exercise name, sets array (3x8 at 60kg =
   three entries of {kg:60, reps:8}), plus notes if any commentary.
 - log_cardio: runs/walks/cycling -> kind, minutes, distance_km, notes. Capture BOTH numbers
   when both are said: "ran 5km in 32 min" -> {kind:"run", distance_km:5, minutes:32}.
-  "5k"/"5 k" means distance_km:5. Not for lifting.
+  "5k"/"5 k" means distance_km:5. Not for lifting. Heart rate ("152 bpm") -> avg_hr: 152.
+  When the user says how it felt, also set effort (easy|steady|pushed|all_out),
+  body (fresh|okay|heavy) and/or amount (could_take_more|right|stretch|over_the_line).
 - create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
   reminder_text and pick the best category. Set confidence for the category choice.
   Emit exactly ONE create_reminder per distinct to-do — never several copies of the same item.
@@ -140,16 +163,22 @@ Rules:
   Examples: "drink water at 14:20" -> {type:"create_reminder", reminder_text:"Drink water",
   due_date:"${date}", due_time:"14:20"}; "drink water in 10 mins" ->
   {type:"create_reminder", reminder_text:"Drink water", due_in_minutes:10}.
+- complete_reminder: the user says a held reminder happened or is no longer needed
+  ("bought the sunscreen", "forget the dentist thing"). Set reminder_id from the open
+  reminders list and reminder_status: "done" (it happened) or "dismissed" (not needed).
+  Never invent reminder_ids; if nothing clearly matches, don't emit this action.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
   Match against the all-tasks list; nothing is written, an answer comes back.
+- query_reminders: QUESTIONS about what's pending or due ("what's on my list?",
+  "anything due today?"). Nothing is written, an answer comes back.
 - query_last_workout: questions about lifting history ("what did I bench last time?") ->
   put the exercise name in exercise.
 - If nothing actionable, return an empty actions array. Never invent task_ids.
 
 User message: "${text}"`
 
-  let gemini: { candidates?: { content?: { parts?: { text?: string }[] } }[] } | null = null
+  let parsed: { actions?: Record<string, any>[] } | null = null
   let lastError = ''
   for (const model of GEMINI_MODELS) {
     const geminiRes = await fetch(
@@ -159,21 +188,29 @@ User message: "${text}"`
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0 },
+          // maxOutputTokens caps runaway repetition; a real parse needs far less
+          generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0, maxOutputTokens: 2048 },
         }),
       },
     )
     if (geminiRes.ok) {
-      gemini = await geminiRes.json()
-      break
+      const gemini = await geminiRes.json()
+      try {
+        parsed = JSON.parse(gemini.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"actions":[]}')
+        break
+      } catch {
+        // the model rambled past the token cap and truncated its JSON -
+        // that model failed, try the next one
+        lastError = `${model}: truncated/unparseable JSON output`
+        continue
+      }
     }
     lastError = `${model}: ${await geminiRes.text()}`
     // overload / quota / a retired model name are per-model - try the next
     // one; anything else is fatal
     if (geminiRes.status !== 503 && geminiRes.status !== 429 && geminiRes.status !== 404) break
   }
-  if (!gemini) return { ai_action_id: null, applied: [], suggestions: [], answers: [], error: `Gemini error: ${lastError}` }
-  const parsed = JSON.parse(gemini.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"actions":[]}')
+  if (!parsed) return { ai_action_id: null, applied: [], suggestions: [], answers: [], error: `Gemini error: ${lastError}` }
 
   const candidateById = new Map(candidates.map((c) => [c.id, c]))
   const taskById = new Map(allTasks.map((t) => [t.id, t]))
@@ -230,26 +267,39 @@ User message: "${text}"`
     nowTime = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
     return nowTime
   }
-  for (const action of parsed.actions ?? []) {
+  // the lite models sometimes emit the same action several times in one
+  // reply - identical copies are dropped, and a runaway list is capped
+  const seenActions = new Set<string>()
+  for (const action of (parsed.actions ?? []).slice(0, 10)) {
+    const actKey = JSON.stringify(action)
+    if (seenActions.has(actKey)) continue
+    seenActions.add(actKey)
     const confidence = typeof action.confidence === 'number' ? action.confidence : 1
 
     if (action.type === 'check_task') {
-      const candidate = candidateById.get(action.task_id)
+      const rawDaysAgo = Number(action.days_ago)
+      let daysAgo = Number.isFinite(rawDaysAgo) ? Math.min(7, Math.max(0, Math.round(rawDaysAgo))) : 0
+      // deterministic fallback: the lite models tend to drop days_ago even
+      // when the message plainly says yesterday
+      if (daysAgo === 0 && /\byesterday\b/i.test(text)) daysAgo = 1
+      // past days may reference tasks that aren't scheduled today
+      const candidate = candidateById.get(action.task_id) ?? (daysAgo > 0 ? taskById.get(action.task_id) : undefined)
       if (!candidate || confidence < SUGGEST_THRESHOLD) continue
       const status = action.status ?? 'done'
       if (confidence < APPLY_THRESHOLD) {
         suggestions.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, confidence })
         continue
       }
+      const logDate = daysAgo > 0 ? addDays(date, -daysAgo) : date
       const { data: log, error } = await supabase
         .from('task_logs')
         .upsert(
-          { task_id: candidate.id, date, status, completed_via: 'ai_text', notes: action.notes ?? null, logged_at: new Date().toISOString() },
+          { task_id: candidate.id, date: logDate, status, completed_via: 'ai_text', notes: action.notes ?? null, logged_at: new Date().toISOString() },
           { onConflict: 'task_id,date' },
         )
         .select('id')
         .single()
-      if (!error) applied.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, log_id: log.id })
+      if (!error) applied.push({ type: 'check_task', task_id: candidate.id, label: candidate.label, status, log_id: log.id, log_date: logDate })
     } else if (action.type === 'log_workout') {
       if (!action.exercise) continue
       const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -337,6 +387,13 @@ User message: "${text}"`
         const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:min|mins|minutes|minutos)/i)
         if (m) minutes = parseFloat(m[1].replace(',', '.'))
       }
+      let avgHr = Number(action.avg_hr)
+      avgHr = Number.isFinite(avgHr) && avgHr > 30 && avgHr < 250 ? Math.round(avgHr) : NaN
+      if (Number.isNaN(avgHr)) {
+        const m = text.match(/(\d{2,3})\s*bpm\b/i)
+        avgHr = m ? Number(m[1]) : NaN
+      }
+      const pick = (v: unknown, allowed: string[]) => (allowed.includes(String(v)) ? String(v) : null)
       const { data: row, error } = await supabase
         .from('cardio_logs')
         .insert({
@@ -345,7 +402,11 @@ User message: "${text}"`
           kind: action.kind ?? 'run',
           minutes,
           distance_km: distanceKm,
+          avg_hr: Number.isNaN(avgHr) ? null : avgHr,
           notes: action.notes ?? null,
+          effort: pick(action.effort, ['easy', 'steady', 'pushed', 'all_out']),
+          body: pick(action.body, ['fresh', 'okay', 'heavy']),
+          amount: pick(action.amount, ['could_take_more', 'right', 'stretch', 'over_the_line']),
         })
         .select('id')
         .single()
@@ -356,6 +417,7 @@ User message: "${text}"`
           kind: action.kind ?? 'run',
           minutes,
           distance_km: distanceKm,
+          avg_hr: Number.isNaN(avgHr) ? null : avgHr,
         })
     } else if (action.type === 'create_reminder') {
       const reminderText = action.reminder_text ?? text
@@ -420,6 +482,37 @@ User message: "${text}"`
         .select('id')
         .single()
       if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate, due_time: dueTime })
+    } else if (action.type === 'complete_reminder') {
+      // status change only, never a delete - and fully undoable via prev_status
+      const target = (pendingReminders ?? []).find((r: any) => r.id === action.reminder_id)
+      if (!target || confidence < APPLY_THRESHOLD) continue // high bar: wrong clears are annoying
+      const newStatus = action.reminder_status === 'dismissed' ? 'dismissed' : 'done'
+      const { error } = await supabase
+        .from('reminders')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', target.id)
+        .eq('user_id', userId)
+      if (!error)
+        applied.push({
+          type: 'complete_reminder',
+          reminder_id: target.id,
+          text: target.raw_text,
+          reminder_status: newStatus,
+          prev_status: target.status,
+        })
+    } else if (action.type === 'query_reminders') {
+      const items = pendingReminders ?? []
+      answers.push(
+        items.length === 0
+          ? 'Nothing on hold.'
+          : `On hold: ${items
+              .map(
+                (r: any) =>
+                  r.raw_text +
+                  (r.due_date ? ` (by ${r.due_date}${r.due_time ? ' ' + String(r.due_time).slice(0, 5) : ''})` : ''),
+              )
+              .join('; ')}.`,
+      )
     } else if (action.type === 'set_energy') {
       if (!action.level) continue
       const { error } = await supabase
@@ -484,6 +577,8 @@ export function describeApplied(a: Record<string, any>): string {
       return `🏃 ${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`
     case 'create_reminder':
       return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date}${a.due_time ? ` ${a.due_time}` : ''})` : ''}`
+    case 'complete_reminder':
+      return `✓ ${a.reminder_status === 'dismissed' ? 'dropped' : 'cleared'}: ${a.text}`
     case 'set_energy':
       return `🔋 Energy: ${a.level}`
     default:

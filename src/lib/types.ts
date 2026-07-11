@@ -72,11 +72,12 @@ export interface CardioLog {
 }
 
 export interface AppliedAction {
-  type: 'check_task' | 'log_workout' | 'log_cardio' | 'create_reminder' | 'set_energy'
+  type: 'check_task' | 'log_workout' | 'log_cardio' | 'create_reminder' | 'complete_reminder' | 'set_energy'
   task_id?: string
   label?: string
   status?: LogStatus
   log_id?: string
+  log_date?: string // check_task can land on a past day ("did X yesterday")
   workout_log_id?: string
   exercise?: string
   sets?: { kg: number; reps: number }[] | null
@@ -85,12 +86,15 @@ export interface AppliedAction {
   category?: string
   due_date?: string | null
   due_time?: string | null
+  reminder_status?: 'done' | 'dismissed' // complete_reminder
+  prev_status?: ReminderStatus // what undo restores
   planned_set_ids?: string[] // NL-filled planned sets (undo clears them)
   split_day?: string
   cardio_log_id?: string
   kind?: string
   minutes?: number | null
   distance_km?: number | null
+  avg_hr?: number | null
   level?: Energy
 }
 

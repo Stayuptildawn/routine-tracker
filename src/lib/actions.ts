@@ -154,10 +154,13 @@ export async function reassignReminder(id: string, category: string, routineId: 
 /** Revert an entire AI action batch, then mark it undone. */
 export async function undoAiAction(aiActionId: string, actions: AppliedAction[]) {
   for (const a of actions) {
-    if (a.type === 'check_task' && a.task_id) {
+    if (a.type === 'check_task' && a.log_id) {
+      // by log id, so a past-day check ("did X yesterday") reverts the right row
+      await supabase.from('task_logs').update({ status: 'pending' }).eq('id', a.log_id)
+    } else if (a.type === 'check_task' && a.task_id) {
       await supabase
         .from('task_logs')
-        .upsert({ task_id: a.task_id, date: localDate(), status: 'pending' }, { onConflict: 'task_id,date' })
+        .upsert({ task_id: a.task_id, date: a.log_date ?? localDate(), status: 'pending' }, { onConflict: 'task_id,date' })
     } else if (a.type === 'log_workout' && a.planned_set_ids?.length) {
       // NL-filled planned sets: clear them and reopen the session
       await supabase
@@ -176,6 +179,9 @@ export async function undoAiAction(aiActionId: string, actions: AppliedAction[])
       await supabase.from('cardio_logs').delete().eq('id', a.cardio_log_id)
     } else if (a.type === 'create_reminder' && a.reminder_id) {
       await supabase.from('reminders').delete().eq('id', a.reminder_id)
+    } else if (a.type === 'complete_reminder' && a.reminder_id) {
+      // restore whatever status the reminder had before the AI cleared it
+      await setReminderStatus(a.reminder_id, a.prev_status ?? 'auto')
     } else if (a.type === 'set_energy') {
       await supabase.from('daily_state').delete().eq('date', localDate())
     }
@@ -202,6 +208,8 @@ export function describeAction(a: AppliedAction): { icon: IconName; text: string
         icon: 'bell',
         text: `${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date}${a.due_time ? ` ${a.due_time.slice(0, 5)}` : ''})` : ''}`,
       }
+    case 'complete_reminder':
+      return { icon: 'check', text: `${a.reminder_status === 'dismissed' ? 'dropped' : 'cleared'}: ${a.text}` }
     case 'set_energy':
       return { icon: 'battery-medium', text: `Energy: ${a.level}` }
   }
