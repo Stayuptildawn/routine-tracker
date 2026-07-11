@@ -85,16 +85,24 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
   const [run, setRun] = useState({ kind: 'run', km: '', min: '', hr: '' })
   const [loggingRun, setLoggingRun] = useState(false)
   const [baseDraft, setBaseDraft] = useState(cardioBase != null ? String(cardioBase) : '')
+  const [editingBase, setEditingBase] = useState(false)
   const [editCardio, setEditCardio] = useState<{ id: string; kind: string; km: string; min: string; hr: string; notes: string; date: string } | null>(null)
 
   useEffect(() => {
-    if (cardioBase != null) setBaseDraft(String(cardioBase))
-  }, [cardioBase])
+    if (cardioBase != null && !editingBase) setBaseDraft(String(cardioBase))
+  }, [cardioBase, editingBase])
 
+  // explicit save only - typing in the field must never touch the database
   function saveBase() {
     const v = parseFloat(baseDraft)
     if (!Number.isFinite(v) || v <= 0) return
     onSaveBase(v)
+    setEditingBase(false)
+  }
+
+  function cancelBase() {
+    setBaseDraft(cardioBase != null ? String(cardioBase) : '')
+    setEditingBase(false)
   }
 
   async function logRun() {
@@ -229,15 +237,35 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
         </p>
         <div className="cardio-plan-base">
           <span className="gentle-inline">Easy-week base</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={baseDraft}
-            onChange={(e) => setBaseDraft(e.target.value)}
-            onBlur={saveBase}
-            onKeyDown={(e) => e.key === 'Enter' && saveBase()}
-          />
-          <span className="gentle-inline">km/week</span>
+          {editingBase ? (
+            <>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={baseDraft}
+                autoFocus
+                onChange={(e) => setBaseDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveBase()
+                  if (e.key === 'Escape') cancelBase()
+                }}
+              />
+              <span className="gentle-inline">km/week</span>
+              <button className="save" onClick={saveBase} disabled={!(parseFloat(baseDraft) > 0)}>
+                Save
+              </button>
+              <button className="link" onClick={cancelBase}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="gentle-inline">{cardioBase ?? DEFAULT_BASE_KM} km/week</span>
+              <button className="link" onClick={() => setEditingBase(true)} disabled={cardioBase == null}>
+                edit
+              </button>
+            </>
+          )}
         </div>
       </div>
 
