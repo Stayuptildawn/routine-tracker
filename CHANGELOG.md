@@ -40,6 +40,9 @@ deployed alongside).
 - The cardio "easy-week base" is edited behind an explicit Edit → Save/Cancel
   flow; it no longer writes to the database on blur.
 - The cardio week chart no longer draws a ghost outline on an empty "today".
+- Empty days on the cardio week chart show the same small accent dash the
+  Explore chart uses at zero, so a quiet day reads as "nothing logged" rather
+  than a gap in the chart.
 - Composer placeholder is a general "What's up today?" with varied examples.
 - README screenshots retaken with the current design.
 

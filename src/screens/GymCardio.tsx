@@ -315,9 +315,14 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
               >
                 <div className="bar-wrap run-bar-wrap">
                   <div className={w.now && w.total > 0 ? 'run-stack now' : 'run-stack'}>
-                    {KIND_ORDER.filter((k) => w.kinds.has(k)).map((k) => (
-                      <div key={k} className={`run-seg ${k}`} style={{ height: `${(w.kinds.get(k)! / maxKm) * 100}%` }} />
-                    ))}
+                    {w.total > 0 ? (
+                      KIND_ORDER.filter((k) => w.kinds.has(k)).map((k) => (
+                        <div key={k} className={`run-seg ${k}`} style={{ height: `${(w.kinds.get(k)! / maxKm) * 100}%` }} />
+                      ))
+                    ) : (
+                      // same 2px accent dash the Explore chart shows at zero
+                      <div className="run-seg empty" />
+                    )}
                   </div>
                 </div>
                 <span className="bar-count">{w.total > 0 ? Math.round(w.total * 10) / 10 : ''}</span>

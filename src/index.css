@@ -1660,6 +1660,7 @@ select option {
 .run-seg.cycle { background: var(--cardio-cycle); }
 .run-seg.swim { background: var(--cardio-swim); }
 .run-seg.other { background: var(--neutral); }
+.run-seg.empty { background: var(--accent); opacity: 0.85; }
 
 .bar-day.now-label {
   color: var(--accent);
