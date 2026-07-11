@@ -286,7 +286,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
                 title={`${w.num}: ${[...w.kinds.entries()].map(([k, v]) => `${k} ${Math.round(v * 10) / 10}km`).join(', ') || 'nothing'}`}
               >
                 <div className="bar-wrap run-bar-wrap">
-                  <div className={w.now ? 'run-stack now' : 'run-stack'}>
+                  <div className={w.now && w.total > 0 ? 'run-stack now' : 'run-stack'}>
                     {KIND_ORDER.filter((k) => w.kinds.has(k)).map((k) => (
                       <div key={k} className={`run-seg ${k}`} style={{ height: `${(w.kinds.get(k)! / maxKm) * 100}%` }} />
                     ))}
