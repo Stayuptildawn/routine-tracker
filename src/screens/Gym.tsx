@@ -339,9 +339,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           <section className="gym-day block-card">
             <h2>
               {block.name}
-              <span className="routine-progress">
-                week {blockWeek} of {block.total_weeks}
-              </span>
+              <span className="routine-progress"> week {blockWeek} of {block.total_weeks}</span>
             </h2>
             <div className="weeks-grid" role="grid" aria-label="block sessions">
               <div className="weeks-row weeks-head">
@@ -491,7 +489,7 @@ export default function Gym({ visible }: { visible: boolean }) {
         <section className="gym-day volume-card">
           <h2>
             Volume picture
-            <span className="routine-progress">hard sets per week</span>
+            <span className="routine-progress"> hard sets per week</span>
           </h2>
           <div className="volume-grid">
             {[...volume.entries()].map(([mg, weeks]) => {

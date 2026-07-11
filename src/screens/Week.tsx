@@ -180,7 +180,7 @@ export default function Week({ visible }: { visible: boolean }) {
   }
 
   return (
-    <div className="week">
+    <div className={draftCount > 0 ? 'week has-savebar' : 'week'}>
       <h1>This week</h1>
       <p className="gentle">A record, not a scorecard. Blanks are neutral.</p>
       {!loaded && <Skeleton cards={4} />}

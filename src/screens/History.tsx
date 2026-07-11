@@ -63,7 +63,15 @@ export default function History({ visible }: { visible: boolean }) {
           </div>
           <div className="ai-meta">
             <span className={`badge ${item.status}`}>{STATUS_LABEL[item.status]}</span>
-            <span className="ai-time">{new Date(item.created_at).toLocaleString()}</span>
+            <span className="ai-time">
+              {/* same "12 Jul, 14:32" shape as the Reminders cleared list */}
+              {new Date(item.created_at).toLocaleString(undefined, {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
             {item.status !== 'undone' && (
               <ConfirmButton
                 className="link"

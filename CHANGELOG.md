@@ -4,6 +4,17 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-07-12
+
+### Fixed
+- Workout headings no longer run their subtitle into the title
+  ("Block 1 — PPLweek 2 of 6" → "Block 1 — PPL week 2 of 6", same for
+  "Volume picture hard sets per week").
+- AI Log timestamps use the same compact "12 Jul, 14:32" shape as the
+  Reminders cleared list (was the verbose locale default with seconds).
+- The Week tab's Save/Cancel bar no longer covers the last routine card or
+  "+ Add routine" when you're scrolled to the bottom.
+
 ## 2026-07-11
 
 ### Added

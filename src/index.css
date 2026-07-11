@@ -2056,6 +2056,11 @@ select option {
   outline-offset: -2px;
 }
 
+/* the fixed bar must never hide the last card or "+ Add routine" */
+.week.has-savebar {
+  padding-bottom: 120px;
+}
+
 /* floats above the mobile tab bar so Save/Cancel stay reachable while
    scrolling through routines */
 .week-savebar {
