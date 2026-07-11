@@ -198,7 +198,10 @@ export function describeAction(a: AppliedAction): { icon: IconName; text: string
         text: `${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`,
       }
     case 'create_reminder':
-      return { icon: 'bell', text: `${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}` }
+      return {
+        icon: 'bell',
+        text: `${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date}${a.due_time ? ` ${a.due_time.slice(0, 5)}` : ''})` : ''}`,
+      }
     case 'set_energy':
       return { icon: 'battery-medium', text: `Energy: ${a.level}` }
   }

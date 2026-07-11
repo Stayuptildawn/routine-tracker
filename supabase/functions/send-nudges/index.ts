@@ -106,25 +106,69 @@ Deno.serve(async (req) => {
       }
     }
 
-    // due-today reminders: one push each, in the first morning tick of the
-    // user's own timezone. "Due today", never "overdue".
+    // due-today reminders: one push each. A reminder with a due_time fires in
+    // the 15-minute window at that local hour; the rest go out together in the
+    // first morning tick of the user's own timezone. "Due today", never "overdue".
     {
       const utcToday = new Date().toISOString().slice(0, 10)
       const { data: dueReminders } = await supabase
         .from('reminders')
-        .select('id, user_id, raw_text, due_date, nudged_at')
+        .select('id, user_id, raw_text, due_date, due_time, nudged_at')
         .in('status', ['auto', 'reassigned'])
         .gte('due_date', addDays(utcToday, -1))
         .lte('due_date', addDays(utcToday, 1))
       const byUser = new Map<string, { id: string; raw_text: string }[]>()
+      const timed: { id: string; user_id: string; raw_text: string }[] = []
       for (const r of dueReminders ?? []) {
         const { date, minutes } = nowFor(r.user_id)
         if (r.due_date !== date) continue // not "today" where this user lives
-        if (minutes < REMINDER_WINDOW_START || minutes >= REMINDER_WINDOW_START + WINDOW_MIN) continue
         if (r.nudged_at && r.nudged_at >= date + 'T00:00:00') continue // already nudged today
-        const list = byUser.get(r.user_id) ?? []
-        list.push(r)
-        byUser.set(r.user_id, list)
+        if (r.due_time) {
+          const [h, m] = (r.due_time as string).split(':').map(Number)
+          const dueMin = h * 60 + m
+          if (minutes < dueMin || minutes >= dueMin + WINDOW_MIN) continue
+          timed.push(r)
+        } else {
+          if (minutes < REMINDER_WINDOW_START || minutes >= REMINDER_WINDOW_START + WINDOW_MIN) continue
+          const list = byUser.get(r.user_id) ?? []
+          list.push(r)
+          byUser.set(r.user_id, list)
+        }
+      }
+
+      // timed reminders: each gets its own push at its own hour
+      for (const r of timed) {
+        const { data: subs } = await supabase
+          .from('push_subscriptions')
+          .select('endpoint, p256dh, auth')
+          .eq('user_id', r.user_id)
+        if (!subs || subs.length === 0) continue
+        const payload = JSON.stringify({
+          title: 'Routine Tracker',
+          body: `🔔 ${r.raw_text}`,
+          tag: `reminder-${r.id}`, // replaces, never stacks
+        })
+        let delivered = 0
+        for (const sub of subs) {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload,
+            )
+            delivered++
+            sent++
+          } catch (err: unknown) {
+            const status = (err as { statusCode?: number }).statusCode
+            if (status === 404 || status === 410) {
+              await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+            } else {
+              console.error('timed reminder push failed:', status, err)
+            }
+          }
+        }
+        if (delivered > 0) {
+          await supabase.from('reminders').update({ nudged_at: new Date().toISOString() }).eq('id', r.id)
+        }
       }
       for (const [userId, items] of byUser) {
         const { data: subs } = await supabase

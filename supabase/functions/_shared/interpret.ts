@@ -36,6 +36,7 @@ const responseSchema = {
           reminder_text: { type: 'STRING' },
           category: { type: 'STRING' },
           due_date: { type: 'STRING' },
+          due_time: { type: 'STRING' },
           kind: { type: 'STRING', enum: ['run', 'walk', 'cycle', 'swim', 'other'] },
           minutes: { type: 'NUMBER' },
           distance_km: { type: 'NUMBER' },
@@ -121,6 +122,8 @@ Rules:
   reminder_text and pick the best category. Set confidence for the category choice.
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
   yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
+  If it also names a clock time ("at 5pm", "at 17:30"), set due_time as HH:MM (24h) and make
+  sure due_date is set too (a bare time means today). Omit due_time if no time is named.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
   Match against the all-tasks list; nothing is written, an answer comes back.
@@ -326,6 +329,7 @@ User message: "${text}"`
       const category = action.category ?? 'Other'
       const routineId = routineByName.get(category.toLowerCase()) ?? null
       const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
+      const dueTime = dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(action.due_time ?? '') ? action.due_time : null
       const { data: row, error } = await supabase
         .from('reminders')
         .insert({
@@ -336,10 +340,11 @@ User message: "${text}"`
           ai_confidence: confidence,
           routine_id: routineId,
           due_date: dueDate,
+          due_time: dueTime,
         })
         .select('id')
         .single()
-      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate })
+      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate, due_time: dueTime })
     } else if (action.type === 'set_energy') {
       if (!action.level) continue
       const { error } = await supabase
@@ -403,7 +408,7 @@ export function describeApplied(a: Record<string, any>): string {
     case 'log_cardio':
       return `🏃 ${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`
     case 'create_reminder':
-      return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
+      return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date}${a.due_time ? ` ${a.due_time}` : ''})` : ''}`
     case 'set_energy':
       return `🔋 Energy: ${a.level}`
     default:

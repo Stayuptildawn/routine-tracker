@@ -52,6 +52,7 @@ export interface Reminder {
   routine_id: string | null
   status: ReminderStatus
   due_date?: string | null // yyyy-mm-dd; absent until the 0002 migration runs
+  due_time?: string | null // HH:MM[:SS]; with a due_date, a push fires at this local time
   created_at: string
   updated_at: string
 }
@@ -83,6 +84,7 @@ export interface AppliedAction {
   text?: string
   category?: string
   due_date?: string | null
+  due_time?: string | null
   planned_set_ids?: string[] // NL-filled planned sets (undo clears them)
   split_day?: string
   cardio_log_id?: string

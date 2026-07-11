@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
 import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
-import { describeDue, pendingOrder } from './Reminders'
+import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
 import Player from './Player'
@@ -349,6 +349,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                     <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
                       <Icon name={due.overdue ? 'hourglass' : 'calendar'} />{' '}
                       {due.label}
+                      {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
                     </span>
                   )}
                 </span>

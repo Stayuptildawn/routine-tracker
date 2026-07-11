@@ -23,7 +23,11 @@ export function describeDue(due: string, today: string): { label: string; overdu
 
 /** Overdue first (oldest deadline up), then dated, then undated newest-first. */
 export function pendingOrder(a: Reminder, b: Reminder): number {
-  if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
+  if (a.due_date && b.due_date) {
+    const byDate = a.due_date.localeCompare(b.due_date)
+    if (byDate !== 0) return byDate
+    return (a.due_time ?? '99').localeCompare(b.due_time ?? '99') // timed before untimed
+  }
   if (a.due_date) return -1
   if (b.due_date) return 1
   return b.created_at.localeCompare(a.created_at)
@@ -45,13 +49,19 @@ interface Draft {
   text: string
   category: string
   due: string
+  dueTime: string // HH:MM; only meaningful with a date - a push fires then
+}
+
+/** "14:30:00" (postgres time) -> "14:30" for display and <input type="time">. */
+export function shortTime(t: string): string {
+  return t.slice(0, 5)
 }
 
 export default function Reminders({ onBack }: { onBack: () => void }) {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [adding, setAdding] = useState<Draft>({ text: '', category: 'Other', due: '' })
+  const [adding, setAdding] = useState<Draft>({ text: '', category: 'Other', due: '', dueTime: '' })
   const [editing, setEditing] = useState<(Draft & { id: string }) | null>(null)
   const [showCleared, setShowCleared] = useState(false)
   const today = localDate()
@@ -100,8 +110,9 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
       routine_id: routineIdFor(adding.category),
       status: 'reassigned', // user-made, not AI-sorted
       due_date: adding.due || null,
+      due_time: (adding.due && adding.dueTime) || null,
     })
-    setAdding({ ...adding, text: '', due: '' })
+    setAdding({ ...adding, text: '', due: '', dueTime: '' })
     load()
   }
 
@@ -110,10 +121,11 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
     const text = editing.text.trim().slice(0, MAX_TEXT)
     if (!text) return
     setEditing(null)
+    const dueTime = (editing.due && editing.dueTime) || null
     setReminders((prev) =>
       prev.map((x) =>
         x.id === editing.id
-          ? { ...x, raw_text: text, final_category: editing.category, routine_id: routineIdFor(editing.category), due_date: editing.due || null, status: 'reassigned' }
+          ? { ...x, raw_text: text, final_category: editing.category, routine_id: routineIdFor(editing.category), due_date: editing.due || null, due_time: dueTime, status: 'reassigned' }
           : x,
       ),
     )
@@ -124,6 +136,7 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
         final_category: editing.category,
         routine_id: routineIdFor(editing.category),
         due_date: editing.due || null,
+        due_time: dueTime,
         status: 'reassigned',
         updated_at: new Date().toISOString(),
       })
@@ -174,6 +187,14 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
             onChange={(e) => setAdding({ ...adding, due: e.target.value })}
             title="Due date (optional)"
           />
+          {adding.due && (
+            <input
+              type="time"
+              value={adding.dueTime}
+              onChange={(e) => setAdding({ ...adding, dueTime: e.target.value })}
+              title="Time (optional) — sends a push nudge then"
+            />
+          )}
           <button onClick={addReminder} disabled={!adding.text.trim()}>
             Add
           </button>
@@ -212,11 +233,22 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                         onChange={(e) => setEditing({ ...editing, due: e.target.value })}
                       />
                       {editing.due && (
-                        <button className="link" onClick={() => setEditing({ ...editing, due: '' })}>
+                        <input
+                          type="time"
+                          value={editing.dueTime}
+                          onChange={(e) => setEditing({ ...editing, dueTime: e.target.value })}
+                          title="Time (optional) — sends a push nudge then"
+                        />
+                      )}
+                      {editing.due && (
+                        <button className="link" onClick={() => setEditing({ ...editing, due: '', dueTime: '' })}>
                           clear date
                         </button>
                       )}
                     </div>
+                    {editing.due && editing.dueTime && (
+                      <p className="gentle">A push nudge goes out around {editing.dueTime} that day (needs nudges enabled).</p>
+                    )}
                     <div className="edit-task-row">
                       <button className="save" onClick={saveEdit} disabled={!editing.text.trim()}>
                         Save
@@ -237,6 +269,7 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                         <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
                           <Icon name={due.overdue ? 'hourglass' : 'calendar'} />{' '}
                           {due.label}
+                          {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
                         </span>
                       )}
                       {r.status === 'auto' && <span className="badge">AI-sorted</span>}
@@ -249,6 +282,7 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                             text: r.raw_text,
                             category: categories.some((c) => c.name === r.final_category) ? r.final_category! : 'Other',
                             due: r.due_date ?? '',
+                            dueTime: r.due_time ? shortTime(r.due_time) : '',
                           })
                         }
                       >
