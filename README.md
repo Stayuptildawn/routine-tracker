@@ -301,9 +301,10 @@ CLI uploads automatically (the dashboard paste-editor can't).
   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a mailto:) and
   `CRON_SECRET` secrets, add the public key as a `VITE_VAPID_PUBLIC_KEY`
   repo secret, deploy `send-nudges` with `--no-verify-jwt`, and schedule it
-  every 15 minutes like the reflection (same 20-second timeout). It covers
-  the anchor nudges, due-today reminders and the pre-reflection reminder at
-  21:30. iOS needs the PWA installed to the home screen.
+  **every 5 minutes** (same 20-second timeout as the reflection). It covers
+  the anchor nudges, due-today reminders — including ones with a clock time,
+  which push within ~5 minutes of their hour — and the pre-reflection
+  reminder at 21:30. iOS needs the PWA installed to the home screen.
 
 ### 3. Local dev
 

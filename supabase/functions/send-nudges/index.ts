@@ -1,5 +1,5 @@
-// send-nudges: pg_cron every 15 minutes. A routine whose anchor_time falls in
-// the last 15-minute window, with core tasks still pending today, gets ONE
+// send-nudges: pg_cron every 5 minutes. A routine whose anchor_time falls in
+// the last cron-tick window, with core tasks still pending today, gets ONE
 // web push - and never a second one that day (nudges_sent ledger).
 //
 // Copy rule: an invitation, never an accusation. "X is ready when you are."
@@ -15,7 +15,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'
 import { addDays, userNow } from '../_shared/localtime.ts'
 
-const WINDOW_MIN = 15 // must match the cron cadence
+const WINDOW_MIN = 5 // must match the cron cadence
+// a timed reminder keeps trying for this long past its hour, so one slow or
+// skipped cron tick can't eat it (nudged_at stops any repeat once delivered)
+const TIMED_TOLERANCE_MIN = 15
 const REMINDER_WINDOW_START = 9 * 60 // due-today reminders go out after 09:00 local
 const REFLECT_PUSH_MIN = 21 * 60 + 30 // 21:30 local - half an hour before the nightly reflection reads the day
 
@@ -126,7 +129,7 @@ Deno.serve(async (req) => {
         if (r.due_time) {
           const [h, m] = (r.due_time as string).split(':').map(Number)
           const dueMin = h * 60 + m
-          if (minutes < dueMin || minutes >= dueMin + WINDOW_MIN) continue
+          if (minutes < dueMin || minutes >= dueMin + TIMED_TOLERANCE_MIN) continue
           timed.push(r)
         } else {
           if (minutes < REMINDER_WINDOW_START || minutes >= REMINDER_WINDOW_START + WINDOW_MIN) continue

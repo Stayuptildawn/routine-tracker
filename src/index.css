@@ -2470,13 +2470,20 @@ select option {
 }
 
 .reminder-add select,
-.reminder-add input[type='date'] {
+.reminder-add input[type='date'],
+.reminder-add input[type='time'] {
   padding: var(--sp-2) var(--sp-2);
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-dim);
   min-width: 0;
+}
+
+/* the text field gets a full-width line of its own; the category/date/time
+   pickers and Add wrap below - otherwise five items crush it on a phone */
+.reminder-add input:not([type='date']):not([type='time']) {
+  flex: 1 1 100%;
 }
 
 .reminder-add button:disabled {

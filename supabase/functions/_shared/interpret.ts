@@ -120,10 +120,13 @@ Rules:
   "5k"/"5 k" means distance_km:5. Not for lifting.
 - create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
   reminder_text and pick the best category. Set confidence for the category choice.
+  Emit exactly ONE create_reminder per distinct to-do — never several copies of the same item.
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
   yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
-  If it also names a clock time ("at 5pm", "at 17:30"), set due_time as HH:MM (24h) and make
-  sure due_date is set too (a bare time means today). Omit due_time if no time is named.
+  If it names a clock time ("at 5pm", "at 17:30"), set due_time as HH:MM (24h); a bare time
+  means due_date is today. Omit due_time if no time is named.
+  Example: "I need to drink water at 14:20" -> ONE action:
+  {type:"create_reminder", reminder_text:"Drink water", due_date:"${date}", due_time:"14:20"}.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
   Match against the all-tasks list; nothing is written, an answer comes back.
@@ -197,6 +200,7 @@ User message: "${text}"`
     return planContext
   }
 
+  const seenReminders = new Set<string>()
   for (const action of parsed.actions ?? []) {
     const confidence = typeof action.confidence === 'number' ? action.confidence : 1
 
@@ -326,10 +330,15 @@ User message: "${text}"`
         })
     } else if (action.type === 'create_reminder') {
       const reminderText = action.reminder_text ?? text
+      // the model sometimes emits the same reminder several times in one
+      // message - the first copy wins, the rest are dropped
+      const dupeKey = reminderText.trim().toLowerCase()
+      if (seenReminders.has(dupeKey)) continue
+      seenReminders.add(dupeKey)
       const category = action.category ?? 'Other'
       const routineId = routineByName.get(category.toLowerCase()) ?? null
       const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
-      const dueTime = dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(action.due_time ?? '') ? action.due_time : null
+      const dueTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(action.due_time ?? '') ? action.due_time : null
       const { data: row, error } = await supabase
         .from('reminders')
         .insert({
@@ -339,12 +348,12 @@ User message: "${text}"`
           final_category: category,
           ai_confidence: confidence,
           routine_id: routineId,
-          due_date: dueDate,
+          due_date: dueDate ?? (dueTime ? date : null), // a bare time means today
           due_time: dueTime,
         })
         .select('id')
         .single()
-      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate, due_time: dueTime })
+      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate ?? (dueTime ? date : null), due_time: dueTime })
     } else if (action.type === 'set_energy') {
       if (!action.level) continue
       const { error } = await supabase
