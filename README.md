@@ -3,8 +3,9 @@
 <p align="center"><em>A routine tracker that works with your brain, whatever it's like.</em></p>
 
 <p align="center">
-An AuDHD-friendly routine tracker I built for myself. You just type (or say)<br>
-<em>"took my meds and drank water"</em> and it ticks the right boxes for you.<br>
+A routine tracker anyone can use: you just type (or say)<br>
+<em>"ran 5k and did my morning routine"</em> and it ticks the right boxes for you.<br>
+Built gentle enough for ADHD brains — which makes it lighter for every brain.<br>
 Self-hosted and free to run, no subscription.
 </p>
 
@@ -90,10 +91,18 @@ not add a new one.
   of a check without you hunting for a button.
 - It knows the difference between telling it something and asking it something.
   *"low energy today"* switches the whole day to minimum mode, while *"when did
-  I last refill?"* or *"what did I bench last time?"* just reads your data back
-  to you and writes nothing. *"remind me to email the lawyer by Friday"* becomes
-  a categorized reminder with a due date. Voice input works too, so you can say
-  it instead of typing.
+  I last refill?"*, *"what did I bench last time?"* or *"what's still
+  pending?"* just reads your data back to you and writes nothing. Voice input
+  works too, so you can say it instead of typing.
+- Reminders understand the clock, in both directions. *"remind me to call the
+  bank tomorrow at 5pm"* (or *"...in 10 mins"*) becomes a categorized reminder
+  with a due time, and a push nudge fires within ~5 minutes of that hour.
+  Later, *"bought the sunscreen"* clears the matching open reminder again —
+  a status change, never a delete, and undo restores exactly what was there.
+- The record is editable by talking, not just today's: *"did the dishes
+  yesterday"* lands on yesterday's row, and undoing it fixes yesterday too.
+  Cardio takes the whole story in one line — *"ran 5k in 25 min at 152 bpm,
+  felt easy"* logs distance, time, heart rate and the recovery answer.
 - The same brain is reachable from a **Telegram bot** (text it from anywhere,
   it replies with what it did) and from Android's **share sheet** (share text
   into the app, it lands in the message box for review).
@@ -101,7 +110,10 @@ not add a new one.
   instantly with one-tap undo, the maybes come back as "Did you mean...?" chips
   you tap to confirm, and anything it's genuinely unsure about does nothing at
   all. Every batch of actions is logged and reversible, and the log keeps a
-  running accuracy score. Nothing happens silently.
+  running accuracy score. Nothing happens silently. And to be straight about
+  it: the model is not always right — my own log hovers around 70% kept. The
+  design bet is different: every miss is visible in the log and one tap from
+  undone, which beats a model you have to babysit.
 
 <p align="center">
   <img src="docs/screenshots/ailog.jpg" width="40%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
@@ -122,6 +134,8 @@ not add a new one.
 - Optional **push nudges**: if a routine's anchor passes and its core tasks are
   still pending, you get one gentle notification ("Morning routine is ready
   when you are") — at most once per routine per day, and never "you missed".
+  Reminders with a due date get one morning nudge; give one a clock time and
+  its nudge arrives at that hour instead.
 - No streaks, no shame. Skips show up neutral, blanks stay blank, past days can
   be corrected from the week grid, and taps work offline (they queue and sync).
 
@@ -190,6 +204,10 @@ low-blue "lamplight" palette, one amber accent, sage green for done. The body
 font is Atkinson Hyperlegible, which was designed by the Braille Institute for
 maximum legibility. There is no red X anywhere in the app!
 
+Every icon is a hand-rolled inline SVG stroke set (no icon font, no emoji in
+the chrome), so the icons render identically on every device and inherit the
+theme colors instead of whatever your OS ships.
+
 ## Stack
 
 React + Vite + TypeScript · Supabase (Postgres, Auth, Realtime, Edge
@@ -211,7 +229,7 @@ are, in the order they'd break:
 
 1. **Gemini (unbilled): the real limit.** Roughly 15 requests/minute and
    ~1,000–1,500/day on the free tier. Every message, question and "what's
-   next?" is one request (a 3-model fallback chain stretches this a bit). At
+   next?" is one request (a 2-model fallback chain stretches this a bit). At
    20–30 messages per user per day, that's **~30–50 active users** before
    midday rate-limit errors — and one user never gets close.
 2. **Supabase Realtime: 200 concurrent connections.** An open app holds one
@@ -305,6 +323,16 @@ CLI uploads automatically (the dashboard paste-editor can't).
   the anchor nudges, due-today reminders — including ones with a clock time,
   which push within ~5 minutes of their hour — and the pre-reflection
   reminder at 21:30. iOS needs the PWA installed to the home screen.
+- **AI canary**: deploy `ai-canary` with `--no-verify-jwt`, set `CANARY_SECRET`
+  (its own secret, so rotating it can't break the other jobs) and
+  `OWNER_EMAIL` secrets, and schedule it once a day like the others. If the
+  whole Gemini model chain ever fails — quota gone, model retired, key
+  revoked — you get one push that morning instead of finding out mid-message.
+- **CI function deploys**: add a `SUPABASE_ACCESS_TOKEN` repo secret and a
+  `SUPABASE_PROJECT_REF` repo variable, and every push that touches
+  `supabase/functions/` deploys them automatically (after the unit tests
+  pass), so the deployed code can't drift from the repo. Without the secret
+  the workflow just skips itself.
 
 ### 3. Local dev
 
@@ -337,17 +365,27 @@ quota.
 
 The interpret core (`supabase/functions/_shared/interpret.ts`, shared by the
 app's `interpret-message` and the Telegram webhook) receives your text plus
-today's date and weekday, loads today's scheduled tasks, and asks Gemini for
-a structured list of actions: check-offs, workout sets, cardio, reminders
-(with due dates), energy level, or read-only questions. Actions with
-confidence ≥ 0.9 are applied immediately (still undoable, every batch is
-recorded in `ai_actions`), the 0.6–0.9 ones come back as one-tap confirm
-chips, and below that nothing happens at all. If a planned training session
-is open today, logged sets fill the session's planned sets instead of the
-freeform log, so the composer, the Telegram bot and the session player all
-write the same rows. The day's tasks are injected straight into the prompt as
-candidates, which at personal scale works better than embeddings and costs
-basically nothing.
+today's date, weekday and local clock, loads today's scheduled tasks and your
+open reminders, and asks Gemini for a structured list of actions: check-offs
+(today or a past day), workout sets, cardio (with heart rate and how it
+felt), creating reminders (with due dates and times), clearing reminders,
+energy level, or read-only questions. Actions with confidence ≥ 0.9 are
+applied immediately (still undoable, every batch is recorded in
+`ai_actions`), the 0.6–0.9 ones come back as one-tap confirm chips, and below
+that nothing happens at all. If a planned training session is open today,
+logged sets fill the session's planned sets instead of the freeform log, so
+the composer, the Telegram bot and the session player all write the same
+rows. The day's tasks and open reminders are injected straight into the
+prompt as candidates, which at personal scale works better than embeddings
+and costs basically nothing.
+
+One lesson from running this on the small models is baked in: anything
+time-shaped is never left to the model's arithmetic. *"in 10 mins"*, *"at
+5pm"*, *"tomorrow"*, *"yesterday"* are all resolved deterministically in
+code against your clock and timezone; the model only has to point at the
+right task or reminder. Repeated actions get deduped, the action list is
+capped, and a model that returns broken JSON just falls through to the next
+one in the chain.
 
 ## License
 

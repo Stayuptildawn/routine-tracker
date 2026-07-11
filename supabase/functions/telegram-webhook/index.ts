@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
         return ok()
       }
       await supabase.from('telegram_links').upsert({ chat_id: chatId, user_id: users.users[0].id })
-      await reply(chatId, 'Linked ✓ — just text me things like "took my meds" or "remind me to call the bank".')
+      await reply(chatId, 'Linked ✓ — just text me things like "ran 5k" or "remind me to call the bank at 5".')
       return ok()
     }
 

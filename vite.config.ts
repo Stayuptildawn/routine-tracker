@@ -30,7 +30,7 @@ export default defineConfig({
       manifest: {
         name: 'Routine Tracker',
         short_name: 'Routines',
-        description: 'AuDHD-friendly routine tracker with conversational check-off',
+        description: 'A routine tracker that works with your brain — conversational check-off, ADHD-friendly by design',
         theme_color: '#1a1714',
         background_color: '#1a1714',
         display: 'standalone',

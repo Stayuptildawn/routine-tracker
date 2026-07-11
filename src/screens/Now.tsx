@@ -261,7 +261,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
               send()
             }
           }}
-          placeholder='Just tell me… "took my meds and drank water"'
+          placeholder='What’s up today? — "ran 5k", "remind me at 6", "morning routine done"'
           rows={2}
         />
         <div className="composer-buttons">
