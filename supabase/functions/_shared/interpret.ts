@@ -6,6 +6,18 @@
 // deno-lint-ignore-file no-explicit-any
 
 import { addDays, userNow } from './localtime.ts'
+import {
+  addMinutesToClock,
+  clampDaysAgo,
+  mentionsYesterday,
+  normalizeAvgHr,
+  normalizeDueInMinutes,
+  normalizeDueTime,
+  parseAbsoluteTime,
+  parseBpm,
+  parseRelativeDay,
+  parseRelativeMinutes,
+} from './timeparse.ts'
 
 // Fast-and-cheap first: heavier "latest" aliases run thinking passes that
 // blow the edge-function worker limit. The lite models drop the reminder
@@ -277,11 +289,10 @@ User message: "${text}"`
     const confidence = typeof action.confidence === 'number' ? action.confidence : 1
 
     if (action.type === 'check_task') {
-      const rawDaysAgo = Number(action.days_ago)
-      let daysAgo = Number.isFinite(rawDaysAgo) ? Math.min(7, Math.max(0, Math.round(rawDaysAgo))) : 0
+      let daysAgo = clampDaysAgo(action.days_ago)
       // deterministic fallback: the lite models tend to drop days_ago even
       // when the message plainly says yesterday
-      if (daysAgo === 0 && /\byesterday\b/i.test(text)) daysAgo = 1
+      if (daysAgo === 0 && mentionsYesterday(text)) daysAgo = 1
       // past days may reference tasks that aren't scheduled today
       const candidate = candidateById.get(action.task_id) ?? (daysAgo > 0 ? taskById.get(action.task_id) : undefined)
       if (!candidate || confidence < SUGGEST_THRESHOLD) continue
@@ -387,12 +398,7 @@ User message: "${text}"`
         const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:min|mins|minutes|minutos)/i)
         if (m) minutes = parseFloat(m[1].replace(',', '.'))
       }
-      let avgHr = Number(action.avg_hr)
-      avgHr = Number.isFinite(avgHr) && avgHr > 30 && avgHr < 250 ? Math.round(avgHr) : NaN
-      if (Number.isNaN(avgHr)) {
-        const m = text.match(/(\d{2,3})\s*bpm\b/i)
-        avgHr = m ? Number(m[1]) : NaN
-      }
+      const avgHr = normalizeAvgHr(action.avg_hr) ?? parseBpm(text)
       const pick = (v: unknown, allowed: string[]) => (allowed.includes(String(v)) ? String(v) : null)
       const { data: row, error } = await supabase
         .from('cardio_logs')
@@ -402,7 +408,7 @@ User message: "${text}"`
           kind: action.kind ?? 'run',
           minutes,
           distance_km: distanceKm,
-          avg_hr: Number.isNaN(avgHr) ? null : avgHr,
+          avg_hr: avgHr,
           notes: action.notes ?? null,
           effort: pick(action.effort, ['easy', 'steady', 'pushed', 'all_out']),
           body: pick(action.body, ['fresh', 'okay', 'heavy']),
@@ -417,7 +423,7 @@ User message: "${text}"`
           kind: action.kind ?? 'run',
           minutes,
           distance_km: distanceKm,
-          avg_hr: Number.isNaN(avgHr) ? null : avgHr,
+          avg_hr: avgHr,
         })
     } else if (action.type === 'create_reminder') {
       const reminderText = action.reminder_text ?? text
@@ -430,41 +436,28 @@ User message: "${text}"`
       const routineId = routineByName.get(category.toLowerCase()) ?? null
       let dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
       // tolerate sloppy model output: "9:30", "17:30:00", numbers as strings
-      const tMatch = String(action.due_time ?? '').match(/^(\d{1,2}):([0-5]\d)(?::\d{2})?$/)
-      let dueTime = tMatch && Number(tMatch[1]) < 24 ? `${tMatch[1].padStart(2, '0')}:${tMatch[2]}` : null
-      const rawInMin = Number(action.due_in_minutes)
-      let dueInMin = Number.isFinite(rawInMin) && rawInMin > 0 ? Math.round(rawInMin) : null
+      let dueTime = normalizeDueTime(action.due_time)
+      let dueInMin = normalizeDueInMinutes(action.due_in_minutes)
       // deterministic fallback: when the model named no time/date but the
       // message plainly does, parse it here so "in 10 mins" / "at 5pm" /
       // "tomorrow" never gets lost (only when this is the message's single
       // reminder - no ambiguity about which one the phrase belongs to)
       if (reminderActionCount === 1) {
         if (!dueTime && dueInMin === null) {
-          const rel = text.match(/\bin\s+(\d+)\s*(min|mins|minute|minutes|h|hr|hrs|hour|hours)\b/i)
-          const abs = text.match(/\bat\s+(\d{1,2})(?::([0-5]\d))?\s*(am|pm)?\b/i)
-          if (rel) {
-            dueInMin = Number(rel[1]) * (/^h/i.test(rel[2]) ? 60 : 1)
-          } else if (abs) {
-            let h = Number(abs[1])
-            const m = Number(abs[2] ?? 0)
-            const ap = abs[3]?.toLowerCase()
-            if (ap === 'pm' && h < 12) h += 12
-            if (ap === 'am' && h === 12) h = 0
-            if (h < 24) dueTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-          }
+          dueInMin = parseRelativeMinutes(text)
+          if (dueInMin === null) dueTime = parseAbsoluteTime(text)
         }
         if (!dueDate && dueInMin === null) {
-          if (/\btomorrow\b/i.test(text)) dueDate = addDays(date, 1)
-          else if (/\b(today|tonight)\b/i.test(text)) dueDate = date
+          const day = parseRelativeDay(text)
+          if (day === 'tomorrow') dueDate = addDays(date, 1)
+          else if (day === 'today') dueDate = date
         }
       }
       // "in 10 mins": the model reports the offset, the clock math happens here
       if (!dueTime && dueInMin !== null) {
-        const [h, m] = (await resolveNow()).split(':').map(Number)
-        const total = h * 60 + m + dueInMin
-        const mm = total % 1440
-        dueTime = `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`
-        dueDate = dueDate ?? addDays(date, Math.floor(total / 1440)) // rolls past midnight
+        const rolled = addMinutesToClock(await resolveNow(), dueInMin)
+        dueTime = rolled.time
+        dueDate = dueDate ?? addDays(date, rolled.dayOffset) // rolls past midnight
       }
       dueDate = dueDate ?? (dueTime ? date : null) // a bare time means today
       const { data: row, error } = await supabase

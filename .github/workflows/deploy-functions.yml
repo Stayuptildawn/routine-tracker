@@ -1,0 +1,46 @@
+# Deploys the Supabase Edge Functions whenever their source changes, so the
+# deployed functions can never drift from what's committed (they used to be
+# deployed by hand from the working tree).
+#
+# One-time setup, without which this workflow simply skips itself:
+#   - repo secret  SUPABASE_ACCESS_TOKEN  (supabase.com/dashboard/account/tokens)
+#   - repo variable SUPABASE_PROJECT_REF  (the project's ref id)
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/functions/**']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SUPABASE_PROJECT_REF != '' }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # the unit tests cover the shared parsing the functions rely on
+      - run: npm test
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Skip when the access token is missing
+        if: env.SUPABASE_ACCESS_TOKEN == ''
+        run: |
+          echo "SUPABASE_ACCESS_TOKEN secret not set - skipping deploy (see workflow header)"
+      - name: Deploy functions
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        run: |
+          supabase functions deploy interpret-message --project-ref "$PROJECT_REF"
+          supabase functions deploy telegram-webhook --no-verify-jwt --project-ref "$PROJECT_REF"
+          supabase functions deploy send-nudges --no-verify-jwt --project-ref "$PROJECT_REF"
+          supabase functions deploy weekly-reflection --no-verify-jwt --project-ref "$PROJECT_REF"
+          supabase functions deploy ai-canary --no-verify-jwt --project-ref "$PROJECT_REF"
