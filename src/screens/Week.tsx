@@ -48,6 +48,9 @@ export default function Week({ visible }: { visible: boolean }) {
   const [newLabel, setNewLabel] = useState('')
   const [newRoutine, setNewRoutine] = useState('')
   const [addingRoutine, setAddingRoutine] = useState(false)
+  // cell taps land here first, keyed `${taskId}|${date}` - nothing is
+  // written until the Save bar confirms it
+  const [drafts, setDrafts] = useState<Record<string, LogStatus>>({})
   const weekDates = currentWeekDates()
   const today = localDate()
 
@@ -73,19 +76,45 @@ export default function Week({ visible }: { visible: boolean }) {
   const logIndex = new Map(logs.map((l) => [`${l.task_id}|${l.date}`, l]))
   const logFor = (taskId: string, date: string) => logIndex.get(`${taskId}|${date}`)
 
-  async function cycleCell(task: Task, date: string) {
-    const next = NEXT_STATUS[logFor(task.id, date)?.status ?? 'pending']
-    // optimistic: show the change instantly, and keep it if the tap gets
-    // queued offline (a reload would revert it)
-    setLogs((prev) => {
-      const existing = prev.find((l) => l.task_id === task.id && l.date === date)
-      if (existing) return prev.map((l) => (l === existing ? { ...l, status: next } : l))
-      return [
-        ...prev,
-        { id: '', task_id: task.id, date, status: next, completed_via: 'manual', notes: null },
-      ]
+  function cycleCell(task: Task, date: string) {
+    const key = `${task.id}|${date}`
+    const saved = logFor(task.id, date)?.status ?? 'pending'
+    const next = NEXT_STATUS[drafts[key] ?? saved]
+    setDrafts((prev) => {
+      // cycled back to what's already saved - drop the draft, nothing to confirm
+      if (next === saved) {
+        const { [key]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [key]: next }
     })
-    if ((await setTaskStatus(task.id, next, 'manual', date)) === 'saved') load()
+  }
+
+  const draftCount = Object.keys(drafts).length
+
+  async function saveDrafts() {
+    const entries = Object.entries(drafts)
+    // optimistic: keep the new marks on screen while the writes go out, and
+    // keep them if a tap gets queued offline (a reload would revert it)
+    setLogs((prev) => {
+      let next = prev
+      for (const [key, status] of entries) {
+        const [taskId, date] = key.split('|')
+        const existing = next.find((l) => l.task_id === taskId && l.date === date)
+        next = existing
+          ? next.map((l) => (l === existing ? { ...l, status } : l))
+          : [...next, { id: '', task_id: taskId, date, status, completed_via: 'manual', notes: null }]
+      }
+      return next
+    })
+    setDrafts({})
+    const results = await Promise.all(
+      entries.map(([key, status]) => {
+        const [taskId, date] = key.split('|')
+        return setTaskStatus(taskId, status, 'manual', date)
+      }),
+    )
+    if (results.some((r) => r === 'saved')) load()
   }
 
   async function addTask(routineId: string) {
@@ -310,12 +339,13 @@ export default function Week({ visible }: { visible: boolean }) {
                         </td>
                         {weekDates.map((date, i) => {
                           const scheduled = task.scheduled_days.includes(i + 1)
-                          const status = logFor(task.id, date)?.status ?? 'pending'
+                          const draft = drafts[`${task.id}|${date}`]
+                          const status = draft ?? logFor(task.id, date)?.status ?? 'pending'
                           const tappable = scheduled && date <= today
                           return (
                             <td
                               key={date}
-                              className={`cell ${status} ${scheduled ? '' : 'unscheduled'} ${date === today ? 'today' : ''} ${tappable ? 'tappable' : ''}`}
+                              className={`cell ${status} ${scheduled ? '' : 'unscheduled'} ${date === today ? 'today' : ''} ${tappable ? 'tappable' : ''} ${draft ? 'draft' : ''}`}
                               role={tappable ? 'button' : undefined}
                               tabIndex={tappable ? 0 : undefined}
                               title={tappable ? `${task.label} — tap to edit ${DAY_NAMES[i]}` : undefined}
@@ -366,6 +396,20 @@ export default function Week({ visible }: { visible: boolean }) {
         <button className="link add-routine" onClick={() => setAddingRoutine(true)}>
           + Add routine
         </button>
+      )}
+
+      {draftCount > 0 && (
+        <div className="week-savebar" role="status">
+          <span>
+            {draftCount} unsaved {draftCount === 1 ? 'change' : 'changes'}
+          </span>
+          <button className="save" onClick={saveDrafts}>
+            Save
+          </button>
+          <button className="energy-btn" onClick={() => setDrafts({})}>
+            Cancel
+          </button>
+        </div>
       )}
     </div>
   )

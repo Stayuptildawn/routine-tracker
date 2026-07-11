@@ -28,6 +28,11 @@ deployed alongside).
   functions so deployed code can't drift from the repo.
 
 ### Changed
+- **Week grid edits now ask before saving.** Tapping a cell stages the
+  change (dashed outline) instead of writing it immediately; a floating bar
+  shows how many changes are pending, with Save and Cancel buttons. Taps
+  still cycle blank → done → skipped, and cycling back to the saved state
+  drops the draft.
 - **Every emoji in the UI replaced with a hand-rolled inline SVG icon set** —
   identical rendering on every device, theme-aware colors.
 - Card actions (Pause/Edit/Activate on week cards, the plan card's Edit, the
