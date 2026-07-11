@@ -5,8 +5,14 @@
 
 // deno-lint-ignore-file no-explicit-any
 
-// Cheapest first; fallbacks cover per-model overload (503) and quota (429).
-export const GEMINI_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']
+import { addDays, userNow } from './localtime.ts'
+
+// Fast-and-cheap first: heavier "latest" aliases run thinking passes that
+// blow the edge-function worker limit. The lite models drop the reminder
+// time fields sometimes, so the create_reminder path re-parses times from
+// the raw text deterministically below. Fallbacks cover per-model overload
+// (503), quota (429) and retirement (404).
+export const GEMINI_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite']
 const APPLY_THRESHOLD = 0.9
 const SUGGEST_THRESHOLD = 0.6
 
@@ -37,6 +43,7 @@ const responseSchema = {
           category: { type: 'STRING' },
           due_date: { type: 'STRING' },
           due_time: { type: 'STRING' },
+          due_in_minutes: { type: 'NUMBER' },
           kind: { type: 'STRING', enum: ['run', 'walk', 'cycle', 'swim', 'other'] },
           minutes: { type: 'NUMBER' },
           distance_km: { type: 'NUMBER' },
@@ -56,6 +63,7 @@ export interface InterpretResult {
   suggestions: Record<string, any>[]
   answers: string[] // read-only question replies; no DB writes, no undo entry
   error?: string
+  raw_actions?: Record<string, any>[] // what the model actually emitted - for debugging misparses
 }
 
 function daysAgo(date: string, today: string): string {
@@ -126,11 +134,12 @@ Rules:
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
   yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
   If it names a clock time ("at 5pm", "at 17:30"), ALWAYS set due_time as HH:MM (24h); a bare
-  time means due_date is today. Relative times ("in 5 minutes", "in two hours") resolve
-  against the current clock${time ? ` — right now it is ${time}` : ''}; if that crosses
-  midnight, due_date is tomorrow. Omit due_time only when no time is named.
-  Example: "I need to drink water at 14:20" -> ONE action:
-  {type:"create_reminder", reminder_text:"Drink water", due_date:"${date}", due_time:"14:20"}.
+  time means due_date is today.
+  If it names a RELATIVE time ("in 10 mins", "in two hours"), ALWAYS set due_in_minutes to
+  the number of minutes from now (integer) — do NOT compute a clock time yourself.
+  Examples: "drink water at 14:20" -> {type:"create_reminder", reminder_text:"Drink water",
+  due_date:"${date}", due_time:"14:20"}; "drink water in 10 mins" ->
+  {type:"create_reminder", reminder_text:"Drink water", due_in_minutes:10}.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
   Match against the all-tasks list; nothing is written, an answer comes back.
@@ -159,8 +168,9 @@ User message: "${text}"`
       break
     }
     lastError = `${model}: ${await geminiRes.text()}`
-    // overload / quota are per-model - try the next one; anything else is fatal
-    if (geminiRes.status !== 503 && geminiRes.status !== 429) break
+    // overload / quota / a retired model name are per-model - try the next
+    // one; anything else is fatal
+    if (geminiRes.status !== 503 && geminiRes.status !== 429 && geminiRes.status !== 404) break
   }
   if (!gemini) return { ai_action_id: null, applied: [], suggestions: [], answers: [], error: `Gemini error: ${lastError}` }
   const parsed = JSON.parse(gemini.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"actions":[]}')
@@ -205,6 +215,21 @@ User message: "${text}"`
   }
 
   const seenReminders = new Set<string>()
+  const reminderActionCount = (parsed.actions ?? []).filter((a: any) => a.type === 'create_reminder').length
+  // the caller's local clock; old clients don't send it, so it's resolved
+  // lazily from the user's stored timezone the first time it's needed
+  let nowTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(time ?? '') ? (time as string) : ''
+  const resolveNow = async (): Promise<string> => {
+    if (nowTime) return nowTime
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('timezone')
+      .eq('user_id', userId)
+      .maybeSingle()
+    const { minutes } = userNow(settings?.timezone)
+    nowTime = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+    return nowTime
+  }
   for (const action of parsed.actions ?? []) {
     const confidence = typeof action.confidence === 'number' ? action.confidence : 1
 
@@ -341,8 +366,45 @@ User message: "${text}"`
       seenReminders.add(dupeKey)
       const category = action.category ?? 'Other'
       const routineId = routineByName.get(category.toLowerCase()) ?? null
-      const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
-      const dueTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(action.due_time ?? '') ? action.due_time : null
+      let dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
+      // tolerate sloppy model output: "9:30", "17:30:00", numbers as strings
+      const tMatch = String(action.due_time ?? '').match(/^(\d{1,2}):([0-5]\d)(?::\d{2})?$/)
+      let dueTime = tMatch && Number(tMatch[1]) < 24 ? `${tMatch[1].padStart(2, '0')}:${tMatch[2]}` : null
+      const rawInMin = Number(action.due_in_minutes)
+      let dueInMin = Number.isFinite(rawInMin) && rawInMin > 0 ? Math.round(rawInMin) : null
+      // deterministic fallback: when the model named no time/date but the
+      // message plainly does, parse it here so "in 10 mins" / "at 5pm" /
+      // "tomorrow" never gets lost (only when this is the message's single
+      // reminder - no ambiguity about which one the phrase belongs to)
+      if (reminderActionCount === 1) {
+        if (!dueTime && dueInMin === null) {
+          const rel = text.match(/\bin\s+(\d+)\s*(min|mins|minute|minutes|h|hr|hrs|hour|hours)\b/i)
+          const abs = text.match(/\bat\s+(\d{1,2})(?::([0-5]\d))?\s*(am|pm)?\b/i)
+          if (rel) {
+            dueInMin = Number(rel[1]) * (/^h/i.test(rel[2]) ? 60 : 1)
+          } else if (abs) {
+            let h = Number(abs[1])
+            const m = Number(abs[2] ?? 0)
+            const ap = abs[3]?.toLowerCase()
+            if (ap === 'pm' && h < 12) h += 12
+            if (ap === 'am' && h === 12) h = 0
+            if (h < 24) dueTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+          }
+        }
+        if (!dueDate && dueInMin === null) {
+          if (/\btomorrow\b/i.test(text)) dueDate = addDays(date, 1)
+          else if (/\b(today|tonight)\b/i.test(text)) dueDate = date
+        }
+      }
+      // "in 10 mins": the model reports the offset, the clock math happens here
+      if (!dueTime && dueInMin !== null) {
+        const [h, m] = (await resolveNow()).split(':').map(Number)
+        const total = h * 60 + m + dueInMin
+        const mm = total % 1440
+        dueTime = `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`
+        dueDate = dueDate ?? addDays(date, Math.floor(total / 1440)) // rolls past midnight
+      }
+      dueDate = dueDate ?? (dueTime ? date : null) // a bare time means today
       const { data: row, error } = await supabase
         .from('reminders')
         .insert({
@@ -352,12 +414,12 @@ User message: "${text}"`
           final_category: category,
           ai_confidence: confidence,
           routine_id: routineId,
-          due_date: dueDate ?? (dueTime ? date : null), // a bare time means today
+          due_date: dueDate,
           due_time: dueTime,
         })
         .select('id')
         .single()
-      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate ?? (dueTime ? date : null), due_time: dueTime })
+      if (!error) applied.push({ type: 'create_reminder', reminder_id: row.id, text: reminderText, category, due_date: dueDate, due_time: dueTime })
     } else if (action.type === 'set_energy') {
       if (!action.level) continue
       const { error } = await supabase
@@ -405,7 +467,7 @@ User message: "${text}"`
     aiActionId = row?.id ?? null
   }
 
-  return { ai_action_id: aiActionId, applied, suggestions, answers }
+  return { ai_action_id: aiActionId, applied, suggestions, answers, raw_actions: parsed.actions ?? [] }
 }
 
 /** One line of plain text per applied action - for chat replies. */
