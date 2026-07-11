@@ -29,8 +29,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { text, date, weekday } = await req.json()
+    const { text, date, weekday, time } = await req.json()
     if (!text || !date || !weekday) return json({ error: 'text, date and weekday are required' }, 400)
+    const localTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(time ?? '') ? time : undefined
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user) return json({ error: 'not authenticated' }, 401)
 
-    const result = await interpretAndApply(supabase, auth.user.id, text, date, weekday)
+    const result = await interpretAndApply(supabase, auth.user.id, text, date, weekday, localTime)
     return json(result, result.error ? 502 : 200)
   } catch (err) {
     return json({ error: String(err) }, 500)

@@ -81,8 +81,9 @@ Deno.serve(async (req) => {
       .select('timezone')
       .eq('user_id', link.user_id)
       .maybeSingle()
-    const { date, weekday } = userNow(settings?.timezone)
-    const result = await interpretAndApply(supabase, link.user_id, text, date, weekday)
+    const { date, weekday, minutes } = userNow(settings?.timezone)
+    const localTime = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+    const result = await interpretAndApply(supabase, link.user_id, text, date, weekday, localTime)
 
     if (result.error) {
       await reply(chatId, 'Something went wrong on my end — try again in a minute.')

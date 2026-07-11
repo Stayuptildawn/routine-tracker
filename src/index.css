@@ -993,8 +993,10 @@ select option {
   flex-shrink: 0;
 }
 
-.task .do,
-.task .skip {
+/* scoped to the wrapper (not .task) so the Reminders screen's Done/Dismiss
+   get the same skin - buttons must read as buttons everywhere */
+.task-buttons .do,
+.task-buttons .skip {
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
   background: var(--surface-2);
@@ -1003,19 +1005,19 @@ select option {
   min-height: 40px;
 }
 
-.task .do:hover,
-.task .skip:hover {
+.task-buttons .do:hover,
+.task-buttons .skip:hover {
   background: var(--surface-3);
   color: var(--text);
 }
 
-.task .do.active {
+.task-buttons .do.active {
   background: var(--good-soft);
   color: var(--good);
   font-weight: 700;
 }
 
-.task .skip.active {
+.task-buttons .skip.active {
   background: var(--surface-3);
   color: var(--text);
   font-weight: 700;
@@ -2484,6 +2486,14 @@ select option {
    pickers and Add wrap below - otherwise five items crush it on a phone */
 .reminder-add input:not([type='date']):not([type='time']) {
   flex: 1 1 100%;
+}
+
+/* labelled date/time pair: the words "due" and "at" are the hint that these
+   empty-looking pickers exist (iOS renders a blank box for an unset date) */
+.reminder-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
 }
 
 .reminder-add button:disabled {

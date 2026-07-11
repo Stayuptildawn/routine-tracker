@@ -104,13 +104,15 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
   async function addReminder() {
     const text = adding.text.trim().slice(0, MAX_TEXT)
     if (!text) return
+    // a time with no date means today - the natural reading of "at 15:00"
+    const dueDate = adding.due || (adding.dueTime ? today : '')
     await supabase.from('reminders').insert({
       raw_text: text,
       final_category: adding.category,
       routine_id: routineIdFor(adding.category),
       status: 'reassigned', // user-made, not AI-sorted
-      due_date: adding.due || null,
-      due_time: (adding.due && adding.dueTime) || null,
+      due_date: dueDate || null,
+      due_time: adding.dueTime || null,
     })
     setAdding({ ...adding, text: '', due: '', dueTime: '' })
     load()
@@ -121,11 +123,12 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
     const text = editing.text.trim().slice(0, MAX_TEXT)
     if (!text) return
     setEditing(null)
-    const dueTime = (editing.due && editing.dueTime) || null
+    const dueDate = editing.due || (editing.dueTime ? today : '')
+    const dueTime = editing.dueTime || null
     setReminders((prev) =>
       prev.map((x) =>
         x.id === editing.id
-          ? { ...x, raw_text: text, final_category: editing.category, routine_id: routineIdFor(editing.category), due_date: editing.due || null, due_time: dueTime, status: 'reassigned' }
+          ? { ...x, raw_text: text, final_category: editing.category, routine_id: routineIdFor(editing.category), due_date: dueDate || null, due_time: dueTime, status: 'reassigned' }
           : x,
       ),
     )
@@ -135,7 +138,7 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
         raw_text: text,
         final_category: editing.category,
         routine_id: routineIdFor(editing.category),
-        due_date: editing.due || null,
+        due_date: dueDate || null,
         due_time: dueTime,
         status: 'reassigned',
         updated_at: new Date().toISOString(),
@@ -181,20 +184,18 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
               <option key={c.name}>{c.name}</option>
             ))}
           </select>
-          <input
-            type="date"
-            value={adding.due}
-            onChange={(e) => setAdding({ ...adding, due: e.target.value })}
-            title="Due date (optional)"
-          />
-          {adding.due && (
+          <label className="reminder-field" title="Due date (optional)">
+            <span className="gentle-inline">due</span>
+            <input type="date" value={adding.due} onChange={(e) => setAdding({ ...adding, due: e.target.value })} />
+          </label>
+          <label className="reminder-field" title="Optional — a push nudge goes out at this time (today if no date)">
+            <span className="gentle-inline">at</span>
             <input
               type="time"
               value={adding.dueTime}
               onChange={(e) => setAdding({ ...adding, dueTime: e.target.value })}
-              title="Time (optional) — sends a push nudge then"
             />
-          )}
+          </label>
           <button onClick={addReminder} disabled={!adding.text.trim()}>
             Add
           </button>
@@ -227,27 +228,33 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                           <option key={c.name}>{c.name}</option>
                         ))}
                       </select>
-                      <input
-                        type="date"
-                        value={editing.due}
-                        onChange={(e) => setEditing({ ...editing, due: e.target.value })}
-                      />
-                      {editing.due && (
+                      <label className="reminder-field">
+                        <span className="gentle-inline">due</span>
+                        <input
+                          type="date"
+                          value={editing.due}
+                          onChange={(e) => setEditing({ ...editing, due: e.target.value })}
+                        />
+                      </label>
+                      <label className="reminder-field">
+                        <span className="gentle-inline">at</span>
                         <input
                           type="time"
                           value={editing.dueTime}
                           onChange={(e) => setEditing({ ...editing, dueTime: e.target.value })}
-                          title="Time (optional) — sends a push nudge then"
                         />
-                      )}
-                      {editing.due && (
+                      </label>
+                      {(editing.due || editing.dueTime) && (
                         <button className="link" onClick={() => setEditing({ ...editing, due: '', dueTime: '' })}>
-                          clear date
+                          clear
                         </button>
                       )}
                     </div>
-                    {editing.due && editing.dueTime && (
-                      <p className="gentle">A push nudge goes out around {editing.dueTime} that day (needs nudges enabled).</p>
+                    {editing.dueTime && (
+                      <p className="gentle">
+                        A push nudge goes out around {editing.dueTime}
+                        {editing.due ? ' that day' : ' today'} (needs nudges enabled).
+                      </p>
                     )}
                     <div className="edit-task-row">
                       <button className="save" onClick={saveEdit} disabled={!editing.text.trim()}>

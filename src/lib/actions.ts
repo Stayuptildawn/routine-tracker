@@ -9,7 +9,7 @@ const QUEUE_KEY = 'pending_messages'
 export async function interpretMessage(text: string): Promise<InterpretResponse | 'queued'> {
   try {
     const { data, error } = await supabase.functions.invoke<InterpretResponse>('interpret-message', {
-      body: { text, date: localDate(), weekday: isoWeekday() },
+      body: { text, date: localDate(), weekday: isoWeekday(), time: new Date().toTimeString().slice(0, 5) },
     })
     if (error) throw error
     return data!

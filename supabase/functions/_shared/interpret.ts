@@ -63,13 +63,15 @@ function daysAgo(date: string, today: string): string {
   return diff === 0 ? 'today' : diff === 1 ? 'yesterday' : `${diff} days ago (${date})`
 }
 
-/** Parse free text into actions and apply them for the given user. */
+/** Parse free text into actions and apply them for the given user.
+ *  `time` is the user's local clock (HH:MM) so relative times resolve. */
 export async function interpretAndApply(
   supabase: any,
   userId: string,
   text: string,
   date: string,
   weekday: number,
+  time?: string,
 ): Promise<InterpretResult> {
   // Today's candidate tasks (small list) get injected into the prompt so the
   // model fuzzy-matches natively - no vector store needed at this scale.
@@ -123,8 +125,10 @@ Rules:
   Emit exactly ONE create_reminder per distinct to-do — never several copies of the same item.
   If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
   yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
-  If it names a clock time ("at 5pm", "at 17:30"), set due_time as HH:MM (24h); a bare time
-  means due_date is today. Omit due_time if no time is named.
+  If it names a clock time ("at 5pm", "at 17:30"), ALWAYS set due_time as HH:MM (24h); a bare
+  time means due_date is today. Relative times ("in 5 minutes", "in two hours") resolve
+  against the current clock${time ? ` — right now it is ${time}` : ''}; if that crosses
+  midnight, due_date is tomorrow. Omit due_time only when no time is named.
   Example: "I need to drink water at 14:20" -> ONE action:
   {type:"create_reminder", reminder_text:"Drink water", due_date:"${date}", due_time:"14:20"}.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
