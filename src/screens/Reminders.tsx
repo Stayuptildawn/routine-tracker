@@ -4,6 +4,7 @@ import { localDate } from '../lib/types'
 import type { Reminder } from '../lib/types'
 import { setReminderStatus } from '../lib/actions'
 import Skeleton from '../components/Skeleton'
+import Icon from '../components/Icon'
 
 interface Category {
   id: string | null // routine id; null = "Other"
@@ -234,7 +235,7 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
                     <div className="reminder-tags">
                       {due && (
                         <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
-                          {due.overdue ? '⏳ ' : '📆 '}
+                          <Icon name={due.overdue ? 'hourglass' : 'calendar'} />{' '}
                           {due.label}
                         </span>
                       )}

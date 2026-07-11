@@ -4,6 +4,7 @@ import { useOverlay } from '../lib/overlay'
 import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
+import Icon from '../components/Icon'
 
 interface Props {
   session: PlannedSession
@@ -308,7 +309,7 @@ export default function Session({ session, plans, onExit }: Props) {
         </div>
 
         <div className="session-date">
-          <span>📅 Workout date</span>
+          <span><Icon name="calendar" /> Workout date</span>
           {handled > 0 ? (
             <input type="date" value={sessionDate} onChange={(e) => updateSessionDate(e.target.value)} />
           ) : (
@@ -337,7 +338,7 @@ export default function Session({ session, plans, onExit }: Props) {
                     <span className="session-target">{exSets[0]?.target_scheme ?? ''}</span>
                   </div>
                   <h2>{exercise}</h2>
-                  {plan?.safety_note && !exDone && <p className="session-cue">🛡 {plan.safety_note}</p>}
+                  {plan?.safety_note && !exDone && <p className="session-cue"><Icon name="shield" /> {plan.safety_note}</p>}
                   {prev && prev.length > 0 && !exDone && (
                     <p className="session-last">
                       last time: {prev.map((p) => `${p.weight ?? '–'}×${p.reps ?? '–'}`).join('  ')}
@@ -386,7 +387,7 @@ export default function Session({ session, plans, onExit }: Props) {
                             aria-label={done ? 'Edit set' : 'Log set'}
                             title={done ? 'Edit set' : 'Log set'}
                           >
-                            {done ? '✏️' : '✓'}
+                            <Icon name={done ? 'pencil' : 'check'} />
                           </button>
                         </div>
                       )
@@ -409,7 +410,7 @@ export default function Session({ session, plans, onExit }: Props) {
             return (
               <div className="session-body checkin">
                 <div className="checkin-head">
-                  <span className="checkin-check">✓</span>
+                  <span className="checkin-check"><Icon name="check" /></span>
                   <h2>{session.split_day} done. Good work.</h2>
                   {trained.length > 0 && (
                     <p className="gentle">
@@ -457,7 +458,7 @@ export default function Session({ session, plans, onExit }: Props) {
                     {saving ? '…' : 'Save & close'}
                   </button>
                   <button className="link" onClick={() => setReviewing(true)}>
-                    ✏️ Edit a logged set
+                    <Icon name="pencil" /> Edit a logged set
                   </button>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { PlannedSession, TrainingBlock, WorkoutPlan } from '../lib/types'
+import Icon from '../components/Icon'
 
 export const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
 export const PHASE_KEYS = ['1-2', '3-4', '5-6']
@@ -206,10 +207,10 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
     <div className="edit-panel">
       <div className="edit-task-row plan-edit-actions">
         <button className="save" onClick={save} disabled={saving}>
-          {saving ? 'Saving…' : '✓ Save changes'}
+          {saving ? 'Saving…' : <><Icon name="check" /> Save changes</>}
         </button>
         <button className="cancel" onClick={onCancel} disabled={saving}>
-          ✕ Cancel
+          <Icon name="x" /> Cancel
         </button>
       </div>
       <p className="gentle">
@@ -247,14 +248,19 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
                   <option key={m}>{m}</option>
                 ))}
               </select>
-              <button className="danger" disabled={pos === 0} onClick={() => move(r.key, -1)}>
-                ↑
+              <button className="danger" disabled={pos === 0} onClick={() => move(r.key, -1)} aria-label="Move up">
+                <Icon name="arrow-up" />
               </button>
-              <button className="danger" disabled={pos === visibleSplitKeys.length - 1} onClick={() => move(r.key, 1)}>
-                ↓
+              <button
+                className="danger"
+                disabled={pos === visibleSplitKeys.length - 1}
+                onClick={() => move(r.key, 1)}
+                aria-label="Move down"
+              >
+                <Icon name="arrow-down" />
               </button>
-              <button className="danger" title="Remove (undoable until Save)" onClick={() => remove(r.key)}>
-                ✕
+              <button className="danger" title="Remove (undoable until Save)" onClick={() => remove(r.key)} aria-label="Remove">
+                <Icon name="x" />
               </button>
             </div>
             <div className="edit-task-row scheme-row">
@@ -285,7 +291,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
             <div className="edit-task-row">
               <input
                 value={r.note}
-                placeholder="🛡 note / form cue (shown in sessions)"
+                placeholder="note / form cue (shown in sessions)"
                 onChange={(e) => patch(r.key, { note: e.target.value })}
               />
             </div>

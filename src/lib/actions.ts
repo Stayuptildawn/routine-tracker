@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { localDate, isoWeekday } from './types'
 import type { AppliedAction, InterpretResponse, LogStatus, ReminderStatus } from './types'
+import type { IconName } from '../components/Icon'
 
 const QUEUE_KEY = 'pending_messages'
 
@@ -182,20 +183,23 @@ export async function undoAiAction(aiActionId: string, actions: AppliedAction[])
   await supabase.from('ai_actions').update({ status: 'undone' }).eq('id', aiActionId)
 }
 
-export function describeAction(a: AppliedAction): string {
+export function describeAction(a: AppliedAction): { icon: IconName; text: string } {
   switch (a.type) {
     case 'check_task':
-      return `${a.status === 'skipped' ? '⏭' : '✓'} ${a.label}`
+      return { icon: a.status === 'skipped' ? 'skip' : 'check', text: a.label ?? '' }
     case 'log_workout': {
       const sets = a.sets?.map((s) => `${s.kg}kg×${s.reps}`).join(', ')
       const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
-      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}${planned}`
+      return { icon: 'dumbbell', text: `${a.exercise}${sets ? ` — ${sets}` : ''}${planned}` }
     }
     case 'log_cardio':
-      return `🏃 ${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`
+      return {
+        icon: 'run',
+        text: `${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`,
+      }
     case 'create_reminder':
-      return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}`
+      return { icon: 'bell', text: `${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date})` : ''}` }
     case 'set_energy':
-      return `🔋 Energy: ${a.level}`
+      return { icon: 'battery-medium', text: `Energy: ${a.level}` }
   }
 }

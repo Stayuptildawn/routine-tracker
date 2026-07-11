@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useOverlay } from '../lib/overlay'
 import type { Task, TaskLog } from '../lib/types'
+import Icon from '../components/Icon'
 
 interface PlayerProps {
   routineName: string
@@ -68,7 +69,7 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
         ) : (
           <>
             <div className="player-task complete">
-              ✓<br />
+              <Icon name="check" /><br />
               That’s {routineName} handled.
             </div>
             <div className="player-buttons">

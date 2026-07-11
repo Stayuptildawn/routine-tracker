@@ -9,6 +9,7 @@ import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 import InstallButton from './InstallButton'
+import Icon from '../components/Icon'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
   low: ['core'],
@@ -246,7 +247,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
         <div className="now-head-actions">
           <InstallButton />
           <button className="settings-inline" onClick={onOpenSettings} title="Settings" aria-label="Settings">
-            ⚙️
+            <Icon name="settings" />
           </button>
         </div>
       </div>
@@ -271,8 +272,9 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
             className={listening ? 'voice listening' : 'voice'}
             onClick={() => (listening ? recognitionRef.current?.stop() : startVoice())}
             title="Voice input"
+            aria-label="Voice input"
           >
-            🎤
+            <Icon name="mic" />
           </button>
         </div>
       </div>
@@ -284,11 +286,11 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
           <span className="chips-label">Did you mean:</span>
           {suggestions.map((s) => (
             <button key={s.task_id} className="chip" onClick={() => confirmSuggestion(s)}>
-              {s.status === 'skipped' ? '⏭' : '✓'} {s.label}
+              <Icon name={s.status === 'skipped' ? 'skip' : 'check'} /> {s.label}
             </button>
           ))}
           <button className="chip dismiss" onClick={() => setSuggestions([])}>
-            ✕ No
+            <Icon name="x" /> No
           </button>
         </div>
       )}
@@ -302,7 +304,13 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
             aria-pressed={energy === level}
             onClick={() => pickEnergy(level)}
           >
-            {level === 'low' ? '🪫 Low' : level === 'medium' ? '🔋 Medium' : '⚡ High'}
+            {level === 'low' ? (
+              <><Icon name="battery-low" /> Low</>
+            ) : level === 'medium' ? (
+              <><Icon name="battery-medium" /> Medium</>
+            ) : (
+              <><Icon name="zap" /> High</>
+            )}
           </button>
         ))}
       </div>
@@ -321,7 +329,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
             {upNext.routine.name}
             {upNext.eta ? ` · ${upNext.eta}` : ''}
           </span>
-          <span className="upnext-go" aria-hidden="true">▶</span>
+          <span className="upnext-go" aria-hidden="true"><Icon name="play" /></span>
         </button>
       )}
 
@@ -339,7 +347,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                   {r.raw_text}
                   {due && (
                     <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
-                      {due.overdue ? '⏳ ' : '📆 '}
+                      <Icon name={due.overdue ? 'hourglass' : 'calendar'} />{' '}
                       {due.label}
                     </span>
                   )}
@@ -377,7 +385,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                 <h2>
                   {routine.name}
                   <span className="routine-progress">
-                    {allHandled ? ' ✓' : ` ${doneCount}/${tasks.length}`}
+                    {allHandled ? <Icon name="check" /> : ` ${doneCount}/${tasks.length}`}
                   </span>
                   {showRing && (
                     <span className="anchor-chip" title={`anchored around ${routine.anchor_time?.slice(0, 5)}`}>
@@ -395,7 +403,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                       onClick={() => setPlaying({ routineId: routine.id })}
                       title="One task at a time"
                     >
-                      ▶ Start
+                      <Icon name="play" /> Start
                     </button>
                   )}
                 </h2>
@@ -436,7 +444,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
         <p className="gentle nudge-row">
           {nudges === 'on' ? (
             <>
-              🔔 Nudges on
+              <Icon name="bell" /> Nudges on
               <button
                 className="link"
                 onClick={async () => {
@@ -457,7 +465,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                   setNotice('Notifications are blocked for this site — enable them in browser settings first.')
               }}
             >
-              🔔 Enable gentle nudges
+              <Icon name="bell" /> Enable gentle nudges
             </button>
           )}
         </p>
@@ -482,13 +490,18 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
       {undo && (
         <div className="toast">
           <div className="toast-lines">
-            {undo.response.applied.map((a, i) => (
-              <div key={i}>{describeAction(a)}</div>
-            ))}
+            {undo.response.applied.map((a, i) => {
+              const d = describeAction(a)
+              return (
+                <div key={i}>
+                  <Icon name={d.icon} /> {d.text}
+                </div>
+              )
+            })}
           </div>
           <button onClick={runUndo}>Undo</button>
-          <button className="toast-close" onClick={() => setUndo(null)}>
-            ✕
+          <button className="toast-close" onClick={() => setUndo(null)} aria-label="Dismiss">
+            <Icon name="x" />
           </button>
         </div>
       )}

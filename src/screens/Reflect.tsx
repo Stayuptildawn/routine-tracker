@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
 import Skeleton from '../components/Skeleton'
+import Icon from '../components/Icon'
+import type { IconName } from '../components/Icon'
 
 interface DayStat {
   date: string
@@ -15,10 +17,10 @@ interface DayStat {
 type Metric = 'tasks' | 'sets' | 'cardio'
 type Frame = 'daily' | 'weekly' | 'monthly' | 'half' | 'yearly'
 
-const METRICS: { id: Metric; label: string; unit: string }[] = [
-  { id: 'tasks', label: '✅ Tasks', unit: '' },
-  { id: 'sets', label: '🏋️ Sets', unit: '' },
-  { id: 'cardio', label: '🏃 Cardio', unit: ' km' },
+const METRICS: { id: Metric; label: string; icon: IconName; unit: string }[] = [
+  { id: 'tasks', label: 'Tasks', icon: 'tasks', unit: '' },
+  { id: 'sets', label: 'Sets', icon: 'dumbbell', unit: '' },
+  { id: 'cardio', label: 'Cardio', icon: 'run', unit: ' km' },
 ]
 
 // every range ends now / today / this week / this month
@@ -243,7 +245,7 @@ export default function Reflect({ visible }: { visible: boolean }) {
           <div className="energy-row explore-row">
             {METRICS.map((m) => (
               <button key={m.id} className={metric === m.id ? 'energy-btn active' : 'energy-btn'} onClick={() => setMetric(m.id)}>
-                {m.label}
+                <Icon name={m.icon} /> {m.label}
               </button>
             ))}
           </div>
@@ -292,22 +294,22 @@ export default function Reflect({ visible }: { visible: boolean }) {
       <p className="gentle export-row">
         Your data is yours:
         <button className="link" onClick={() => exportTaskLogs()}>
-          ⬇ tasks CSV
+          <Icon name="download" /> tasks CSV
         </button>
         <button className="link" onClick={() => exportWorkoutLogs()}>
-          ⬇ workouts CSV
+          <Icon name="download" /> workouts CSV
         </button>
         <button className="link" onClick={() => exportCardioLogs()}>
-          ⬇ cardio CSV
+          <Icon name="download" /> cardio CSV
         </button>
         <button className="link" onClick={() => exportTrainingSets()}>
-          ⬇ training CSV
+          <Icon name="download" /> training CSV
         </button>
         <button className="link" onClick={() => exportCheckins()}>
-          ⬇ check-ins CSV
+          <Icon name="download" /> check-ins CSV
         </button>
         <button className="link" onClick={() => exportReminders()}>
-          ⬇ reminders CSV
+          <Icon name="download" /> reminders CSV
         </button>
       </p>
     </div>

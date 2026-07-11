@@ -6,6 +6,7 @@ import {
   subscribeInstall,
   triggerInstall,
 } from '../lib/pwaInstall'
+import Icon from '../components/Icon'
 
 const DISMISS_KEY = 'pwa-install-dismissed'
 
@@ -32,7 +33,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="install-card">
-      <p className="install-title">📲 Install this as an app first</p>
+      <p className="install-title"><Icon name="install" /> Install this as an app first</p>
 
       {platform === 'ios' ? (
         <>

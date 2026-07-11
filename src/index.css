@@ -202,6 +202,15 @@ select option {
   }
 }
 
+/* inline SVG icons (components/Icon.tsx): sized and colored by the
+   surrounding text, so they drop in wherever the emoji glyphs used to be */
+.icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
 /* ---------- app shell ---------- */
 .app {
   display: flex;

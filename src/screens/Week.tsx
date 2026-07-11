@@ -5,6 +5,8 @@ import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
 import { setTaskStatus } from '../lib/actions'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
+import Icon from '../components/Icon'
+import type { ReactNode } from 'react'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIERS: Tier[] = ['core', 'standard', 'bonus']
@@ -21,10 +23,10 @@ function currentWeekDates(): string[] {
   })
 }
 
-const STATUS_GLYPH: Record<string, string> = {
-  done: '✓',
-  partial: '◐',
-  skipped: '–', // deliberately neutral, never a red X
+const STATUS_GLYPH: Record<string, ReactNode> = {
+  done: <Icon name="check" />,
+  partial: <Icon name="circle-half" />,
+  skipped: <Icon name="minus" />, // deliberately neutral, never a red X
   pending: '',
 }
 
@@ -249,7 +251,7 @@ export default function Week({ visible }: { visible: boolean }) {
                       </select>
                       <ConfirmButton
                         className="danger"
-                        label="✕"
+                        label={<Icon name="x" />}
                         confirmLabel="delete?"
                         title={`Delete "${task.label}"`}
                         onConfirm={() => deleteTask(task)}

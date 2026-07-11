@@ -8,6 +8,7 @@ import {
   subscribeInstall,
   triggerInstall,
 } from '../lib/pwaInstall'
+import Icon from '../components/Icon'
 
 // A standing "install this app" button for signed-in mobile users who are
 // still in the browser. Android gets the native install dialog when Chrome
@@ -34,7 +35,7 @@ export default function InstallButton() {
   return (
     <>
       <button className="install-fab" onClick={onClick} title="Install app" aria-label="Install app">
-        📲 Install
+        <Icon name="install" /> Install
       </button>
 
       {showHelp && (
@@ -45,7 +46,7 @@ export default function InstallButton() {
             aria-label="How to install"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="install-title">📲 Add this app to your home screen</p>
+            <p className="install-title"><Icon name="install" /> Add this app to your home screen</p>
             <p className="install-body">
               {platform === 'ios' ? IOS_INSTALL_STEPS : ANDROID_INSTALL_STEPS} It then runs full
               screen and can send you gentle nudges.

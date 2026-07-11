@@ -10,6 +10,7 @@ import GymCardio from './GymCardio'
 import PlanEditor, { MUSCLE_GROUPS, composeScheme } from './PlanEditor'
 import type { BlockApplyDiff } from './PlanEditor'
 import Skeleton from '../components/Skeleton'
+import Icon from '../components/Icon'
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
   { key: '1-2', name: 'Accumulation', maxWeek: 2 },
@@ -312,14 +313,14 @@ export default function Gym({ visible }: { visible: boolean }) {
           aria-pressed={view === 'strength'}
           onClick={() => setView('strength')}
         >
-          🏋️ Strength
+          <Icon name="dumbbell" /> Strength
         </button>
         <button
           className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'}
           aria-pressed={view === 'cardio'}
           onClick={() => setView('cardio')}
         >
-          🏃 Cardio
+          <Icon name="run" /> Cardio
         </button>
       </div>
       {view === 'strength' && (
@@ -369,7 +370,7 @@ export default function Gym({ visible }: { visible: boolean }) {
                         title={`${s.split_day} — week ${w}${s.completed_at ? ' ✓' : ''}`}
                         onClick={() => setActive(s)}
                       >
-                        {s.completed_at ? '✓' : ''}
+                        {s.completed_at ? <Icon name="check" /> : ''}
                       </button>
                     )
                   })}
@@ -379,7 +380,7 @@ export default function Gym({ visible }: { visible: boolean }) {
             <p className="gentle">Tap any cell to open that session — past weeks can be filled in late.</p>
             {upNext && !blockDone && (
               <button className="start-session" onClick={() => setActive(upNext)}>
-                ▶ {upNext.date && !upNext.completed_at ? 'Continue' : 'Start'} {upNext.split_day}
+                <Icon name="play" /> {upNext.date && !upNext.completed_at ? 'Continue' : 'Start'} {upNext.split_day}
                 <span className="routine-progress"> week {upNext.week_number}</span>
               </button>
             )}
@@ -391,7 +392,7 @@ export default function Gym({ visible }: { visible: boolean }) {
         <section className="gym-day wrapup-card">
           <h2>
             {block.name} — wrapped
-            <span className="routine-progress"> ✓</span>
+            <span className="routine-progress"> <Icon name="check" /></span>
           </h2>
           <p className="gentle">
             {doneSessionCount} of {sessions.length} sessions handled ·{' '}
@@ -479,8 +480,9 @@ export default function Gym({ visible }: { visible: boolean }) {
               localStorage.setItem(`vol-sugg-${mg}`, '1')
               setOverLine(overLine.filter((m) => m !== mg))
             }}
+            aria-label="Dismiss"
           >
-            ✕
+            <Icon name="x" />
           </button>
         </div>
       ))}
@@ -643,7 +645,7 @@ export default function Gym({ visible }: { visible: boolean }) {
               <div key={p.id} className="gym-entry">
                 <span className="gym-exercise">{p.exercise}</span>
                 <span className="gym-sets">{(phase && p.schemes?.[phase.key]) ?? p.schemes?.['1-2'] ?? ''}</span>
-                {p.safety_note && <span className="gym-notes">🛡 {p.safety_note}</span>}
+                {p.safety_note && <span className="gym-notes"><Icon name="shield" /> {p.safety_note}</span>}
               </div>
             ))}
           {editingPlan && (

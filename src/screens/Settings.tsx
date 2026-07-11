@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
+import Icon from '../components/Icon'
+import type { IconName } from '../components/Icon'
 
 export type Theme = 'auto' | 'light' | 'dark'
 
@@ -10,10 +12,10 @@ interface Props {
   onClose: () => void
 }
 
-const THEME_OPTIONS: [Theme, string][] = [
-  ['auto', '🌗 Auto'],
-  ['light', '☀️ Light'],
-  ['dark', '🌙 Dark'],
+const THEME_OPTIONS: [Theme, IconName, string][] = [
+  ['auto', 'circle-half', 'Auto'],
+  ['light', 'sun', 'Light'],
+  ['dark', 'moon', 'Dark'],
 ]
 
 const FALLBACK_ZONES = [
@@ -100,14 +102,14 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
           <section className="settings-section">
             <h2>Theme</h2>
             <div className="energy-row">
-              {THEME_OPTIONS.map(([value, label]) => (
+              {THEME_OPTIONS.map(([value, icon, label]) => (
                 <button
                   key={value}
                   className={theme === value ? 'energy-btn active' : 'energy-btn'}
                   aria-pressed={theme === value}
                   onClick={() => onTheme(value)}
                 >
-                  {label}
+                  <Icon name={icon} /> {label}
                 </button>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { describeAction, undoAiAction } from '../lib/actions'
+import Icon from '../components/Icon'
 import type { AiAction } from '../lib/types'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
@@ -51,9 +52,14 @@ export default function History({ visible }: { visible: boolean }) {
         <div key={item.id} className={`ai-item ${item.status}`}>
           <div className="ai-raw">“{item.raw_text}”</div>
           <div className="ai-did">
-            {item.actions.map((a, i) => (
-              <div key={i}>{describeAction(a)}</div>
-            ))}
+            {item.actions.map((a, i) => {
+              const d = describeAction(a)
+              return (
+                <div key={i}>
+                  <Icon name={d.icon} /> {d.text}
+                </div>
+              )
+            })}
           </div>
           <div className="ai-meta">
             <span className={`badge ${item.status}`}>{STATUS_LABEL[item.status]}</span>

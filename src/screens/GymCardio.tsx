@@ -6,13 +6,19 @@ import type { CardioLog } from '../lib/types'
 import { runOp } from '../lib/offline'
 import { DEFAULT_BASE_KM, cardioTargetForWeek } from '../lib/cardioPlan'
 import ConfirmButton from '../components/ConfirmButton'
+import Icon from '../components/Icon'
+import type { IconName } from '../components/Icon'
 
+// labels stay plain text because they also render inside <option> elements,
+// which can't hold SVG; the entry list gets its icon from kindIcon below
 const CARDIO_KINDS = [
-  ['run', '🏃 Run'],
-  ['walk', '🚶 Walk'],
-  ['cycle', '🚴 Cycle'],
-  ['swim', '🏊 Swim'],
+  ['run', 'Run'],
+  ['walk', 'Walk'],
+  ['cycle', 'Cycle'],
+  ['swim', 'Swim'],
 ] as const
+
+const KIND_ICONS: Record<string, IconName> = { run: 'run', walk: 'walk', cycle: 'bike', swim: 'waves' }
 
 // the strength check-in questions, adapted to cardio - saved per entry
 const CARDIO_QUESTIONS: { field: 'effort' | 'body' | 'amount'; label: string; options: [string, string][] }[] = [
@@ -193,7 +199,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
   const longest = runs.length ? Math.max(...runs.map((c) => Number(c.distance_km))) : null
   const paces = runs.filter((c) => Number(c.distance_km) >= 2).map((c) => Number(c.minutes) / Number(c.distance_km))
   const bestPace = paces.length ? Math.min(...paces) : null
-  const kindIcon = (k: string) => CARDIO_KINDS.find(([v]) => v === k)?.[1].split(' ')[0] ?? '🏃'
+  const kindIcon = (k: string): IconName => KIND_ICONS[k] ?? 'run'
   const target = cardioTargetForWeek(cardioBase ?? DEFAULT_BASE_KM, week ?? 1)
   const pct = Math.min(100, Math.round((weekKm / target.km) * 100))
 
@@ -328,8 +334,9 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
                   localStorage.setItem('cardio-sugg-over', '1')
                   reload()
                 }}
+                aria-label="Dismiss"
               >
-                ✕
+                <Icon name="x" />
               </button>
             </div>
           )
@@ -344,8 +351,9 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
                   localStorage.setItem('cardio-sugg-more', '1')
                   reload()
                 }}
+                aria-label="Dismiss"
               >
-                ✕
+                <Icon name="x" />
               </button>
             </div>
           )
@@ -439,7 +447,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
         return (
           <div key={c.id} className="gym-entry run-entry">
             <span className="gym-exercise">
-              {kindIcon(c.kind)} {c.date}
+              <Icon name={kindIcon(c.kind)} /> {c.date}
             </span>
             <span className="gym-sets">
               {c.distance_km ? `${c.distance_km} km` : ''}

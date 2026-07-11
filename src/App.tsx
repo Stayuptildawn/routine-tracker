@@ -15,16 +15,18 @@ import Reflect from './screens/Reflect'
 import Reminders from './screens/Reminders'
 import Settings from './screens/Settings'
 import type { Theme } from './screens/Settings'
+import Icon from './components/Icon'
+import type { IconName } from './components/Icon'
 
 // 'reminders' is a sub-view of Now (reached via "See all"), not a sixth tab
 type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect' | 'reminders'
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'now', label: 'Now', icon: '☀️' },
-  { id: 'week', label: 'Week', icon: '📅' },
-  { id: 'gym', label: 'Workout', icon: '🏋️' },
-  { id: 'history', label: 'AI Log', icon: '🤖' },
-  { id: 'reflect', label: 'Reflect', icon: '🌱' },
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'now', label: 'Now', icon: 'sun' },
+  { id: 'week', label: 'Week', icon: 'calendar' },
+  { id: 'gym', label: 'Workout', icon: 'dumbbell' },
+  { id: 'history', label: 'AI Log', icon: 'bot' },
+  { id: 'reflect', label: 'Reflect', icon: 'leaf' },
 ]
 
 /** Import the spreadsheet routines on first login. */
@@ -170,13 +172,13 @@ export default function App() {
               window.scrollTo(0, 0)
             }}
           >
-            <span className="tab-icon">{t.icon}</span>
+            <span className="tab-icon"><Icon name={t.icon} /></span>
             <span className="tab-label">{t.label}</span>
           </button>
           )
         })}
         <button className="settings-rail" onClick={() => setSettingsOpen(true)} title="Settings">
-          ⚙️ Settings
+          <Icon name="settings" /> Settings
         </button>
       </nav>
       {settingsOpen && <Settings theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />}
