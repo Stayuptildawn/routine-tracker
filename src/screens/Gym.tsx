@@ -592,7 +592,7 @@ export default function Gym({ visible }: { visible: boolean }) {
               <span className="routine-progress">{phase ? ` ${phase.name}` : week !== null && week > 6 ? ' deload / Block 2 soon' : ''}</span>
             </h2>
             {!editingPlan && (
-              <button className="link" onClick={() => setEditingPlan(true)}>
+              <button className="energy-btn" onClick={() => setEditingPlan(true)}>
                 Edit
               </button>
             )}

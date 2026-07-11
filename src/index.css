@@ -263,6 +263,20 @@ select option {
   background: var(--accent-soft);
 }
 
+/* the commit button: one global skin, so a Save outside its old scoped
+   containers can never render as a bare unstyled button again */
+.save {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  padding: var(--sp-2) var(--sp-3);
+  font-weight: 700;
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ---------- navigation: bottom bar → left rail ---------- */
 .tabbar {
   position: fixed;
@@ -388,8 +402,9 @@ select option {
   opacity: 0.8;
 }
 
-.link.activate {
+.energy-btn.activate {
   font-weight: 700;
+  color: var(--text);
 }
 
 @media (min-width: 900px) {
@@ -1507,13 +1522,6 @@ select option {
   border-color: var(--accent);
 }
 
-.cardio-edit .save {
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  padding: var(--sp-2) var(--sp-3);
-  font-weight: 700;
-}
-
 /* ---------- cardio plan ---------- */
 .cardio-plan {
   background: var(--surface-2);
@@ -1564,6 +1572,12 @@ select option {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+}
+
+/* the plan box is itself surface-2, so a surface-2 pill would vanish -
+   a border keeps Edit/Cancel reading as buttons here */
+.cardio-plan-base .energy-btn {
+  border-color: var(--border);
 }
 
 .cardio-plan-base input {
@@ -2060,13 +2074,6 @@ select option {
   font-weight: 700;
 }
 
-.rename-row .save {
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  padding: var(--sp-2) var(--sp-3);
-  font-weight: 700;
-}
-
 .edit-panel {
   display: flex;
   flex-direction: column;
@@ -2154,9 +2161,6 @@ select option {
 .plan-edit-actions .save {
   flex: 1;
   min-height: 46px;
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  font-weight: 700;
 }
 
 .plan-edit-actions .cancel {
@@ -2485,17 +2489,6 @@ select option {
   border-radius: var(--r-sm);
   border-bottom: none;
   margin: var(--sp-2) 0;
-}
-
-.reminder-edit .save {
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  padding: var(--sp-2) var(--sp-3);
-  font-weight: 700;
-}
-
-.reminder-edit .save:disabled {
-  opacity: 0.5;
 }
 
 .reminder-edit input[type='date'] {

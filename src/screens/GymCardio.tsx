@@ -254,15 +254,15 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
               <button className="save" onClick={saveBase} disabled={!(parseFloat(baseDraft) > 0)}>
                 Save
               </button>
-              <button className="link" onClick={cancelBase}>
+              <button className="energy-btn" onClick={cancelBase}>
                 Cancel
               </button>
             </>
           ) : (
             <>
               <span className="gentle-inline">{cardioBase ?? DEFAULT_BASE_KM} km/week</span>
-              <button className="link" onClick={() => setEditingBase(true)} disabled={cardioBase == null}>
-                edit
+              <button className="energy-btn" onClick={() => setEditingBase(true)} disabled={cardioBase == null}>
+                Edit
               </button>
             </>
           )}

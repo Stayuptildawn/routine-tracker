@@ -179,7 +179,7 @@ export default function Week({ visible }: { visible: boolean }) {
                   <button className="save" onClick={() => renameRoutine(routine.id)} disabled={!nameDraft.trim()}>
                     Save
                   </button>
-                  <button className="link" onClick={() => setEditing(null)}>
+                  <button className="energy-btn" onClick={() => setEditing(null)}>
                     Cancel
                   </button>
                 </div>
@@ -190,14 +190,14 @@ export default function Week({ visible }: { visible: boolean }) {
                     {paused && <span className="routine-progress"> paused</span>}
                   </h2>
                   <button
-                    className={paused ? 'link activate' : 'link'}
+                    className={paused ? 'energy-btn activate' : 'energy-btn'}
                     onClick={() => setActive(routine.id, paused)}
                     title={paused ? 'Show on the Now tab again' : 'Hide from the Now tab (keeps all history)'}
                   >
                     {paused ? 'Activate' : 'Pause'}
                   </button>
                   <button
-                    className="link"
+                    className="energy-btn"
                     onClick={() => {
                       setEditing(routine.id)
                       setNameDraft(routine.name)
