@@ -6,6 +6,7 @@ import { phaseKey, recoveryAdjustments, setCount, startBlock } from '../lib/bloc
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
 import Session from './Session'
+import { usePresence } from '../lib/overlay'
 import GymCardio from './GymCardio'
 import PlanEditor, { MUSCLE_GROUPS, composeScheme } from './PlanEditor'
 import type { BlockApplyDiff } from './PlanEditor'
@@ -40,6 +41,10 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
   const [nextTweaks, setNextTweaks] = useState<string | null>(null) // wrap-up preview
   const [active, setActive] = useState<PlannedSession | null>(null)
+  // the session screen keeps rendering its last value while the exit plays
+  const sessionOverlay = usePresence(active !== null)
+  const lastActive = useRef(active)
+  if (active) lastActive.current = active
   const [planBlock, setPlanBlock] = useState(1) // which block the plan card shows
   const [editingPlan, setEditingPlan] = useState(false)
   const [cardioBase, setCardioBase] = useState<number | null>(null) // null=loading
@@ -704,10 +709,11 @@ export default function Gym({ visible }: { visible: boolean }) {
       {!loaded && <Skeleton cards={2} />}
       {view === 'strength' && loaded && logs.length === 0 && <p className="gentle">No freeform lifts logged yet.</p>}
 
-      {active && (
+      {sessionOverlay.mounted && (active ?? lastActive.current) && (
         <Session
-          session={active}
+          session={(active ?? lastActive.current)!}
           plans={plans}
+          closing={sessionOverlay.closing}
           onExit={() => {
             setActive(null)
             load()

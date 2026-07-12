@@ -10,6 +10,8 @@ interface PlayerProps {
   focusTaskId?: string | null // start here instead of the first pending task
   onStatus: (task: Task, status: 'done' | 'skipped') => void
   onExit: () => void
+  /** true while the exit transition plays (usePresence in the parent) */
+  closing?: boolean
 }
 
 const handled = (logs: Map<string, TaskLog>, t: Task) => {
@@ -18,7 +20,7 @@ const handled = (logs: Map<string, TaskLog>, t: Task) => {
 }
 
 /** Full-screen "just this one thing" mode: one task, two big buttons. */
-export default function Player({ routineName, tasks, logs, focusTaskId, onStatus, onExit }: PlayerProps) {
+export default function Player({ routineName, tasks, logs, focusTaskId, onStatus, onExit, closing }: PlayerProps) {
   // which task to show next; falls back to the first pending one
   const [preferredId, setPreferredId] = useState<string | null>(focusTaskId ?? null)
 
@@ -38,7 +40,14 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
   }
 
   return (
-    <div ref={trapRef} className="player" role="dialog" aria-modal="true" aria-label={`${routineName} player`}>
+    <div
+      ref={trapRef}
+      className="player"
+      data-closing={closing || undefined}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${routineName} player`}
+    >
       <div className="player-rail" aria-hidden="true">
         <div className="player-rail-fill" style={{ width: `${(doneCount / tasks.length) * 100}%` }} />
       </div>

@@ -10,6 +10,8 @@ interface Props {
   session: PlannedSession
   plans: WorkoutPlan[] // for neck cues
   onExit: () => void
+  /** true while the exit transition plays (usePresence in the parent) */
+  closing?: boolean
 }
 
 interface Draft {
@@ -65,7 +67,7 @@ const fmtDate = (iso: string) =>
   new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Full-screen day view: every exercise with its set rows, RP-style overview. */
-export default function Session({ session, plans, onExit }: Props) {
+export default function Session({ session, plans, onExit, closing }: Props) {
   const [sets, setSets] = useState<PlannedSet[]>([])
   const [lastTime, setLastTime] = useState<Map<string, PrevSet[]>>(new Map())
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map())
@@ -294,7 +296,14 @@ export default function Session({ session, plans, onExit }: Props) {
   }
 
   return (
-    <div ref={trapRef} className="player session" role="dialog" aria-modal="true" aria-label={`${session.split_day} session`}>
+    <div
+      ref={trapRef}
+      className="player session"
+      data-closing={closing || undefined}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${session.split_day} session`}
+    >
       <div className="player-rail" aria-hidden="true">
         <div className="player-rail-fill" style={{ width: `${sets.length ? (handled / sets.length) * 100 : 0}%` }} />
       </div>

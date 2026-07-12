@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { usePresence } from '../lib/overlay'
 import { localDate } from '../lib/types'
 import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
 import { setTaskStatus } from '../lib/actions'
@@ -91,6 +92,11 @@ export default function Week({ visible }: { visible: boolean }) {
   }
 
   const draftCount = Object.keys(drafts).length
+  // the save bar keeps its last count while it slides out after save/cancel
+  const savebar = usePresence(draftCount > 0)
+  const lastCount = useRef(draftCount)
+  if (draftCount > 0) lastCount.current = draftCount
+  const shownCount = draftCount > 0 ? draftCount : lastCount.current
 
   async function saveDrafts() {
     const entries = Object.entries(drafts)
@@ -398,10 +404,10 @@ export default function Week({ visible }: { visible: boolean }) {
         </button>
       )}
 
-      {draftCount > 0 && (
-        <div className="week-savebar" role="status">
+      {savebar.mounted && (
+        <div className="week-savebar" data-closing={savebar.closing || undefined} role="status">
           <span>
-            {draftCount} unsaved {draftCount === 1 ? 'change' : 'changes'}
+            {shownCount} unsaved {shownCount === 1 ? 'change' : 'changes'}
           </span>
           <button className="save" onClick={saveDrafts}>
             Save

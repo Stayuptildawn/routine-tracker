@@ -5,6 +5,7 @@ import { SEED_ROUTINES } from './lib/seedData'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import { flushOps } from './lib/offline'
 import { armBackGuard, onBackButton } from './lib/backButton'
+import { usePresence } from './lib/overlay'
 import Auth from './screens/Auth'
 import SetPassword from './screens/SetPassword'
 import Now from './screens/Now'
@@ -61,6 +62,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('now')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const settings = usePresence(settingsOpen)
   const [recovering, setRecovering] = useState(false)
 
   // installed-PWA back (Android button, iOS swipe): open overlays close
@@ -181,7 +183,9 @@ export default function App() {
           <Icon name="settings" /> Settings
         </button>
       </nav>
-      {settingsOpen && <Settings theme={theme} onTheme={setTheme} onClose={() => setSettingsOpen(false)} />}
+      {settings.mounted && (
+        <Settings theme={theme} onTheme={setTheme} closing={settings.closing} onClose={() => setSettingsOpen(false)} />
+      )}
     </div>
   )
 }

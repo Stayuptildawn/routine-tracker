@@ -53,7 +53,12 @@
   --r-md: 14px;
   --r-full: 999px;
   --speed: 160ms;
+  --speed-press: 140ms; /* button press feedback */
+  --speed-panel: 240ms; /* full-screen overlays entering */
+  --speed-exit: 150ms; /* anything leaving: faster than it arrived */
   --ease: cubic-bezier(0.25, 0.6, 0.35, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* entrances, releases */
+  --ease-panel: cubic-bezier(0.32, 0.72, 0, 1); /* iOS-drawer curve for big surfaces */
   --shadow: 0 1px 2px rgba(50, 44, 36, 0.06), 0 4px 16px rgba(50, 44, 36, 0.05);
 }
 
@@ -150,7 +155,21 @@ button {
   color: inherit;
   background: none;
   transition: background-color var(--speed) var(--ease), color var(--speed) var(--ease),
-    border-color var(--speed) var(--ease), opacity var(--speed) var(--ease);
+    border-color var(--speed) var(--ease), opacity var(--speed) var(--ease),
+    transform var(--speed-press) var(--ease-out);
+}
+
+/* pressables confirm the press: quick scale down, springy release.
+   Kept to real buttons - not list rows or grid cells, where the whole
+   surface shifting reads as layout jitter */
+.energy-btn:active:not(:disabled),
+.save:active:not(:disabled),
+.tab:active,
+.settings-rail:active,
+.player-done:active,
+.player-skip:active,
+.toast button:active {
+  transform: scale(0.97);
 }
 
 input,
@@ -226,6 +245,20 @@ select option {
   /* nothing may ever push the page into horizontal scroll */
   overflow-x: clip;
   min-width: 0;
+}
+
+/* screens live in hidden-toggled divs (App.tsx keeps them mounted); the
+   animation replays each time one comes back from display:none. Deliberately
+   faint - tab switches happen dozens of times a day */
+.content > div:not([hidden]) {
+  animation: screen-in 180ms var(--ease-out);
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 .center-note {
@@ -1107,6 +1140,24 @@ select option {
   inset: 0;
   z-index: 40;
   background: var(--bg);
+  /* slides up on open (via @starting-style), drops back out faster on
+     close (via [data-closing], see usePresence in lib/overlay.ts) */
+  transition: opacity var(--speed-panel) var(--ease-panel),
+    transform var(--speed-panel) var(--ease-panel);
+}
+
+@starting-style {
+  .player {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.player[data-closing] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
 }
 
 .player-rail {
@@ -2067,7 +2118,9 @@ select option {
   position: fixed;
   bottom: calc(env(safe-area-inset-bottom) + 68px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0);
+  transition: opacity var(--speed-panel) var(--ease-out),
+    transform var(--speed-panel) var(--ease-out);
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -2078,6 +2131,20 @@ select option {
   box-shadow: var(--shadow);
   z-index: 21;
   white-space: nowrap;
+}
+
+@starting-style {
+  .week-savebar {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.week-savebar[data-closing] {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
 }
 
 .week-savebar span {

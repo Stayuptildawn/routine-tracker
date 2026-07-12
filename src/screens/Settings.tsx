@@ -10,6 +10,8 @@ interface Props {
   theme: Theme
   onTheme: (t: Theme) => void
   onClose: () => void
+  /** true while the exit transition plays (usePresence in the parent) */
+  closing?: boolean
 }
 
 const THEME_OPTIONS: [Theme, IconName, string][] = [
@@ -29,7 +31,7 @@ const FALLBACK_ZONES = [
   'Asia/Tokyo',
 ]
 
-export default function Settings({ theme, onTheme, onClose }: Props) {
+export default function Settings({ theme, onTheme, onClose, closing }: Props) {
   const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone
   const zones: string[] =
     (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ??
@@ -89,7 +91,14 @@ export default function Settings({ theme, onTheme, onClose }: Props) {
   const trapRef = useOverlay<HTMLDivElement>(onClose)
 
   return (
-    <div ref={trapRef} className="player settings-screen" role="dialog" aria-modal="true" aria-label="Settings">
+    <div
+      ref={trapRef}
+      className="player settings-screen"
+      data-closing={closing || undefined}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+    >
       <div className="player-inner">
         <div className="player-top">
           <span className="eyebrow">Settings</span>

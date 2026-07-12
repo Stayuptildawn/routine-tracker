@@ -12,3 +12,7 @@ private/
 handoff.md
 .claude/
 supabase/.temp/
+
+# locally installed agent skills (npx skills add ...)
+.agents/
+skills-lock.json

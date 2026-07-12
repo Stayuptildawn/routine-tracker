@@ -6,6 +6,7 @@ import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, und
 import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
+import { usePresence } from '../lib/overlay'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 import InstallButton from './InstallButton'
@@ -44,6 +45,10 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [undo, setUndo] = useState<UndoState | null>(null)
   const [playing, setPlaying] = useState<{ routineId: string; focusTaskId?: string | null } | null>(null)
+  // the player keeps rendering its last routine while the exit plays
+  const player = usePresence(playing !== null)
+  const lastPlaying = useRef(playing)
+  if (playing) lastPlaying.current = playing
   const [listening, setListening] = useState(false)
   const [nudges, setNudges] = useState<'unknown' | 'on' | 'off' | 'unsupported'>('unknown')
   const [nowMin, setNowMin] = useState(() => new Date().getHours() * 60 + new Date().getMinutes())
@@ -472,18 +477,20 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
         </p>
       )}
 
-      {playing &&
+      {player.mounted &&
         (() => {
-          const s = sections.find((x) => x.routine.id === playing.routineId)
-          if (!s) return null
+          const p = playing ?? lastPlaying.current
+          const s = p && sections.find((x) => x.routine.id === p.routineId)
+          if (!p || !s) return null
           return (
             <Player
               routineName={s.routine.name}
               tasks={s.tasks}
               logs={logs}
-              focusTaskId={playing.focusTaskId}
+              focusTaskId={p.focusTaskId}
               onStatus={tapStatus}
               onExit={() => setPlaying(null)}
+              closing={player.closing}
             />
           )
         })()}

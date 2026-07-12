@@ -6,6 +6,14 @@ deployed alongside).
 
 ## 2026-07-12
 
+### Added
+- **Motion polish** (following Emil Kowalski's design-engineering rules):
+  the Player, Workout session and Settings screens slide up on open and
+  drop away on close instead of popping; the Week tab's Save/Cancel bar
+  slides in and out the same way; switching tabs cross-fades the incoming
+  screen instead of hard-cutting; buttons compress slightly while pressed.
+  All of it is transform/opacity-only CSS and respects reduced-motion.
+
 ### Fixed
 - Workout headings no longer run their subtitle into the title
   ("Block 1 — PPLweek 2 of 6" → "Block 1 — PPL week 2 of 6", same for
