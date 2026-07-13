@@ -230,7 +230,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
           </span>
         </div>
         <div className="cardio-plan-rail" aria-hidden="true">
-          <div className="cardio-plan-fill" style={{ width: `${pct}%` }} />
+          <div className="cardio-plan-fill" style={{ transform: `scaleX(${pct / 100})` }} />
         </div>
         <p className="gentle cardio-plan-note">
           {Math.round(weekKm * 10) / 10} / {target.km} km so far. {target.note}

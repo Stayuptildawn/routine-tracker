@@ -49,7 +49,7 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
       aria-label={`${routineName} player`}
     >
       <div className="player-rail" aria-hidden="true">
-        <div className="player-rail-fill" style={{ width: `${(doneCount / tasks.length) * 100}%` }} />
+        <div className="player-rail-fill" style={{ transform: `scaleX(${doneCount / tasks.length})` }} />
       </div>
       <div className="player-inner">
         <div className="player-top">

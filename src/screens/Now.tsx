@@ -44,6 +44,10 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
   const [notice, setNotice] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [undo, setUndo] = useState<UndoState | null>(null)
+  // the undo toast keeps its last content while the exit transition plays
+  const toast = usePresence(undo !== null)
+  const lastUndo = useRef(undo)
+  if (undo) lastUndo.current = undo
   const [playing, setPlaying] = useState<{ routineId: string; focusTaskId?: string | null } | null>(null)
   // the player keeps rendering its last routine while the exit plays
   const player = usePresence(playing !== null)
@@ -385,7 +389,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                 <div className="rail" aria-hidden="true">
                   <div
                     className="rail-fill"
-                    style={{ height: `${(doneCount / tasks.length) * 100}%` }}
+                    style={{ transform: `scaleY(${doneCount / tasks.length})` }}
                   />
                 </div>
                 <h2>
@@ -495,24 +499,29 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
           )
         })()}
 
-      {undo && (
-        <div className="toast">
-          <div className="toast-lines">
-            {undo.response.applied.map((a, i) => {
-              const d = describeAction(a)
-              return (
-                <div key={i}>
-                  <Icon name={d.icon} /> {d.text}
-                </div>
-              )
-            })}
-          </div>
-          <button onClick={runUndo}>Undo</button>
-          <button className="toast-close" onClick={() => setUndo(null)} aria-label="Dismiss">
-            <Icon name="x" />
-          </button>
-        </div>
-      )}
+      {toast.mounted &&
+        (() => {
+          const u = undo ?? lastUndo.current
+          if (!u) return null
+          return (
+            <div className="toast" data-closing={toast.closing || undefined}>
+              <div className="toast-lines">
+                {u.response.applied.map((a, i) => {
+                  const d = describeAction(a)
+                  return (
+                    <div key={i}>
+                      <Icon name={d.icon} /> {d.text}
+                    </div>
+                  )
+                })}
+              </div>
+              <button onClick={runUndo}>Undo</button>
+              <button className="toast-close" onClick={() => setUndo(null)} aria-label="Dismiss">
+                <Icon name="x" />
+              </button>
+            </div>
+          )
+        })()}
     </div>
   )
 }

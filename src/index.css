@@ -59,7 +59,10 @@
   --ease: cubic-bezier(0.25, 0.6, 0.35, 1);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* entrances, releases */
   --ease-panel: cubic-bezier(0.32, 0.72, 0, 1); /* iOS-drawer curve for big surfaces */
-  --shadow: 0 1px 2px rgba(50, 44, 36, 0.06), 0 4px 16px rgba(50, 44, 36, 0.05);
+  /* three stacked translucent layers (contact / near / ambient) read as
+     real depth where one flat shadow reads as a smudge */
+  --shadow: 0 1px 1px rgba(50, 44, 36, 0.05), 0 2px 6px rgba(50, 44, 36, 0.05),
+    0 8px 24px rgba(50, 44, 36, 0.05);
 }
 
 /* dark palette applies via system preference OR the manual toggle;
@@ -86,7 +89,8 @@
     --cardio-walk: #a8b98a;
     --cardio-cycle: #8fa9c9;
     --cardio-swim: #7fb5b0;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.2);
+    --shadow: 0 1px 1px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.22),
+    0 10px 28px rgba(0, 0, 0, 0.2);
   }
 }
 
@@ -109,7 +113,8 @@
   --cardio-walk: #a8b98a;
   --cardio-cycle: #8fa9c9;
   --cardio-swim: #7fb5b0;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.2);
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.22),
+    0 10px 28px rgba(0, 0, 0, 0.2);
 }
 
 /* ---------- base ---------- */
@@ -948,9 +953,13 @@ select option {
   left: 0;
   top: 0;
   width: 100%;
+  height: 100%;
   background: var(--accent);
   border-radius: 0 0 var(--r-full) var(--r-full);
-  transition: height 420ms var(--ease);
+  /* scaleY, not height: the fill moves every time a task is tapped and
+     transform stays off the layout path (progress set inline as scaleY) */
+  transform-origin: top;
+  transition: transform 420ms var(--ease);
 }
 
 .routine.complete {
@@ -1170,10 +1179,12 @@ select option {
 }
 
 .player-rail-fill {
+  width: 100%;
   height: 100%;
   background: var(--accent);
   border-radius: 0 var(--r-full) var(--r-full) 0;
-  transition: width 420ms var(--ease);
+  transform-origin: left;
+  transition: transform 420ms var(--ease);
 }
 
 .player-inner {
@@ -1211,6 +1222,19 @@ select option {
 
 .player-task.complete {
   color: var(--good);
+}
+
+/* the once-per-routine payoff: the check pops in with a small overshoot.
+   Rare enough to earn the flourish - task swaps stay plain task-in */
+.player-task.complete .icon {
+  animation: check-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
 }
 
 @keyframes task-in {
@@ -1611,10 +1635,12 @@ select option {
 }
 
 .cardio-plan-fill {
+  width: 100%;
   height: 100%;
   background: var(--accent);
   border-radius: var(--r-full);
-  transition: width 420ms var(--ease);
+  transform-origin: left;
+  transition: transform 420ms var(--ease);
 }
 
 .cardio-plan-note {
@@ -1948,18 +1974,24 @@ select option {
   gap: var(--sp-4);
   box-shadow: var(--shadow);
   z-index: 30;
-  animation: toast-in 260ms var(--ease);
+  /* transition, not keyframes: undo toasts can be replaced mid-flight and
+     transitions retarget smoothly where keyframes would restart from zero */
+  transition: opacity var(--speed-panel) var(--ease-out),
+    transform var(--speed-panel) var(--ease-out);
 }
 
-@keyframes toast-in {
-  from {
+@starting-style {
+  .toast {
     opacity: 0;
     transform: translate(-50%, 8px);
   }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+}
+
+.toast[data-closing] {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
 }
 
 .toast-lines {
@@ -2702,11 +2734,13 @@ select option {
 
 .bar {
   width: 58%;
-  min-height: 2px;
+  height: 100%;
   background: var(--accent);
   border-radius: var(--r-sm) var(--r-sm) 0 0;
   opacity: 0.85;
-  transition: height 420ms var(--ease);
+  /* scaleY set inline; the 0.02 floor there replaces the old 2px min-height */
+  transform-origin: bottom;
+  transition: transform 420ms var(--ease);
 }
 
 .bar-count,

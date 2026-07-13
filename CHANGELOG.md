@@ -4,6 +4,17 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-07-13
+
+### Added
+- **Motion polish, second pass**: the undo toast now slides out instead of
+  vanishing (and retargets smoothly if replaced mid-animation); finishing a
+  routine in the Player pops the check in with a small flourish; progress
+  fills (routine rails, player/session rail, cardio week bar, Reflect
+  chart) animate via GPU-friendly transforms instead of width/height, so
+  they stay smooth on mid-range phones; cards sit on a three-layer shadow
+  that reads as depth in both themes.
+
 ## 2026-07-12
 
 ### Added

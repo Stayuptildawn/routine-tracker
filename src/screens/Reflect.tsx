@@ -205,7 +205,7 @@ export default function Reflect({ visible }: { visible: boolean }) {
         {days.map((d) => (
           <div key={d.date} className="reflect-day">
             <div className="bar-wrap">
-              <div className="bar" style={{ height: `${(d.done / max) * 100}%` }} />
+              <div className="bar" style={{ transform: `scaleY(${Math.max(d.done / max, 0.02)})` }} />
             </div>
             <span className="bar-count">{d.done || ''}</span>
             <span className="bar-day">{d.dayName}</span>

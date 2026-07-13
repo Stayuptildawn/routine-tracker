@@ -305,7 +305,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
       aria-label={`${session.split_day} session`}
     >
       <div className="player-rail" aria-hidden="true">
-        <div className="player-rail-fill" style={{ width: `${sets.length ? (handled / sets.length) * 100 : 0}%` }} />
+        <div className="player-rail-fill" style={{ transform: `scaleX(${sets.length ? handled / sets.length : 0})` }} />
       </div>
       <div className="player-inner">
         <div className="player-top">
