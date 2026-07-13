@@ -132,6 +132,22 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation; /* no double-tap zoom on buttons */
+  /* UI chrome is not prose: long-pressing a label or card must not start
+     text selection. Text entry opts back in below */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* text entry, plus the two places that hold copyable prose rather than
+   chrome (an AI insight, the words you told the AI), stay selectable */
+input,
+textarea,
+select,
+.reflection-body,
+.ai-raw {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 h1,
@@ -263,6 +279,32 @@ select option {
   from {
     opacity: 0;
     transform: translateY(4px);
+  }
+}
+
+/* first fetch: real content fades in when it replaces the skeleton (an
+   animation runs when its element first mounts). Opacity-only, not the
+   screen-in slide: on a tab switch the parent's screen-in already slides
+   the whole screen, and a second transform here would make content drift
+   further than the headers around it. A plain fade compounds invisibly. */
+.upnext,
+.reminders-card,
+.routine-list,
+.week-routine,
+.gym-day,
+.ai-item,
+.reminder-add,
+.reminder-group,
+.cleared-section,
+.reflection-card,
+.reflect-bars,
+.reflect-notes {
+  animation: content-in 200ms var(--ease-out);
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
   }
 }
 

@@ -147,7 +147,9 @@ export default function App() {
         <div hidden={tab !== 'now'}>
           <Now visible={tab === 'now'} onOpenReminders={() => setTab('reminders')} onOpenSettings={() => setSettingsOpen(true)} />
         </div>
-        {tab === 'reminders' && <Reminders onBack={() => setTab('now')} />}
+        <div hidden={tab !== 'reminders'}>
+          <Reminders visible={tab === 'reminders'} onBack={() => setTab('now')} />
+        </div>
         <div hidden={tab !== 'week'}>
           <Week visible={tab === 'week'} />
         </div>

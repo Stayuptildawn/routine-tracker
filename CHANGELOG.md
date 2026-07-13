@@ -15,6 +15,17 @@ deployed alongside).
   they stay smooth on mid-range phones; cards sit on a three-layer shadow
   that reads as depth in both themes.
 
+### Fixed
+- Long-pressing a button, label or day cell no longer starts a text
+  selection — the interface reads as an app, not a web page. Text fields
+  and genuinely copyable prose (an AI insight, the words you told the AI)
+  stay selectable.
+- Content now fades in when it first arrives from the server, instead of
+  snapping in after the skeleton with no motion.
+- Reopening the Reminders list is instant: it keeps its data in memory
+  like the main tabs, so it no longer flashes an empty screen and reloads
+  from scratch each time you come back to it.
+
 ## 2026-07-12
 
 ### Added

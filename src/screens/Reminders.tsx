@@ -57,7 +57,7 @@ export function shortTime(t: string): string {
   return t.slice(0, 5)
 }
 
-export default function Reminders({ onBack }: { onBack: () => void }) {
+export default function Reminders({ visible, onBack }: { visible: boolean; onBack: () => void }) {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -76,8 +76,12 @@ export default function Reminders({ onBack }: { onBack: () => void }) {
     setLoaded(true)
   }, [])
 
+  // refresh whenever the view is shown - silent, the old data stays on screen
   useEffect(() => {
-    load()
+    if (visible) load()
+  }, [visible, load])
+
+  useEffect(() => {
     const channel = supabase
       .channel('reminders-view')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, load)
