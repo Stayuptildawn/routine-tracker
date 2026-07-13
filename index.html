@@ -41,34 +41,45 @@
         display: grid;
         place-items: center;
       }
-      .boot-dot {
-        width: 12px;
-        height: 12px;
+      .boot-dots {
+        display: flex;
+        gap: 9px;
+      }
+      .boot-dots span {
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         background: #a9702c;
-        animation: boot-pulse 1.2s ease-in-out infinite;
+        animation: boot-wave 1.4s ease-in-out infinite;
+      }
+      .boot-dots span:nth-child(2) {
+        animation-delay: 0.16s;
+      }
+      .boot-dots span:nth-child(3) {
+        animation-delay: 0.32s;
       }
       @media (prefers-color-scheme: dark) {
-        html:not([data-theme='light']) .boot-dot {
+        html:not([data-theme='light']) .boot-dots span {
           background: #e0a458;
         }
       }
-      html[data-theme='dark'] .boot-dot {
+      html[data-theme='dark'] .boot-dots span {
         background: #e0a458;
       }
-      @keyframes boot-pulse {
+      @keyframes boot-wave {
         0%,
+        70%,
         100% {
-          opacity: 0.3;
-          transform: scale(0.8);
+          opacity: 0.28;
+          transform: translateY(0);
         }
-        50% {
+        35% {
           opacity: 1;
-          transform: scale(1);
+          transform: translateY(-7px);
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .boot-dot {
+        .boot-dots span {
           animation: none;
           opacity: 0.7;
         }
@@ -77,7 +88,9 @@
   </head>
   <body>
     <div id="root">
-      <div class="boot" aria-hidden="true"><div class="boot-dot"></div></div>
+      <div class="boot" aria-hidden="true">
+        <div class="boot-dots"><span></span><span></span><span></span></div>
+      </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
