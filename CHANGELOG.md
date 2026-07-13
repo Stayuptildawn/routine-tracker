@@ -25,6 +25,10 @@ deployed alongside).
 - Reopening the Reminders list is instant: it keeps its data in memory
   like the main tabs, so it no longer flashes an empty screen and reloads
   from scratch each time you come back to it.
+- Reopening the installed app no longer shows a black void for a second
+  while it reloads. iOS reloads PWAs on resume (and a fresh deploy reloads
+  once more to update); the page now paints its own warm background and a
+  small lamplight dot immediately, instead of the empty dark theme colour.
 
 ## 2026-07-12
 

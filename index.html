@@ -14,9 +14,71 @@
         if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
       } catch (e) {}
     </script>
+    <style>
+      /* App shell, inline so it paints without waiting for the JS bundle.
+         iOS reloads installed PWAs on resume (and an SW update reloads once
+         more); until React mounts, #root is empty. Without this the reload
+         shows the dark theme-color as a black void for ~1s. Instead: the
+         app's own background, plus a single lamplight dot. React clears
+         #root on mount, so this vanishes the moment the app is ready. */
+      html {
+        background: #f3efe7;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme='light']) {
+          background: #1a1714;
+        }
+      }
+      html[data-theme='dark'] {
+        background: #1a1714;
+      }
+      html[data-theme='light'] {
+        background: #f3efe7;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+      .boot-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #a9702c;
+        animation: boot-pulse 1.2s ease-in-out infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme='light']) .boot-dot {
+          background: #e0a458;
+        }
+      }
+      html[data-theme='dark'] .boot-dot {
+        background: #e0a458;
+      }
+      @keyframes boot-pulse {
+        0%,
+        100% {
+          opacity: 0.3;
+          transform: scale(0.8);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-dot {
+          animation: none;
+          opacity: 0.7;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" aria-hidden="true"><div class="boot-dot"></div></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
