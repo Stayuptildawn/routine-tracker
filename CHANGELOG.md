@@ -4,6 +4,15 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-07-16
+
+### Fixed
+- The bottom navigation bar no longer gets stuck floating mid-screen on
+  iPhone after typing (a WebKit bug in installed PWAs: closing the on-screen
+  keyboard sometimes leaves the viewport panned, taking every pinned element
+  with it). The app now detects the keyboard closing and re-anchors itself —
+  no more force-closing the app to fix the layout.
+
 ## 2026-07-13
 
 ### Added

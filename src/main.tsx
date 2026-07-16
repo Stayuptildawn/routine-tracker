@@ -6,6 +6,9 @@ import '@fontsource-variable/bitter'
 import App from './App'
 import './index.css'
 import './lib/pwaInstall' // register the beforeinstallprompt capture as early as possible
+import { armViewportFix } from './lib/viewportFix'
+
+armViewportFix()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
