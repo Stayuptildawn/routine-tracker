@@ -135,7 +135,15 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                     key={l.id}
                     className={lang === l.id ? 'energy-btn active' : 'energy-btn'}
                     aria-pressed={lang === l.id}
-                    onClick={() => setLanguage(l.id)}
+                    onClick={async () => {
+                      // the server needs to know too: the weekly reflection is
+                      // written in this language and nudges use its strings
+                      await supabase
+                        .from('user_settings')
+                        .upsert({ language: l.id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+                        .then(() => {}, () => {}) // offline: the UI still switches
+                      setLanguage(l.id)
+                    }}
                   >
                     {l.name}
                   </button>

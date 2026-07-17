@@ -14,6 +14,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'
 import { addDays, userNow } from '../_shared/localtime.ts'
+import { normLang, SERVER_STRINGS } from '../_shared/lang.ts'
 
 const WINDOW_MIN = 5 // must match the cron cadence
 // a timed reminder keeps trying for this long past its hour, so one slow or
@@ -39,9 +40,11 @@ Deno.serve(async (req) => {
     )
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
-    // each user lives in their own timezone
-    const { data: settingsRows } = await supabase.from('user_settings').select('user_id, timezone')
+    // each user lives in their own timezone and language
+    const { data: settingsRows } = await supabase.from('user_settings').select('user_id, timezone, language')
     const tzOf = new Map((settingsRows ?? []).map((r) => [r.user_id, r.timezone]))
+    const strFor = (userId: string) =>
+      SERVER_STRINGS[normLang((settingsRows ?? []).find((r) => r.user_id === userId)?.language)]
     const nowCache = new Map<string, { date: string; weekday: number; minutes: number }>()
     const nowFor = (userId: string) => {
       if (!nowCache.has(userId)) nowCache.set(userId, userNow(tzOf.get(userId)))
@@ -86,7 +89,7 @@ Deno.serve(async (req) => {
 
       const payload = JSON.stringify({
         title: 'Routine Tracker',
-        body: `${routine.name} is ready when you are.`,
+        body: strFor(routine.user_id).routineReady(routine.name),
         tag: `nudge-${routine.id}`, // replaces, never stacks
       })
 
@@ -179,10 +182,7 @@ Deno.serve(async (req) => {
           .select('endpoint, p256dh, auth')
           .eq('user_id', userId)
         if (!subs || subs.length === 0) continue
-        const body =
-          items.length === 1
-            ? `🔔 Due today: ${items[0].raw_text}`
-            : `🔔 Due today: ${items[0].raw_text} (+${items.length - 1} more)`
+        const body = strFor(userId).dueToday(items[0].raw_text, items.length - 1)
         const payload = JSON.stringify({ title: 'Routine Tracker', body, tag: 'reminders-due' })
         let delivered = 0
         for (const sub of subs) {
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
         if (dupe) continue
         const payload = JSON.stringify({
           title: 'Routine Tracker',
-          body: "Tonight's reflection reads the day at 22:00 — a good moment to log anything still floating around.",
+          body: strFor(userId).reflectHeadsUp,
           tag: 'reflect-nudge', // replaces, never stacks
         })
         for (const sub of subs) {

@@ -13,8 +13,12 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { GEMINI_MODELS } from '../_shared/interpret.ts'
+import { LANGUAGE_NAMES, normLang } from '../_shared/lang.ts'
 import { userNow, addDays } from '../_shared/localtime.ts'
 
+// English-only by design: non-English reflections rely on the prompt-level
+// ban (translated equivalents can't be enumerated reliably), and English
+// words sneaking into a non-English reply would still be caught here.
 const FORBIDDEN =
   /\b(failed|failure|missed|only|just|should|behind|lazy|slipped)\b|great job|keep it up|well done|good work|stay(ing)? consistent|consistency/i
 
@@ -63,8 +67,9 @@ Deno.serve(async (req) => {
     const results: Record<string, string> = {}
 
     for (const user of usersPage?.users ?? []) {
-      // each user's day runs in their own timezone, read fresh every tick
-      const { data: us } = await supabase.from('user_settings').select('timezone').eq('user_id', user.id).maybeSingle()
+      // each user's day runs in their own timezone (and language), read fresh every tick
+      const { data: us } = await supabase.from('user_settings').select('timezone, language').eq('user_id', user.id).maybeSingle()
+      const lang = normLang(us?.language)
       const { date, weekday, minutes } = userNow(us?.timezone)
       const inWindow = (m: number) => minutes >= m && minutes < m + WINDOW_MIN
       if (!force && !inWindow(MORNING_MIN) && !inWindow(NIGHT_MIN)) continue
@@ -172,21 +177,25 @@ Recovery flags ("too much" answers): ${flags.join(', ') || 'none'}
 Cardio feel (effort/body/amount per entry): ${cardioFeel || 'not asked'}
 Reminders completed: ${remindersDone}
 
-Write EXACTLY two sentences:
+Write EXACTLY two sentences, in ${LANGUAGE_NAMES[lang]}:
 1. One specific, true pattern from the data above. It MUST name at least one real
-   routine, task or session by name AND use a real number, weekday or
-   week-over-week change. Prefer the most interesting contrast (improvement,
-   an energy-completion link, a routine that works on some days and not others).
-2. One small experiment for next week, phrased as a question starting with
-   "Want to", directly connected to the pattern in sentence 1.
+   routine, task or session by name (keep the names exactly as written in the
+   data) AND use a real number, weekday or week-over-week change. Prefer the
+   most interesting contrast (improvement, an energy-completion link, a routine
+   that works on some days and not others).
+2. One small experiment for next week, phrased as an inviting question — the
+   natural ${LANGUAGE_NAMES[lang]} equivalent of "Want to try...?" — directly
+   connected to the pattern in sentence 1.
 
-Hard rules: never use the words failed, missed, only, just, should, behind,
-lazy. No generic praise (no "great job", "keep it up", "well done",
-"consistency"). Never count or dwell on what didn't happen - frame around
-what did. Skips are deliberate self-management. No exclamation marks, no
-emoji, no preamble - reply with the two sentences and nothing else.
+Hard rules: never use ${LANGUAGE_NAMES[lang]} words meaning failed, missed,
+only, just, should, behind, lazy. No generic praise (nothing like "great job",
+"keep it up", "well done", "consistency"). Never count or dwell on what didn't
+happen - frame around what did. Skips are deliberate self-management. No
+exclamation marks, no emoji, no preamble - reply with the two sentences in
+${LANGUAGE_NAMES[lang]} and nothing else.
 
-Example of the expected quality: "Bedtime Routine landed 6 of 7 nights and
+Example of the expected quality (the example is English, but your reply must
+be in ${LANGUAGE_NAMES[lang]}): "Bedtime Routine landed 6 of 7 nights and
 both low-energy days still closed out every core task. Want to try giving
 Study Time the same 9am slot where 4 of its 5 completions happened?"`
 

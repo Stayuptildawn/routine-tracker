@@ -7,6 +7,7 @@ import {
   clampDaysAgo,
   mentionsYesterday,
   normalizeAvgHr,
+  normalizeDigits,
   normalizeDueInMinutes,
   normalizeDueTime,
   parseAbsoluteTime,
@@ -14,6 +15,41 @@ import {
   parseRelativeDay,
   parseRelativeMinutes,
 } from '../supabase/functions/_shared/timeparse'
+
+describe('multilingual fallbacks', () => {
+  it('normalizes Persian and Arabic-Indic digits', () => {
+    expect(normalizeDigits('۵ کیلومتر در ۳۲ دقیقه')).toBe('5 کیلومتر در 32 دقیقه')
+    expect(normalizeDigits('٥ كم')).toBe('5 كم')
+    expect(normalizeDigits('plain 5 km')).toBe('plain 5 km')
+  })
+  it('parses relative minutes across languages', () => {
+    expect(parseRelativeMinutes('rappelle-moi dans 10 min')).toBe(10)
+    expect(parseRelativeMinutes('recuérdame en 2 horas')).toBe(120)
+    expect(parseRelativeMinutes('erinnere mich in 45 minuten')).toBe(45)
+    expect(parseRelativeMinutes('بعد 10 دقائق')).toBe(10)
+    expect(parseRelativeMinutes('۱۰ دقیقه دیگر یادم بنداز')).toBe(10)
+    expect(parseRelativeMinutes('10分钟后提醒我')).toBe(10)
+  })
+  it('parses absolute times across languages', () => {
+    expect(parseAbsoluteTime('rappelle-moi à 17h30')).toBe('17:30')
+    expect(parseAbsoluteTime('erinnere mich um 17:30')).toBe('17:30')
+    expect(parseAbsoluteTime('recuérdame a las 5pm')).toBe('17:00')
+    expect(parseAbsoluteTime('ساعت ۱۸ یادم بنداز')).toBe('18:00')
+    expect(parseAbsoluteTime('الساعة 18')).toBe('18:00')
+    expect(parseAbsoluteTime('下午5点提醒我')).toBe('17:00')
+  })
+  it('recognizes tomorrow/today/yesterday words across languages', () => {
+    expect(parseRelativeDay('demain matin')).toBe('tomorrow')
+    expect(parseRelativeDay('فردا صبح')).toBe('tomorrow')
+    expect(parseRelativeDay('明天早上')).toBe('tomorrow')
+    expect(parseRelativeDay('اليوم')).toBe('today')
+    expect(parseRelativeDay('heute abend')).toBe('today')
+    expect(mentionsYesterday('گلدون‌ها رو دیروز آب دادم')).toBe(true)
+    expect(mentionsYesterday('hice los platos ayer')).toBe(true)
+    expect(mentionsYesterday('昨天洗了碗')).toBe(true)
+    expect(mentionsYesterday('a year ago')).toBe(false)
+  })
+})
 
 describe('normalizeDueTime', () => {
   it('accepts sloppy model output', () => {

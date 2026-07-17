@@ -6,6 +6,12 @@
 // model's arithmetic. The model points at tasks and reminders; clocks and
 // calendars are resolved here.
 
+/** Persian (۰-۹) and Arabic-Indic (٠-٩) digits -> ASCII, so the numeric
+ *  regexes below read "۵ کیلومتر" the same as "5 km". */
+export function normalizeDigits(text: string): string {
+  return text.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+}
+
 /** Model-emitted time in any sloppy shape ("9:30", "17:30:00") -> "HH:MM", else null. */
 export function normalizeDueTime(raw: unknown): string | null {
   const m = String(raw ?? '').match(/^(\d{1,2}):([0-5]\d)(?::\d{2})?$/)
@@ -13,36 +19,63 @@ export function normalizeDueTime(raw: unknown): string | null {
   return `${m[1].padStart(2, '0')}:${m[2]}`
 }
 
-/** "in 10 mins" / "in 2 hours" anywhere in the text -> minutes from now, else null. */
+// The relative/absolute fallbacks below only run when the model already
+// decided the message is a reminder and dropped the time fields, so a broad
+// multilingual net is safe: it can only recover a time, not invent an intent.
+// \b does not work around non-Latin scripts, so those tokens match bare.
+
+const MIN_WORDS = 'min|mins|minute|minutes|minuten|minutos?|دقیقه|دقايق|دقائق|دقيقة|分钟|分'
+const HOUR_WORDS = 'h|hr|hrs|hour|hours|heures?|horas?|stunden?|ساعت|ساعات|ساعة|小时|個小時|个小时'
+
+/** "in 10 mins" / "dans 10 min" / "بعد 10 دقائق" / "10分钟后" -> minutes from now, else null. */
 export function parseRelativeMinutes(text: string): number | null {
-  const m = text.match(/\bin\s+(\d+)\s*(min|mins|minute|minutes|h|hr|hrs|hour|hours)\b/i)
+  const t = normalizeDigits(text)
+  const m =
+    t.match(new RegExp(`\\b(?:in|dans|en)\\s+(\\d+)\\s*(${MIN_WORDS}|${HOUR_WORDS})\\b`, 'i')) ??
+    t.match(new RegExp(`(?:بعد|طی)\\s*(\\d+)\\s*(${MIN_WORDS}|${HOUR_WORDS})`, 'i')) ??
+    t.match(new RegExp(`(\\d+)\\s*(${MIN_WORDS}|${HOUR_WORDS})\\s*(?:دیگر|بعد|后|後)`, 'i'))
   if (!m) return null
-  return Number(m[1]) * (/^h/i.test(m[2]) ? 60 : 1)
+  return Number(m[1]) * (new RegExp(`^(?:${HOUR_WORDS})$`, 'i').test(m[2]) ? 60 : 1)
 }
 
-/** "at 5pm" / "at 17:30" / "at 12am" anywhere in the text -> "HH:MM", else null. */
+/** "at 5pm" / "à 17h30" / "um 17:30" / "ساعت ۱۸" / "下午5点" -> "HH:MM", else null. */
 export function parseAbsoluteTime(text: string): string | null {
-  const m = text.match(/\bat\s+(\d{1,2})(?::([0-5]\d))?\s*(am|pm)?\b/i)
+  const t = normalizeDigits(text)
+  const m =
+    // (?:^|\s) instead of \b: word boundaries don't exist next to "à"
+    t.match(/(?:^|\s)(?:at|à|um|a las|a la)\s+(\d{1,2})(?:[:h]([0-5]\d))?\s*(am|pm)?\b/i) ??
+    t.match(/(?:ساعت|الساعة|الساعه)\s*(\d{1,2})(?::([0-5]\d))?/) ??
+    t.match(/(上午|下午|晚上)?\s*(\d{1,2})\s*[点點](?:([0-5]\d)分?)?/)
   if (!m) return null
-  let h = Number(m[1])
-  const min = Number(m[2] ?? 0)
-  const ap = m[3]?.toLowerCase()
+  // the Chinese pattern puts its am/pm marker first; normalize the groups
+  const zh = m.length === 4 && (m[1] === '上午' || m[1] === '下午' || m[1] === '晚上' || /[点點]/.test(m[0]))
+  let h = Number(zh ? m[2] : m[1])
+  const min = Number((zh ? m[3] : m[2]) ?? 0)
+  const ap = zh ? (m[1] === '下午' || m[1] === '晚上' ? 'pm' : m[1] === '上午' ? 'am' : undefined) : m[3]?.toLowerCase()
   if (ap === 'pm' && h < 12) h += 12
   if (ap === 'am' && h === 12) h = 0
-  if (h >= 24) return null
+  if (h >= 24 || Number.isNaN(h)) return null
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
 }
 
-/** "tomorrow" / "today" / "tonight" anywhere in the text, else null. */
+const TOMORROW = /\b(tomorrow|demain|mañana|morgen)\b/i
+const TOMORROW_BARE = ['فردا', 'غدا', 'غدًا', 'غداً', '明天', '明早', '明晚']
+const TODAY = /\b(today|tonight|aujourd'hui|aujourd’hui|ce soir|hoy|esta noche|heute|heute abend)\b/i
+const TODAY_BARE = ['امروز', 'امشب', 'اليوم', 'الليلة', '今天', '今晚']
+
+/** "tomorrow" / "today" / "tonight" (any pack language) anywhere in the text, else null. */
 export function parseRelativeDay(text: string): 'tomorrow' | 'today' | null {
-  if (/\btomorrow\b/i.test(text)) return 'tomorrow'
-  if (/\b(today|tonight)\b/i.test(text)) return 'today'
+  if (TOMORROW.test(text) || TOMORROW_BARE.some((w) => text.includes(w))) return 'tomorrow'
+  if (TODAY.test(text) || TODAY_BARE.some((w) => text.includes(w))) return 'today'
   return null
 }
 
+const YESTERDAY = /\b(yesterday|hier|ayer|gestern)\b/i
+const YESTERDAY_BARE = ['دیروز', 'دیشب', 'أمس', 'امس', 'البارحة', '昨天', '昨晚']
+
 /** True when the text plainly reports a past day ("did X yesterday"). */
 export function mentionsYesterday(text: string): boolean {
-  return /\byesterday\b/i.test(text)
+  return YESTERDAY.test(text) || YESTERDAY_BARE.some((w) => text.includes(w))
 }
 
 /** "HH:MM" + N minutes -> the new clock time and how many days it rolled over. */
@@ -70,7 +103,7 @@ export function normalizeDueInMinutes(raw: unknown): number | null {
 
 /** "152 bpm" anywhere in the text -> 152; sanity-bounded, else null. */
 export function parseBpm(text: string): number | null {
-  const m = text.match(/(\d{2,3})\s*bpm\b/i)
+  const m = normalizeDigits(text).match(/(\d{2,3})\s*bpm\b/i)
   if (!m) return null
   const n = Number(m[1])
   return n > 30 && n < 250 ? n : null

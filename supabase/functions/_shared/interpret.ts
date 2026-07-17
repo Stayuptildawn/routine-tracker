@@ -6,11 +6,14 @@
 // deno-lint-ignore-file no-explicit-any
 
 import { addDays, userNow } from './localtime.ts'
+import { LANGUAGE_NAMES, normLang, SERVER_STRINGS } from './lang.ts'
+import type { Lang } from './lang.ts'
 import {
   addMinutesToClock,
   clampDaysAgo,
   mentionsYesterday,
   normalizeAvgHr,
+  normalizeDigits,
   normalizeDueInMinutes,
   normalizeDueTime,
   parseAbsoluteTime,
@@ -85,13 +88,16 @@ export interface InterpretResult {
   raw_actions?: Record<string, any>[] // what the model actually emitted - for debugging misparses
 }
 
-function daysAgo(date: string, today: string): string {
+function daysAgo(date: string, today: string, lang: Lang): string {
+  const S = SERVER_STRINGS[lang]
   const diff = Math.round((new Date(today + 'T00:00:00Z').getTime() - new Date(date + 'T00:00:00Z').getTime()) / 86400000)
-  return diff === 0 ? 'today' : diff === 1 ? 'yesterday' : `${diff} days ago (${date})`
+  return diff === 0 ? S.today : diff === 1 ? S.yesterday : S.daysAgo(diff, date)
 }
 
 /** Parse free text into actions and apply them for the given user.
- *  `time` is the user's local clock (HH:MM) so relative times resolve. */
+ *  `time` is the user's local clock (HH:MM) so relative times resolve.
+ *  `langParam` is the client's i18n pack id; when absent it's read from
+ *  user_settings so Telegram gets the same language as the app. */
 export async function interpretAndApply(
   supabase: any,
   userId: string,
@@ -99,7 +105,18 @@ export async function interpretAndApply(
   date: string,
   weekday: number,
   time?: string,
+  langParam?: string,
 ): Promise<InterpretResult> {
+  let lang: Lang
+  if (langParam) {
+    lang = normLang(langParam)
+  } else {
+    const { data: ls } = await supabase.from('user_settings').select('language').eq('user_id', userId).maybeSingle()
+    lang = normLang(ls?.language)
+  }
+  const S = SERVER_STRINGS[lang]
+  // regex fallbacks below read this copy, so Persian/Arabic digits count too
+  const asciiText = normalizeDigits(text)
   // Today's candidate tasks (small list) get injected into the prompt so the
   // model fuzzy-matches natively - no vector store needed at this scale.
   const { data: routines } = await supabase
@@ -137,6 +154,10 @@ export async function interpretAndApply(
 
   const prompt = `You are the input parser for an AuDHD-friendly routine tracker.
 Parse the user's message into zero or more actions. The message may contain several intents at once.
+The user's app language is ${LANGUAGE_NAMES[lang]}; task labels and reminders below are usually in
+that language, but the message may be in any language — parse it all the same. Free-text fields you
+emit (reminder_text, notes) must be written in ${LANGUAGE_NAMES[lang]} (clean up wording, keep meaning).
+Digits may be Persian/Arabic-Indic (۵ = 5); read them as numbers.
 
 Today's tasks (only ever reference these exact task_id values):
 ${candidates.map((c) => `- task_id=${c.id} | ${c.routine} | ${c.label} | currently: ${c.status}`).join('\n')}
@@ -292,7 +313,7 @@ User message: "${text}"`
       let daysAgo = clampDaysAgo(action.days_ago)
       // deterministic fallback: the lite models tend to drop days_ago even
       // when the message plainly says yesterday
-      if (daysAgo === 0 && mentionsYesterday(text)) daysAgo = 1
+      if (daysAgo === 0 && mentionsYesterday(asciiText)) daysAgo = 1
       // past days may reference tasks that aren't scheduled today
       const candidate = candidateById.get(action.task_id) ?? (daysAgo > 0 ? taskById.get(action.task_id) : undefined)
       if (!candidate || confidence < SUGGEST_THRESHOLD) continue
@@ -391,14 +412,14 @@ User message: "${text}"`
       let distanceKm = action.distance_km ?? null
       let minutes = action.minutes ?? null
       if (distanceKm == null) {
-        const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:km|kms|k\b)/i)
+        const m = asciiText.match(/(\d+(?:[.,]\d+)?)\s*(?:km|kms|k\b|کیلومتر|كم\b|公里)/i)
         if (m) distanceKm = parseFloat(m[1].replace(',', '.'))
       }
       if (minutes == null) {
-        const m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:min|mins|minutes|minutos)/i)
+        const m = asciiText.match(/(\d+(?:[.,]\d+)?)\s*(?:min|mins|minutes|minuten|minutos|دقیقه|دقيقة|دقائق|分钟)/i)
         if (m) minutes = parseFloat(m[1].replace(',', '.'))
       }
-      const avgHr = normalizeAvgHr(action.avg_hr) ?? parseBpm(text)
+      const avgHr = normalizeAvgHr(action.avg_hr) ?? parseBpm(asciiText)
       const pick = (v: unknown, allowed: string[]) => (allowed.includes(String(v)) ? String(v) : null)
       const { data: row, error } = await supabase
         .from('cardio_logs')
@@ -444,11 +465,11 @@ User message: "${text}"`
       // reminder - no ambiguity about which one the phrase belongs to)
       if (reminderActionCount === 1) {
         if (!dueTime && dueInMin === null) {
-          dueInMin = parseRelativeMinutes(text)
-          if (dueInMin === null) dueTime = parseAbsoluteTime(text)
+          dueInMin = parseRelativeMinutes(asciiText)
+          if (dueInMin === null) dueTime = parseAbsoluteTime(asciiText)
         }
         if (!dueDate && dueInMin === null) {
-          const day = parseRelativeDay(text)
+          const day = parseRelativeDay(asciiText)
           if (day === 'tomorrow') dueDate = addDays(date, 1)
           else if (day === 'today') dueDate = date
         }
@@ -497,14 +518,15 @@ User message: "${text}"`
       const items = pendingReminders ?? []
       answers.push(
         items.length === 0
-          ? 'Nothing on hold.'
-          : `On hold: ${items
-              .map(
-                (r: any) =>
-                  r.raw_text +
-                  (r.due_date ? ` (by ${r.due_date}${r.due_time ? ' ' + String(r.due_time).slice(0, 5) : ''})` : ''),
-              )
-              .join('; ')}.`,
+          ? S.nothingOnHold
+          : S.onHold(
+              items
+                .map(
+                  (r: any) =>
+                    r.raw_text + (r.due_date ? S.byDue(r.due_date, r.due_time ? String(r.due_time).slice(0, 5) : '') : ''),
+                )
+                .join('; '),
+            ),
       )
     } else if (action.type === 'set_energy') {
       if (!action.level) continue
@@ -523,7 +545,7 @@ User message: "${text}"`
         .order('date', { ascending: false })
         .limit(1)
         .maybeSingle()
-      answers.push(last ? `${task.label}: last done ${daysAgo(last.date, date)}.` : `${task.label}: no record of it yet.`)
+      answers.push(last ? S.lastDone(task.label, daysAgo(last.date, date, lang)) : S.noRecord(task.label))
     } else if (action.type === 'query_last_workout') {
       if (!action.exercise) continue
       const { data: last } = await supabase
@@ -535,10 +557,10 @@ User message: "${text}"`
         .limit(1)
         .maybeSingle()
       if (!last) {
-        answers.push(`${action.exercise}: nothing logged yet.`)
+        answers.push(S.nothingLoggedFor(action.exercise))
       } else {
         const sets = last.sets?.map((s: { kg: number; reps: number }) => `${s.kg}kg×${s.reps}`).join(', ')
-        answers.push(`${last.exercise}, ${daysAgo(last.date, date)}${sets ? `: ${sets}` : ''}.`)
+        answers.push(S.lastWorkout(last.exercise, daysAgo(last.date, date, lang), sets ?? ''))
       }
     }
   }

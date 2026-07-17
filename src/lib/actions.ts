@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import { localDate, isoWeekday } from './types'
 import type { AppliedAction, InterpretResponse, LogStatus, ReminderStatus } from './types'
 import type { IconName } from '../components/Icon'
-import { t } from '../i18n'
+import { t, lang } from '../i18n'
 
 const QUEUE_KEY = 'pending_messages'
 
@@ -10,7 +10,7 @@ const QUEUE_KEY = 'pending_messages'
 export async function interpretMessage(text: string): Promise<InterpretResponse | 'queued'> {
   try {
     const { data, error } = await supabase.functions.invoke<InterpretResponse>('interpret-message', {
-      body: { text, date: localDate(), weekday: isoWeekday(), time: new Date().toTimeString().slice(0, 5) },
+      body: { text, date: localDate(), weekday: isoWeekday(), time: new Date().toTimeString().slice(0, 5), lang },
     })
     if (error) throw error
     return data!

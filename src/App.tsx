@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase, configured } from './lib/supabase'
 import { isDemo, exitDemo } from './lib/demo'
 import { SEED_ROUTINES } from './lib/seedData'
-import { t } from './i18n'
+import { t, lang, availableLanguages, setLanguage } from './i18n'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import { flushOps } from './lib/offline'
 import { armBackGuard, onBackButton } from './lib/backButton'
@@ -108,6 +108,18 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return
+    // a language picked on another device follows the account: adopt the
+    // stored choice once, then localStorage keeps the two in sync
+    if (!isDemo) {
+      supabase
+        .from('user_settings')
+        .select('language')
+        .maybeSingle()
+        .then(({ data }) => {
+          const stored = data?.language
+          if (stored && stored !== lang && availableLanguages.some((l) => l.id === stored)) setLanguage(stored)
+        })
+    }
     let cancelled = false
     setSeeding(true)
     // block first render until seeding finishes, or a fresh account

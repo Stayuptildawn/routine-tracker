@@ -7,6 +7,15 @@ deployed alongside).
 ## 2026-07-17
 
 ### Added
+- **The AI speaks your language now.** The language you pick in Settings is
+  stored with your account, and everything the server writes follows it: the
+  weekly reflection is generated in that language (at its next scheduled pass —
+  switching languages never triggers an extra AI call), push nudges use a
+  translated string table, and the composer's answers ("what's pending?")
+  come back localized. The parser also handles non-English messages
+  properly — Persian/Arabic digits (۵ = 5), and time phrases like
+  "dans 10 min", "ساعت ۱۸", "明天" are caught by the same deterministic
+  fallbacks that already backed up English.
 - **Six new languages**: Français, Español, Deutsch, 中文, العربية and فارسی
   join English. The picker appears under Settings → Language; Arabic and Farsi
   flip the whole layout right-to-left, and Farsi shows dates in the Jalali
