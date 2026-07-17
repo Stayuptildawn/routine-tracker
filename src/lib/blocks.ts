@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { localDate, isoWeekday } from './types'
 import type { WorkoutPlan } from './types'
+import { t } from '../i18n'
 
 /** "4 x 8-10" -> 4 sets. Anything unparseable (e.g. "Rest") -> 0. */
 export function setCount(scheme: string | undefined | null): number {
@@ -12,7 +13,6 @@ export function phaseKey(week: number): string {
   return week <= 2 ? '1-2' : week <= 4 ? '3-4' : '5-6'
 }
 
-const BLOCK_NAMES: Record<number, string> = { 1: 'Block 1 — PPL', 2: 'Block 2 — Upper/Lower' }
 
 /** What the recovery check-ins suggest per muscle: +1 set, -1 set, or nothing.
  *  Needs at least two answers for a muscle in the last 60 days to say anything. */
@@ -59,7 +59,7 @@ export async function startBlock(
   const { data: block, error } = await supabase
     .from('training_blocks')
     .insert({
-      name: BLOCK_NAMES[blockNumber] ?? `Block ${blockNumber}`,
+      name: t.blocks.names[blockNumber] ?? t.blocks.fallback(blockNumber),
       block: blockNumber,
       start_date: localDate(monday),
       total_weeks: totalWeeks,

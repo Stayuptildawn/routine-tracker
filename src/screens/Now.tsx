@@ -7,6 +7,7 @@ import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
 import { usePresence } from '../lib/overlay'
+import { t, locale } from '../i18n'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 import InstallButton from './InstallButton'
@@ -28,8 +29,9 @@ const ANCHOR_WINDOW = 120
 
 function fmtEta(diff: number): string {
   const abs = Math.abs(diff)
-  const t = abs >= 60 ? `${Math.floor(abs / 60)}h ${String(abs % 60).padStart(2, '0')}m` : `${abs} min`
-  return diff > 0 ? `in ${t}` : diff < 0 ? `${t} ago` : 'now'
+  const dur =
+    abs >= 60 ? t.now.hoursMinutes(Math.floor(abs / 60), String(abs % 60).padStart(2, '0')) : t.now.minutes(abs)
+  return diff > 0 ? t.now.etaIn(dur) : diff < 0 ? t.now.etaAgo(dur) : t.now.etaNow
 }
 
 export default function Now({ visible, onOpenReminders, onOpenSettings }: { visible: boolean; onOpenReminders: () => void; onOpenSettings: () => void }) {
@@ -62,8 +64,8 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
 
   // minute tick keeps anchor sort + countdown ring honest (time blindness aid)
   useEffect(() => {
-    const t = setInterval(() => setNowMin(new Date().getHours() * 60 + new Date().getMinutes()), 60_000)
-    return () => clearInterval(t)
+    const tick = setInterval(() => setNowMin(new Date().getHours() * 60 + new Date().getMinutes()), 60_000)
+    return () => clearInterval(tick)
   }, [])
 
   useEffect(() => {
@@ -140,9 +142,9 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
     try {
       const result = await interpretMessage(text)
       if (result === 'queued') {
-        setNotice('Offline — saved, will send when back online.')
+        setNotice(t.now.offlineQueued)
       } else if (result.error) {
-        setNotice(`Something went wrong: ${result.error}`)
+        setNotice(t.now.somethingWrong(result.error))
       } else {
         setMessage('')
         setSuggestions(result.suggestions)
@@ -152,12 +154,12 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
         if (result.applied.length > 0 && result.ai_action_id) {
           setUndo({ aiActionId: result.ai_action_id, response: result })
         } else if (result.applied.length === 0 && result.suggestions.length === 0 && !result.answers?.length) {
-          setNotice('Nothing matched — try naming the task, or add it as a reminder.')
+          setNotice(t.now.noMatch)
         }
         load()
       }
     } catch (err) {
-      setNotice(`Couldn't reach the AI: ${String(err)}`)
+      setNotice(t.now.cantReachAi(String(err)))
     } finally {
       setBusy(false)
     }
@@ -181,12 +183,12 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
       (window as unknown as Record<string, unknown>).SpeechRecognition ??
       (window as unknown as Record<string, unknown>).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      setNotice('Voice input is not supported in this browser.')
+      setNotice(t.now.voiceUnsupported)
       return
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rec = new (SpeechRecognition as any)()
-    rec.lang = 'en-US'
+    rec.lang = t.now.speechLang
     rec.interimResults = false
     rec.onresult = (e: { results: { transcript: string }[][] }) => {
       setMessage((prev) => (prev ? prev + ' ' : '') + e.results[0][0].transcript)
@@ -202,13 +204,13 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
     .map((r) => ({
       routine: r,
       tasks: (r.tasks ?? [])
-        .filter((t) => t.scheduled_days.includes(weekday) && visibleTiers.includes(t.tier))
+        .filter((task) => task.scheduled_days.includes(weekday) && visibleTiers.includes(task.tier))
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     }))
     .filter((s) => s.tasks.length > 0)
     .map((s) => {
-      const doneCount = s.tasks.filter((t) => {
-        const status = logs.get(t.id)?.status
+      const doneCount = s.tasks.filter((task) => {
+        const status = logs.get(task.id)?.status
         return status === 'done' || status === 'skipped' || status === 'partial'
       }).length
       // signed minutes until (+) / since (-) the anchor, if any
@@ -236,11 +238,11 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
   const upNext = (() => {
     const section = sections.find((s) => !s.complete)
     if (!section) return null
-    const pending = (t: Task) => {
-      const status = logs.get(t.id)?.status
+    const pending = (task: Task) => {
+      const status = logs.get(task.id)?.status
       return status !== 'done' && status !== 'skipped' && status !== 'partial'
     }
-    const task = section.tasks.find((t) => t.tier === 'core' && pending(t)) ?? section.tasks.find(pending)
+    const task = section.tasks.find((x) => x.tier === 'core' && pending(x)) ?? section.tasks.find(pending)
     if (!task) return null
     const eta =
       section.anchorDiff !== null && Math.abs(section.anchorDiff) <= ANCHOR_WINDOW ? fmtEta(section.anchorDiff) : null
@@ -251,11 +253,11 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
     <div className="now">
       <div className="now-head">
         <p className="eyebrow">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+          {new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
         <div className="now-head-actions">
           <InstallButton />
-          <button className="settings-inline" onClick={onOpenSettings} title="Settings" aria-label="Settings">
+          <button className="settings-inline" onClick={onOpenSettings} title={t.common.settings} aria-label={t.common.settings}>
             <Icon name="settings" />
           </button>
         </div>
@@ -270,18 +272,18 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
               send()
             }
           }}
-          placeholder='What’s up today? — "ran 5k", "remind me at 6", "morning routine done"'
+          placeholder={t.now.composerPh}
           rows={2}
         />
         <div className="composer-buttons">
           <button className="send" onClick={send} disabled={busy || !message.trim()}>
-            {busy ? '…' : 'Send'}
+            {busy ? '…' : t.now.send}
           </button>
           <button
             className={listening ? 'voice listening' : 'voice'}
             onClick={() => (listening ? recognitionRef.current?.stop() : startVoice())}
-            title="Voice input"
-            aria-label="Voice input"
+            title={t.now.voiceInput}
+            aria-label={t.now.voiceInput}
           >
             <Icon name="mic" />
           </button>
@@ -292,20 +294,20 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
 
       {suggestions.length > 0 && (
         <div className="chips">
-          <span className="chips-label">Did you mean:</span>
+          <span className="chips-label">{t.now.didYouMean}</span>
           {suggestions.map((s) => (
             <button key={s.task_id} className="chip" onClick={() => confirmSuggestion(s)}>
               <Icon name={s.status === 'skipped' ? 'skip' : 'check'} /> {s.label}
             </button>
           ))}
           <button className="chip dismiss" onClick={() => setSuggestions([])}>
-            <Icon name="x" /> No
+            <Icon name="x" /> {t.now.no}
           </button>
         </div>
       )}
 
       <div className="energy-row">
-        <span className="energy-label">Energy today</span>
+        <span className="energy-label">{t.now.energyToday}</span>
         {(['low', 'medium', 'high'] as Energy[]).map((level) => (
           <button
             key={level}
@@ -314,17 +316,17 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
             onClick={() => pickEnergy(level)}
           >
             {level === 'low' ? (
-              <><Icon name="battery-low" /> Low</>
+              <><Icon name="battery-low" /> {t.now.energyLow}</>
             ) : level === 'medium' ? (
-              <><Icon name="battery-medium" /> Medium</>
+              <><Icon name="battery-medium" /> {t.now.energyMedium}</>
             ) : (
-              <><Icon name="zap" /> High</>
+              <><Icon name="zap" /> {t.now.energyHigh}</>
             )}
           </button>
         ))}
       </div>
       {energy === 'low' && (
-        <p className="gentle">Low-energy mode: only the essentials. Doing these counts as a full win.</p>
+        <p className="gentle">{t.now.lowEnergyNote}</p>
       )}
 
       {loaded && upNext && (
@@ -332,7 +334,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
           className="upnext"
           onClick={() => setPlaying({ routineId: upNext.routine.id, focusTaskId: upNext.task.id })}
         >
-          <span className="upnext-label">Up next</span>
+          <span className="upnext-label">{t.now.upNext}</span>
           <span className="upnext-task">{upNext.task.label}</span>
           <span className="routine-progress">
             {upNext.routine.name}
@@ -345,7 +347,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
       {loaded && (
         <section className={reminders.length === 0 ? 'routine reminders-card empty' : 'routine reminders-card'}>
           <h2>
-            Reminders
+            {t.now.remindersTitle}
             {reminders.length > 0 && <span className="routine-progress">{reminders.length}</span>}
           </h2>
           {reminders.slice(0, 4).map((r) => {
@@ -364,15 +366,15 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                 </span>
                 <div className="task-buttons">
                   <button className="do" onClick={() => clearReminder(r)}>
-                    Done
+                    {t.common.done}
                   </button>
                 </div>
               </div>
             )
           })}
-          {reminders.length === 0 && <p className="gentle reminders-empty">Nothing on hold.</p>}
+          {reminders.length === 0 && <p className="gentle reminders-empty">{t.now.nothingOnHold}</p>}
           <button className="link see-all" onClick={onOpenReminders}>
-            {reminders.length > 4 ? `See all ${reminders.length} →` : 'Open →'}
+            {reminders.length > 4 ? t.now.seeAll(reminders.length) : t.now.open}
           </button>
         </section>
       )}
@@ -398,7 +400,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                     {allHandled ? <Icon name="check" /> : ` ${doneCount}/${tasks.length}`}
                   </span>
                   {showRing && (
-                    <span className="anchor-chip" title={`anchored around ${routine.anchor_time?.slice(0, 5)}`}>
+                    <span className="anchor-chip" title={t.now.anchoredAround(routine.anchor_time?.slice(0, 5) ?? '')}>
                       <span
                         className="anchor-ring"
                         style={{ background: `conic-gradient(var(--accent) ${ringPct}%, var(--surface-3) 0)` }}
@@ -411,9 +413,9 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                     <button
                       className="start-btn"
                       onClick={() => setPlaying({ routineId: routine.id })}
-                      title="One task at a time"
+                      title={t.now.startTitle}
                     >
-                      <Icon name="play" /> Start
+                      <Icon name="play" /> {t.now.start}
                     </button>
                   )}
                 </h2>
@@ -428,13 +430,13 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                             className={status === 'done' ? 'do active' : 'do'}
                             onClick={() => tapStatus(task, 'done')}
                           >
-                            Done
+                            {t.common.done}
                           </button>
                           <button
                             className={status === 'skipped' ? 'skip active' : 'skip'}
                             onClick={() => tapStatus(task, 'skipped')}
                           >
-                            Skip
+                            {t.common.skip}
                           </button>
                         </div>
                       </div>
@@ -447,14 +449,14 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
       )}
 
       {loaded && sections.length === 0 && (
-        <p className="gentle">Nothing scheduled right now. That’s allowed.</p>
+        <p className="gentle">{t.now.nothingScheduled}</p>
       )}
 
       {loaded && (nudges === 'on' || nudges === 'off') && (
         <p className="gentle nudge-row">
           {nudges === 'on' ? (
             <>
-              <Icon name="bell" /> Nudges on
+              <Icon name="bell" /> {t.now.nudgesOn}
               <button
                 className="link"
                 onClick={async () => {
@@ -462,7 +464,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                   setNudges('off')
                 }}
               >
-                turn off
+                {t.now.turnOff}
               </button>
             </>
           ) : (
@@ -472,10 +474,10 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                 const result = await enableNudges()
                 if (result === 'on') setNudges('on')
                 else if (result === 'denied')
-                  setNotice('Notifications are blocked for this site — enable them in browser settings first.')
+                  setNotice(t.now.notifBlocked)
               }}
             >
-              <Icon name="bell" /> Enable gentle nudges
+              <Icon name="bell" /> {t.now.enableNudges}
             </button>
           )}
         </p>
@@ -515,8 +517,8 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
                   )
                 })}
               </div>
-              <button onClick={runUndo}>Undo</button>
-              <button className="toast-close" onClick={() => setUndo(null)} aria-label="Dismiss">
+              <button onClick={runUndo}>{t.common.undo}</button>
+              <button className="toast-close" onClick={() => setUndo(null)} aria-label={t.common.dismiss}>
                 <Icon name="x" />
               </button>
             </div>

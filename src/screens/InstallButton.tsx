@@ -8,6 +8,7 @@ import {
   subscribeInstall,
   triggerInstall,
 } from '../lib/pwaInstall'
+import { t } from '../i18n'
 import Icon from '../components/Icon'
 
 // A standing "install this app" button for signed-in mobile users who are
@@ -34,8 +35,8 @@ export default function InstallButton() {
 
   return (
     <>
-      <button className="install-fab" onClick={onClick} title="Install app" aria-label="Install app">
-        <Icon name="install" /> Install
+      <button className="install-fab" onClick={onClick} title={t.install.installApp} aria-label={t.install.installApp}>
+        <Icon name="install" /> {t.install.install}
       </button>
 
       {showHelp && (
@@ -43,16 +44,16 @@ export default function InstallButton() {
           <div
             className="install-help"
             role="dialog"
-            aria-label="How to install"
+            aria-label={t.install.helpAria}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="install-title"><Icon name="install" /> Add this app to your home screen</p>
+            <p className="install-title"><Icon name="install" /> {t.install.helpTitle}</p>
             <p className="install-body">
-              {platform === 'ios' ? IOS_INSTALL_STEPS : ANDROID_INSTALL_STEPS} It then runs full
-              screen and can send you gentle nudges.
+              {platform === 'ios' ? IOS_INSTALL_STEPS : ANDROID_INSTALL_STEPS}
+              {t.install.helpTail}
             </p>
             <button className="start-session" onClick={() => setShowHelp(false)}>
-              Got it
+              {t.install.gotIt}
             </button>
           </div>
         </div>

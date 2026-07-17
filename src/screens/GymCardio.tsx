@@ -5,53 +5,21 @@ import { localDate } from '../lib/types'
 import type { CardioLog } from '../lib/types'
 import { runOp } from '../lib/offline'
 import { DEFAULT_BASE_KM, cardioTargetForWeek } from '../lib/cardioPlan'
+import { t, locale } from '../i18n'
 import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
 
 // labels stay plain text because they also render inside <option> elements,
 // which can't hold SVG; the entry list gets its icon from kindIcon below
-const CARDIO_KINDS = [
-  ['run', 'Run'],
-  ['walk', 'Walk'],
-  ['cycle', 'Cycle'],
-  ['swim', 'Swim'],
-] as const
+const CARDIO_KINDS = ['run', 'walk', 'cycle', 'swim'] as const
 
 const KIND_ICONS: Record<string, IconName> = { run: 'run', walk: 'walk', cycle: 'bike', swim: 'waves' }
 
+const kindLabel = (k: string) => t.cardio.kinds[k] ?? k
+
 // the strength check-in questions, adapted to cardio - saved per entry
-const CARDIO_QUESTIONS: { field: 'effort' | 'body' | 'amount'; label: string; options: [string, string][] }[] = [
-  {
-    field: 'effort',
-    label: 'How hard did it feel?',
-    options: [
-      ['easy', 'Easy'],
-      ['steady', 'Steady'],
-      ['pushed', 'Pushed'],
-      ['all_out', 'All out'],
-    ],
-  },
-  {
-    field: 'body',
-    label: 'How was the body?',
-    options: [
-      ['fresh', 'Fresh'],
-      ['okay', 'Okay'],
-      ['heavy', 'Heavy'],
-    ],
-  },
-  {
-    field: 'amount',
-    label: 'How was the amount?',
-    options: [
-      ['could_take_more', 'Could take more'],
-      ['right', 'Right'],
-      ['stretch', 'A stretch'],
-      ['over_the_line', 'Over the line'],
-    ],
-  },
-]
+const CARDIO_QUESTIONS: ('effort' | 'body' | 'amount')[] = ['effort', 'body', 'amount']
 
 /** minutes over km -> "6:24 /km" */
 function fmtPace(minutes: number | null, km: number | null): string | null {
@@ -59,7 +27,7 @@ function fmtPace(minutes: number | null, km: number | null): string | null {
   const perKm = minutes / km
   const m = Math.floor(perKm)
   const s = Math.round((perKm - m) * 60)
-  return `${m}:${String(s).padStart(2, '0')} /km`
+  return `${m}:${String(s).padStart(2, '0')} ${t.cardio.perKm}`
 }
 
 /** Monday (yyyy-mm-dd) of the week containing the given date string. */
@@ -195,7 +163,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
     }
     const total = [...kinds.values()].reduce((a, b) => a + b, 0)
     weeks.push({
-      num: d.toLocaleDateString(undefined, { weekday: 'short' }),
+      num: d.toLocaleDateString(locale, { weekday: 'short' }),
       kinds,
       total,
       now: date === today,
@@ -214,29 +182,31 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
   return (
     <section className="gym-day cardio-card">
       <h2>
-        Cardio
+        {t.cardio.title}
         <span className="routine-progress">
           {weekKm > 0 || weekMin > 0
-            ? ` this week: ${weekKm > 0 ? `${Math.round(weekKm * 10) / 10} km` : ''}${weekKm > 0 && weekMin > 0 ? ' · ' : ''}${weekMin > 0 ? `${Math.round(weekMin)} min` : ''}`
-            : ' nothing yet this week — that’s allowed'}
+            ? t.cardio.thisWeek(
+                `${weekKm > 0 ? t.cardio.km(Math.round(weekKm * 10) / 10) : ''}${weekKm > 0 && weekMin > 0 ? ' · ' : ''}${weekMin > 0 ? t.cardio.min(Math.round(weekMin)) : ''}`,
+              )
+            : t.cardio.nothingYet}
         </span>
       </h2>
 
       <div className="cardio-plan">
         <div className="cardio-plan-head">
-          <span className="cardio-plan-phase">{target.phase} week</span>
+          <span className="cardio-plan-phase">{t.cardio.phaseWeek(t.cardioPlan.phases[target.phase] ?? target.phase)}</span>
           <span className="cardio-plan-target">
-            aim ~{target.km} km · {target.sessions} easy sessions
+            {t.cardio.aim(target.km, target.sessions)}
           </span>
         </div>
         <div className="cardio-plan-rail" aria-hidden="true">
           <div className="cardio-plan-fill" style={{ transform: `scaleX(${pct / 100})` }} />
         </div>
         <p className="gentle cardio-plan-note">
-          {Math.round(weekKm * 10) / 10} / {target.km} km so far. {target.note}
+          {t.cardio.soFar(Math.round(weekKm * 10) / 10, target.km, target.note)}
         </p>
         <div className="cardio-plan-base">
-          <span className="gentle-inline">Easy-week base</span>
+          <span className="gentle-inline">{t.cardio.easyWeekBase}</span>
           {editingBase ? (
             <>
               <input
@@ -250,19 +220,19 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
                   if (e.key === 'Escape') cancelBase()
                 }}
               />
-              <span className="gentle-inline">km/week</span>
+              <span className="gentle-inline">{t.cardio.kmPerWeek}</span>
               <button className="save" onClick={saveBase} disabled={!(parseFloat(baseDraft) > 0)}>
-                Save
+                {t.common.save}
               </button>
               <button className="energy-btn" onClick={cancelBase}>
-                Cancel
+                {t.common.cancel}
               </button>
             </>
           ) : (
             <>
-              <span className="gentle-inline">{cardioBase ?? DEFAULT_BASE_KM} km/week</span>
+              <span className="gentle-inline">{t.cardio.baseValue(cardioBase ?? DEFAULT_BASE_KM)}</span>
               <button className="energy-btn" onClick={() => setEditingBase(true)} disabled={cardioBase == null}>
-                Edit
+                {t.common.Edit}
               </button>
             </>
           )}
@@ -271,36 +241,36 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
 
       <div className="run-log-row">
         <select value={run.kind} onChange={(e) => setRun({ ...run, kind: e.target.value })}>
-          {CARDIO_KINDS.map(([value, label]) => (
+          {CARDIO_KINDS.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {kindLabel(value)}
             </option>
           ))}
         </select>
         <input
           type="number"
           inputMode="decimal"
-          placeholder="km"
+          placeholder={t.cardio.kmPh}
           value={run.km}
           onChange={(e) => setRun({ ...run, km: e.target.value })}
         />
         <input
           type="number"
           inputMode="numeric"
-          placeholder="min"
+          placeholder={t.cardio.minPh}
           value={run.min}
           onChange={(e) => setRun({ ...run, min: e.target.value })}
         />
         <input
           type="number"
           inputMode="numeric"
-          placeholder="bpm"
+          placeholder={t.cardio.bpmPh}
           value={run.hr}
           onChange={(e) => setRun({ ...run, hr: e.target.value })}
           onKeyDown={(e) => e.key === 'Enter' && logRun()}
         />
         <button className="run-log-btn" onClick={logRun} disabled={loggingRun}>
-          {loggingRun ? '…' : 'Log'}
+          {loggingRun ? '…' : t.cardio.log}
         </button>
       </div>
 
@@ -311,7 +281,11 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
               <div
                 key={i}
                 className="reflect-day"
-                title={`${w.num}: ${[...w.kinds.entries()].map(([k, v]) => `${k} ${Math.round(v * 10) / 10}km`).join(', ') || 'nothing'}`}
+                title={t.cardio.dayTitle(
+                  w.num,
+                  [...w.kinds.entries()].map(([k, v]) => t.cardio.kindKm(kindLabel(k), Math.round(v * 10) / 10)).join(', ') ||
+                    t.cardio.nothing,
+                )}
               >
                 <div className="bar-wrap run-bar-wrap">
                   <div className={w.now && w.total > 0 ? 'run-stack now' : 'run-stack'}>
@@ -335,7 +309,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
               {presentKinds.map((k) => (
                 <span key={k} className="run-legend-item">
                   <span className={`run-dot ${k}`} />
-                  {k}
+                  {kindLabel(k)}
                 </span>
               ))}
             </div>
@@ -345,9 +319,9 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
 
       {(longest || bestPace) && (
         <p className="gentle run-stats">
-          {longest ? `Longest: ${longest} km` : ''}
+          {longest ? t.cardio.longest(longest) : ''}
           {longest && bestPace ? ' · ' : ''}
-          {bestPace ? `Best pace: ${fmtPace(bestPace, 1)}` : ''}
+          {bestPace ? t.cardio.bestPace(fmtPace(bestPace, 1) ?? '') : ''}
         </p>
       )}
 
@@ -360,14 +334,14 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
         if (over >= 2 && !localStorage.getItem('cardio-sugg-over')) {
           return (
             <div className="notice vol-suggestion">
-              Cardio has said “over the line” a couple of times lately — an easier week is a fine plan.
+              {t.cardio.overNotice}
               <button
                 className="link"
                 onClick={() => {
                   localStorage.setItem('cardio-sugg-over', '1')
                   reload()
                 }}
-                aria-label="Dismiss"
+                aria-label={t.common.dismiss}
               >
                 <Icon name="x" />
               </button>
@@ -377,14 +351,14 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
         if (more >= 2 && over === 0 && !localStorage.getItem('cardio-sugg-more')) {
           return (
             <div className="notice vol-suggestion">
-              Cardio keeps saying “could take more” — want to nudge the distance up a little?
+              {t.cardio.moreNotice}
               <button
                 className="link"
                 onClick={() => {
                   localStorage.setItem('cardio-sugg-more', '1')
                   reload()
                 }}
-                aria-label="Dismiss"
+                aria-label={t.common.dismiss}
               >
                 <Icon name="x" />
               </button>
@@ -404,55 +378,55 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
                   type="date"
                   value={editCardio.date}
                   onChange={(e) => setEditCardio({ ...editCardio, date: e.target.value })}
-                  title="Date"
+                  title={t.cardio.dateTitle}
                 />
               </div>
               <div className="edit-task-row">
                 <select value={editCardio.kind} onChange={(e) => setEditCardio({ ...editCardio, kind: e.target.value })}>
-                  {CARDIO_KINDS.map(([value, label]) => (
+                  {CARDIO_KINDS.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {kindLabel(value)}
                     </option>
                   ))}
                 </select>
                 <input
                   type="number"
                   inputMode="decimal"
-                  placeholder="km"
+                  placeholder={t.cardio.kmPh}
                   value={editCardio.km}
                   onChange={(e) => setEditCardio({ ...editCardio, km: e.target.value })}
                 />
                 <input
                   type="number"
                   inputMode="numeric"
-                  placeholder="min"
+                  placeholder={t.cardio.minPh}
                   value={editCardio.min}
                   onChange={(e) => setEditCardio({ ...editCardio, min: e.target.value })}
                 />
                 <input
                   type="number"
                   inputMode="numeric"
-                  placeholder="bpm"
+                  placeholder={t.cardio.bpmPh}
                   value={editCardio.hr}
                   onChange={(e) => setEditCardio({ ...editCardio, hr: e.target.value })}
                 />
               </div>
               <div className="edit-task-row">
                 <input
-                  placeholder="notes"
+                  placeholder={t.cardio.notesPh}
                   value={editCardio.notes}
                   onChange={(e) => setEditCardio({ ...editCardio, notes: e.target.value })}
                 />
               </div>
-              {CARDIO_QUESTIONS.map((q) => (
-                <div key={q.field} className="checkin-q">
-                  <span className="energy-label">{q.label}</span>
+              {CARDIO_QUESTIONS.map((field) => (
+                <div key={field} className="checkin-q">
+                  <span className="energy-label">{t.cardio.questions[field].label}</span>
                   <div className="checkin-pills">
-                    {q.options.map(([value, label]) => (
+                    {Object.entries(t.cardio.questions[field].options).map(([value, label]) => (
                       <button
                         key={value}
-                        className={c[q.field] === value ? 'energy-btn active' : 'energy-btn'}
-                        onClick={() => setCardioFeel(c.id, q.field, value)}
+                        className={c[field] === value ? 'energy-btn active' : 'energy-btn'}
+                        onClick={() => setCardioFeel(c.id, field, value)}
                       >
                         {label}
                       </button>
@@ -462,15 +436,15 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
               ))}
               <div className="edit-task-row">
                 <button className="save" onClick={saveCardio}>
-                  Save
+                  {t.common.save}
                 </button>
                 <button className="link" onClick={() => setEditCardio(null)}>
-                  Close
+                  {t.common.close}
                 </button>
                 <ConfirmButton
                   className="danger"
-                  label="Delete"
-                  confirmLabel="delete this entry?"
+                  label={t.common.delete}
+                  confirmLabel={t.cardio.deleteConfirm}
                   onConfirm={() => deleteCardio(c.id)}
                 />
               </div>
@@ -483,11 +457,11 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
               <Icon name={kindIcon(c.kind)} /> {c.date}
             </span>
             <span className="gym-sets">
-              {c.distance_km ? `${c.distance_km} km` : ''}
+              {c.distance_km ? t.cardio.km(Number(c.distance_km)) : ''}
               {c.distance_km && c.minutes ? ' · ' : ''}
-              {c.minutes ? `${c.minutes} min` : ''}
+              {c.minutes ? t.cardio.min(Number(c.minutes)) : ''}
               {pace ? ` · ${pace}` : ''}
-              {c.avg_hr ? ` · ${c.avg_hr} bpm` : ''}
+              {c.avg_hr ? ` · ${t.cardio.bpm(c.avg_hr)}` : ''}
             </span>
             <button
               className="link run-edit"
@@ -503,7 +477,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
                 })
               }
             >
-              edit
+              {t.common.edit}
             </button>
             {c.notes && <span className="gym-notes">{c.notes}</span>}
           </div>
@@ -511,7 +485,9 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
       })}
       {cardio.length === 0 && (
         <p className="gentle">
-          Log above, tell the composer <em>“ran 5k in 32 min”</em>, or finish a Pull session — they all land here.
+          {t.cardio.emptyHint}
+          <em>{t.cardio.emptyHintExample}</em>
+          {t.cardio.emptyHintTail}
         </p>
       )}
     </section>

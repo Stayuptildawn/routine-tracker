@@ -4,12 +4,13 @@ import { usePresence } from '../lib/overlay'
 import { localDate } from '../lib/types'
 import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
 import { setTaskStatus } from '../lib/actions'
+import { t } from '../i18n'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 import type { ReactNode } from 'react'
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAY_NAMES = t.week.dayNames
 const TIERS: Tier[] = ['core', 'standard', 'bonus']
 
 /** Dates (yyyy-mm-dd) for Monday..Sunday of the current week. */
@@ -127,7 +128,7 @@ export default function Week({ visible }: { visible: boolean }) {
     const label = newLabel.trim()
     if (!label) return
     const routine = routines.find((r) => r.id === routineId)
-    const maxOrder = Math.max(0, ...(routine?.tasks ?? []).map((t) => t.sort_order ?? 0))
+    const maxOrder = Math.max(0, ...(routine?.tasks ?? []).map((task) => task.sort_order ?? 0))
     await supabase.from('tasks').insert({ routine_id: routineId, label, sort_order: maxOrder + 1 })
     setNewLabel('')
     setNewTaskFor(null)
@@ -187,8 +188,8 @@ export default function Week({ visible }: { visible: boolean }) {
 
   return (
     <div className={draftCount > 0 ? 'week has-savebar' : 'week'}>
-      <h1>This week</h1>
-      <p className="gentle">A record, not a scorecard. Blanks are neutral.</p>
+      <h1>{t.week.title}</h1>
+      <p className="gentle">{t.week.subtitle}</p>
       {!loaded && <Skeleton cards={4} />}
       {routines.map((routine) => {
         const tasks = (routine.tasks ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -212,24 +213,24 @@ export default function Week({ visible }: { visible: boolean }) {
                     autoFocus
                   />
                   <button className="save" onClick={() => renameRoutine(routine.id)} disabled={!nameDraft.trim()}>
-                    Save
+                    {t.common.save}
                   </button>
                   <button className="energy-btn" onClick={() => setEditing(null)}>
-                    Cancel
+                    {t.common.cancel}
                   </button>
                 </div>
               ) : (
                 <>
                   <h2>
                     {routine.name}
-                    {paused && <span className="routine-progress"> paused</span>}
+                    {paused && <span className="routine-progress">{t.week.paused}</span>}
                   </h2>
                   <button
                     className={paused ? 'energy-btn activate' : 'energy-btn'}
                     onClick={() => setActive(routine.id, paused)}
-                    title={paused ? 'Show on the Now tab again' : 'Hide from the Now tab (keeps all history)'}
+                    title={paused ? t.week.activateTitle : t.week.pauseTitle}
                   >
-                    {paused ? 'Activate' : 'Pause'}
+                    {paused ? t.week.activate : t.week.pause}
                   </button>
                   <button
                     className="energy-btn"
@@ -238,7 +239,7 @@ export default function Week({ visible }: { visible: boolean }) {
                       setNameDraft(routine.name)
                     }}
                   >
-                    Edit
+                    {t.common.Edit}
                   </button>
                 </>
               )}
@@ -247,20 +248,20 @@ export default function Week({ visible }: { visible: boolean }) {
             {isEditing ? (
               <div className="edit-panel">
                 <div className="anchor-row">
-                  <label htmlFor={`anchor-${routine.id}`}>Anchor time</label>
+                  <label htmlFor={`anchor-${routine.id}`}>{t.week.anchorTime}</label>
                   <input
                     id={`anchor-${routine.id}`}
                     type="time"
                     value={routine.anchor_time?.slice(0, 5) ?? ''}
                     onChange={(e) => setAnchor(routine.id, e.target.value)}
-                    title="Roughly when this routine happens - sorts the Now view and times nudges"
+                    title={t.week.anchorTitle}
                   />
                   {routine.anchor_time ? (
                     <button className="link" onClick={() => setAnchor(routine.id, '')}>
-                      clear
+                      {t.common.clear}
                     </button>
                   ) : (
-                    <span className="gentle anchor-hint">optional — “around when?”</span>
+                    <span className="gentle anchor-hint">{t.week.anchorHint}</span>
                   )}
                 </div>
                 {tasks.map((task) => (
@@ -276,19 +277,19 @@ export default function Week({ visible }: { visible: boolean }) {
                       <select
                         value={task.tier}
                         onChange={(e) => updateTask(task.id, { tier: e.target.value as Tier })}
-                        title="core = shown even on low-energy days"
+                        title={t.week.tierTitle}
                       >
-                        {TIERS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
+                        {TIERS.map((tier) => (
+                          <option key={tier} value={tier}>
+                            {t.tiers[tier]}
                           </option>
                         ))}
                       </select>
                       <ConfirmButton
                         className="danger"
                         label={<Icon name="x" />}
-                        confirmLabel="delete?"
-                        title={`Delete "${task.label}"`}
+                        confirmLabel={t.week.deleteTaskConfirm}
+                        title={t.week.deleteTaskTitle(task.label)}
                         onConfirm={() => deleteTask(task)}
                       />
                     </div>
@@ -298,9 +299,9 @@ export default function Week({ visible }: { visible: boolean }) {
                           key={d}
                           className={task.scheduled_days.includes(i + 1) ? 'day on' : 'day'}
                           onClick={() => toggleDay(task, i + 1)}
-                          title={task.scheduled_days.includes(i + 1) ? `scheduled ${d}` : `not scheduled ${d}`}
+                          title={task.scheduled_days.includes(i + 1) ? t.week.scheduledDay(d) : t.week.notScheduledDay(d)}
                         >
-                          {d.slice(0, 2)}
+                          {t.week.dayNamesShort[i]}
                         </button>
                       ))}
                     </div>
@@ -312,14 +313,14 @@ export default function Week({ visible }: { visible: boolean }) {
                     onFocus={() => setNewTaskFor(routine.id)}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addTask(routine.id)}
-                    placeholder="New task label"
+                    placeholder={t.week.newTaskPh}
                   />
-                  <button onClick={() => addTask(routine.id)}>Add</button>
+                  <button onClick={() => addTask(routine.id)}>{t.common.add}</button>
                 </div>
                 <ConfirmButton
                   className="danger delete-routine"
-                  label="Delete this routine"
-                  confirmLabel="Really delete — tasks and history too?"
+                  label={t.week.deleteRoutine}
+                  confirmLabel={t.week.deleteRoutineConfirm}
                   onConfirm={() => deleteRoutine(routine)}
                 />
               </div>
@@ -341,7 +342,7 @@ export default function Week({ visible }: { visible: boolean }) {
                       <tr key={task.id}>
                         <td className="task-name">
                           {task.label}
-                          {task.tier === 'core' && <span className="tier-dot" title="core">•</span>}
+                          {task.tier === 'core' && <span className="tier-dot" title={t.week.coreDot}>•</span>}
                         </td>
                         {weekDates.map((date, i) => {
                           const scheduled = task.scheduled_days.includes(i + 1)
@@ -354,7 +355,7 @@ export default function Week({ visible }: { visible: boolean }) {
                               className={`cell ${status} ${scheduled ? '' : 'unscheduled'} ${date === today ? 'today' : ''} ${tappable ? 'tappable' : ''} ${draft ? 'draft' : ''}`}
                               role={tappable ? 'button' : undefined}
                               tabIndex={tappable ? 0 : undefined}
-                              title={tappable ? `${task.label} — tap to edit ${DAY_NAMES[i]}` : undefined}
+                              title={tappable ? t.week.cellTitle(task.label, DAY_NAMES[i]) : undefined}
                               onClick={tappable ? () => cycleCell(task, date) : undefined}
                               onKeyDown={
                                 tappable
@@ -377,7 +378,7 @@ export default function Week({ visible }: { visible: boolean }) {
                 </table>
               </div>
             ) : (
-              <p className="gentle">No daily tasks — used as a reminder category.</p>
+              <p className="gentle">{t.week.noDailyTasks}</p>
             )}
           </section>
         )
@@ -390,30 +391,28 @@ export default function Week({ visible }: { visible: boolean }) {
             onChange={(e) => setNewRoutine(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addRoutine()}
             onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-            placeholder="New routine name"
+            placeholder={t.week.newRoutinePh}
             autoFocus
           />
-          <button onClick={addRoutine}>Add</button>
+          <button onClick={addRoutine}>{t.common.add}</button>
           <button className="link" onClick={() => setAddingRoutine(false)}>
-            Cancel
+            {t.common.cancel}
           </button>
         </div>
       ) : (
         <button className="link add-routine" onClick={() => setAddingRoutine(true)}>
-          + Add routine
+          {t.week.addRoutine}
         </button>
       )}
 
       {savebar.mounted && (
         <div className="week-savebar" data-closing={savebar.closing || undefined} role="status">
-          <span>
-            {shownCount} unsaved {shownCount === 1 ? 'change' : 'changes'}
-          </span>
+          <span>{t.week.unsavedChanges(shownCount)}</span>
           <button className="save" onClick={saveDrafts}>
-            Save
+            {t.common.save}
           </button>
           <button className="energy-btn" onClick={() => setDrafts({})}>
-            Cancel
+            {t.common.cancel}
           </button>
         </div>
       )}

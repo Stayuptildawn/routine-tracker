@@ -4,6 +4,36 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-07-17
+
+### Added
+- **Six new languages**: Français, Español, Deutsch, 中文, العربية and فارسی
+  join English. The picker appears under Settings → Language; Arabic and Farsi
+  flip the whole layout right-to-left, and Farsi shows dates in the Jalali
+  calendar. Everything is translated — screens, seeded routines, the starter
+  plan's safety cues and the demo content (the demo reseeds itself in the
+  chosen language).
+- **Live demo mode**: the app now runs fully in the browser with no account
+  and no backend — visit with `?demo` (linked from the README) or tap
+  "Try the live demo" on the sign-in screen. A fake Supabase client backed
+  by localStorage serves a believable week of routines, workouts, cardio and
+  reminders; everything is interactive (check-offs, the Week grid, starting
+  a training block, Reflect charts, CSV exports). The AI composer explains
+  itself instead of calling a server, and a small pill labels the session
+  with an Exit back to the real app.
+- **Single-file translations**: every user-facing string now lives in
+  `src/i18n/en.ts` — one typed file covering all screens, the seeded
+  routines and the starter plan's safety cues. Adding a language is copy,
+  translate, register (one import); TypeScript flags anything a translation
+  misses, and a language picker appears in Settings automatically once a
+  second language exists. Includes an RTL-ready `dir`/`lang` hook and
+  locale-aware date formatting.
+
+### Fixed
+- The "build your own" fields on the Workout setup card no longer sit
+  border-on-border — the three rows now have proper spacing in every
+  language, LTR and RTL.
+
 ## 2026-07-16
 
 ### Fixed

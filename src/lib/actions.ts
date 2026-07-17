@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { localDate, isoWeekday } from './types'
 import type { AppliedAction, InterpretResponse, LogStatus, ReminderStatus } from './types'
 import type { IconName } from '../components/Icon'
+import { t } from '../i18n'
 
 const QUEUE_KEY = 'pending_messages'
 
@@ -194,23 +195,30 @@ export function describeAction(a: AppliedAction): { icon: IconName; text: string
     case 'check_task':
       return { icon: a.status === 'skipped' ? 'skip' : 'check', text: a.label ?? '' }
     case 'log_workout': {
-      const sets = a.sets?.map((s) => `${s.kg}kg×${s.reps}`).join(', ')
-      const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
+      const sets = a.sets?.map((s) => t.actions.setKgReps(s.kg, s.reps)).join(', ')
+      const planned = a.planned_set_ids ? t.actions.plannedSession(a.split_day ?? '') : ''
       return { icon: 'dumbbell', text: `${a.exercise}${sets ? ` — ${sets}` : ''}${planned}` }
     }
     case 'log_cardio':
       return {
         icon: 'run',
-        text: `${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`,
+        text: `${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${t.now.minutes(a.minutes)}` : ''}`,
       }
     case 'create_reminder':
       return {
         icon: 'bell',
-        text: `${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date}${a.due_time ? ` ${a.due_time.slice(0, 5)}` : ''})` : ''}`,
+        text: t.actions.reminderTo(
+          a.text ?? '',
+          a.category ?? '',
+          a.due_date ? t.actions.reminderDue(a.due_date, a.due_time ? a.due_time.slice(0, 5) : '') : '',
+        ),
       }
     case 'complete_reminder':
-      return { icon: 'check', text: `${a.reminder_status === 'dismissed' ? 'dropped' : 'cleared'}: ${a.text}` }
+      return {
+        icon: 'check',
+        text: a.reminder_status === 'dismissed' ? t.actions.dropped(a.text ?? '') : t.actions.cleared(a.text ?? ''),
+      }
     case 'set_energy':
-      return { icon: 'battery-medium', text: `Energy: ${a.level}` }
+      return { icon: 'battery-medium', text: t.actions.energy(a.level ?? '') }
   }
 }

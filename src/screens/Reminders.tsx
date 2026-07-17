@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { Reminder } from '../lib/types'
 import { setReminderStatus } from '../lib/actions'
+import { t, locale } from '../i18n'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 
@@ -11,14 +12,18 @@ interface Category {
   name: string
 }
 
+// "Other" is a stored sentinel value (the AI writes it too) - only its
+// display is translated, the DB value stays stable
+const displayCat = (name: string) => (name === 'Other' ? t.reminders.other : name)
+
 /** "today" / "tomorrow" / "Sat 12 Jul", plus whether it's behind us. */
 export function describeDue(due: string, today: string): { label: string; overdue: boolean } {
-  if (due === today) return { label: 'today', overdue: false }
+  if (due === today) return { label: t.reminders.today, overdue: false }
   const dueDate = new Date(due + 'T00:00:00')
   const diffDays = Math.round((dueDate.getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000)
-  if (diffDays === 1) return { label: 'tomorrow', overdue: false }
-  const label = dueDate.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
-  return diffDays < 0 ? { label: `since ${label}`, overdue: true } : { label, overdue: false }
+  if (diffDays === 1) return { label: t.reminders.tomorrow, overdue: false }
+  const label = dueDate.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+  return diffDays < 0 ? { label: t.reminders.since(label), overdue: true } : { label, overdue: false }
 }
 
 /** Overdue first (oldest deadline up), then dated, then undated newest-first. */
@@ -35,7 +40,7 @@ export function pendingOrder(a: Reminder, b: Reminder): number {
 
 /** "12 Jul, 14:32" — when a reminder was cleared (its last status change). */
 function clearedWhen(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  return new Date(iso).toLocaleString(locale, {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -53,8 +58,8 @@ interface Draft {
 }
 
 /** "14:30:00" (postgres time) -> "14:30" for display and <input type="time">. */
-export function shortTime(t: string): string {
-  return t.slice(0, 5)
+export function shortTime(time: string): string {
+  return time.slice(0, 5)
 }
 
 export default function Reminders({ visible, onBack }: { visible: boolean; onBack: () => void }) {
@@ -169,10 +174,10 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
   return (
     <div className="reminders">
       <button className="link back" onClick={onBack}>
-        ← Back to Now
+        {t.reminders.back}
       </button>
-      <h1>Reminders</h1>
-      <p className="gentle">Things you asked to hold onto. Nothing here expires or nags.</p>
+      <h1>{t.reminders.title}</h1>
+      <p className="gentle">{t.reminders.subtitle}</p>
 
       {loaded && (
         <div className="add-task reminder-add">
@@ -181,19 +186,19 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
             maxLength={MAX_TEXT}
             onChange={(e) => setAdding({ ...adding, text: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && addReminder()}
-            placeholder="Add a reminder…"
+            placeholder={t.reminders.addPh}
           />
           <select value={adding.category} onChange={(e) => setAdding({ ...adding, category: e.target.value })}>
             {categories.map((c) => (
-              <option key={c.name}>{c.name}</option>
+              <option key={c.name} value={c.name}>{displayCat(c.name)}</option>
             ))}
           </select>
-          <label className="reminder-field" title="Due date (optional)">
-            <span className="gentle-inline">due</span>
+          <label className="reminder-field" title={t.reminders.dueTitle}>
+            <span className="gentle-inline">{t.reminders.due}</span>
             <input type="date" value={adding.due} onChange={(e) => setAdding({ ...adding, due: e.target.value })} />
           </label>
-          <label className="reminder-field" title="Optional — a push nudge goes out at this time (today if no date)">
-            <span className="gentle-inline">at</span>
+          <label className="reminder-field" title={t.reminders.atTitle}>
+            <span className="gentle-inline">{t.reminders.at}</span>
             <input
               type="time"
               value={adding.dueTime}
@@ -201,7 +206,7 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
             />
           </label>
           <button onClick={addReminder} disabled={!adding.text.trim()}>
-            Add
+            {t.common.add}
           </button>
         </div>
       )}
@@ -211,7 +216,7 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
       {loaded &&
         groups.map(({ cat, items }) => (
           <section key={cat.name} className="reminder-group">
-            <h2>{cat.name}</h2>
+            <h2>{displayCat(cat.name)}</h2>
             {items.map((r) => {
               const due = r.due_date ? describeDue(r.due_date, today) : null
               if (editing?.id === r.id) {
@@ -229,11 +234,11 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                     <div className="edit-task-row">
                       <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
                         {categories.map((c) => (
-                          <option key={c.name}>{c.name}</option>
+                          <option key={c.name} value={c.name}>{displayCat(c.name)}</option>
                         ))}
                       </select>
                       <label className="reminder-field">
-                        <span className="gentle-inline">due</span>
+                        <span className="gentle-inline">{t.reminders.due}</span>
                         <input
                           type="date"
                           value={editing.due}
@@ -241,7 +246,7 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                         />
                       </label>
                       <label className="reminder-field">
-                        <span className="gentle-inline">at</span>
+                        <span className="gentle-inline">{t.reminders.at}</span>
                         <input
                           type="time"
                           value={editing.dueTime}
@@ -250,22 +255,21 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                       </label>
                       {(editing.due || editing.dueTime) && (
                         <button className="link" onClick={() => setEditing({ ...editing, due: '', dueTime: '' })}>
-                          clear
+                          {t.common.clear}
                         </button>
                       )}
                     </div>
                     {editing.dueTime && (
                       <p className="gentle">
-                        A push nudge goes out around {editing.dueTime}
-                        {editing.due ? ' that day' : ' today'} (needs nudges enabled).
+                        {t.reminders.pushNote(editing.dueTime, !!editing.due)}
                       </p>
                     )}
                     <div className="edit-task-row">
                       <button className="save" onClick={saveEdit} disabled={!editing.text.trim()}>
-                        Save
+                        {t.common.save}
                       </button>
                       <button className="link" onClick={() => setEditing(null)}>
-                        Cancel
+                        {t.common.cancel}
                       </button>
                     </div>
                   </div>
@@ -283,8 +287,8 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                           {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
                         </span>
                       )}
-                      {r.status === 'auto' && <span className="badge">AI-sorted</span>}
-                      <span className="cat-pill">{r.final_category ?? 'Other'}</span>
+                      {r.status === 'auto' && <span className="badge">{t.reminders.aiSorted}</span>}
+                      <span className="cat-pill">{displayCat(r.final_category ?? 'Other')}</span>
                       <button
                         className="link reminder-edit-link"
                         onClick={() =>
@@ -297,16 +301,16 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                           })
                         }
                       >
-                        edit
+                        {t.common.edit}
                       </button>
                     </div>
                   </div>
                   <div className="task-buttons">
                     <button className="do" onClick={() => clear(r, 'done')}>
-                      Done
+                      {t.common.done}
                     </button>
                     <button className="skip" onClick={() => clear(r, 'dismissed')}>
-                      Dismiss
+                      {t.common.dismiss}
                     </button>
                   </div>
                 </div>
@@ -316,13 +320,13 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
         ))}
 
       {loaded && pending.length === 0 && (
-        <p className="gentle">Nothing pending. Say “remind me to…” on the Now tab to add one.</p>
+        <p className="gentle">{t.reminders.nothingPending}</p>
       )}
 
       {loaded && cleared.length > 0 && (
         <div className="cleared-section">
           <button className="link" onClick={() => setShowCleared(!showCleared)}>
-            {showCleared ? 'Hide cleared' : `Cleared (${cleared.length})`}
+            {showCleared ? t.reminders.hideCleared : t.reminders.cleared(cleared.length)}
           </button>
           {showCleared &&
             cleared.map((r) => (
@@ -331,13 +335,13 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                   <span className="reminder-text">{r.raw_text}</span>
                   <div className="reminder-tags">
                     <span className={r.status === 'done' ? 'badge confirmed' : 'badge undone'}>
-                      {r.status === 'done' ? 'Done' : 'Dismissed'}
+                      {r.status === 'done' ? t.reminders.doneBadge : t.reminders.dismissedBadge}
                     </span>
                     <span className="cleared-when">{clearedWhen(r.updated_at)}</span>
                   </div>
                 </div>
                 <button className="link" onClick={() => restore(r)}>
-                  Restore
+                  {t.common.Restore}
                 </button>
               </div>
             ))}

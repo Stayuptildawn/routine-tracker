@@ -9,6 +9,8 @@
 //    build/peak weeks.
 // The whole plan scales off one number: your easy-week baseline volume (km).
 
+import { t } from '../i18n'
+
 export const DEFAULT_BASE_KM = 10 // two easy 5k runs
 
 interface CardioWeek {
@@ -40,13 +42,6 @@ export function cardioTargetForWeek(baseKm: number, programWeek: number): Cardio
   const idx = ((Math.max(1, programWeek) - 1) % 6)
   const w = CYCLE[idx]
   const km = Math.round(baseKm * w.factor * 10) / 10
-  const note =
-    w.phase === 'Deload'
-      ? 'Easy week. Keep it short and gentle so the last block settles in.'
-      : w.phase === 'Peak'
-        ? 'Highest volume of the cycle. Still all conversational pace — easy is the point.'
-        : w.phase === 'Build'
-          ? 'Adding a little distance. Keep every session easy enough to hold a conversation.'
-          : 'Building the aerobic base. All easy, all Zone 2.'
+  const note = t.cardioPlan.notes[w.phase] ?? ''
   return { week: idx + 1, phase: w.phase, km, sessions: w.sessions, note }
 }

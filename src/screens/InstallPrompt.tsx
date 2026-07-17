@@ -6,6 +6,7 @@ import {
   subscribeInstall,
   triggerInstall,
 } from '../lib/pwaInstall'
+import { t } from '../i18n'
 import Icon from '../components/Icon'
 
 const DISMISS_KEY = 'pwa-install-dismissed'
@@ -33,32 +34,25 @@ export default function InstallPrompt() {
 
   return (
     <div className="install-card">
-      <p className="install-title"><Icon name="install" /> Install this as an app first</p>
+      <p className="install-title"><Icon name="install" /> {t.install.installFirst}</p>
 
       {platform === 'ios' ? (
         <>
-          <p className="install-body">
-            iPhone keeps this one tucked away. Tap the Share button at the bottom
-            of the screen, then “Add to Home Screen”. Open it from there and sign
-            in, it runs full screen and can send you gentle nudges.
-          </p>
+          <p className="install-body">{t.install.iosBody}</p>
           <button className="link install-later" onClick={dismiss}>
-            maybe later
+            {t.install.maybeLater}
           </button>
         </>
       ) : canPrompt ? (
         // Android with Chrome's install event ready: one tap does it.
         <>
-          <p className="install-body">
-            On your phone it runs much nicer from the home screen, full screen and
-            with push nudges, and you only do this once.
-          </p>
+          <p className="install-body">{t.install.androidOneTapBody}</p>
           <div className="install-actions">
             <button className="start-session" onClick={install}>
-              Install app
+              {t.install.installApp}
             </button>
             <button className="link install-later" onClick={dismiss}>
-              maybe later
+              {t.install.maybeLater}
             </button>
           </div>
         </>
@@ -66,13 +60,9 @@ export default function InstallPrompt() {
         // Android without the event (Firefox, Samsung Internet, or Chrome
         // before it offers the prompt): tell them where the menu item lives.
         <>
-          <p className="install-body">
-            Tap the ⋮ menu at the top right of your browser, then “Install app”
-            (some browsers call it “Add to Home screen”). Open it from there and
-            sign in, it runs full screen and can send you gentle nudges.
-          </p>
+          <p className="install-body">{t.install.androidMenuBody}</p>
           <button className="link install-later" onClick={dismiss}>
-            maybe later
+            {t.install.maybeLater}
           </button>
         </>
       )}

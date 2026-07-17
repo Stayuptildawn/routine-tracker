@@ -3,6 +3,8 @@
 // such API (install is a manual "Add to Home Screen"), so we detect the
 // platform and show instructions there instead.
 
+import { t } from '../i18n'
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
@@ -44,10 +46,8 @@ export async function triggerInstall(): Promise<'accepted' | 'dismissed' | null>
 
 // Manual steps for when there's no install event to fire (always on iOS,
 // sometimes on Android). Shared so the login card and the Now-tab button agree.
-export const IOS_INSTALL_STEPS =
-  'Tap the Share button at the bottom of the screen, then “Add to Home Screen”.'
-export const ANDROID_INSTALL_STEPS =
-  'Tap the ⋮ menu at the top right of your browser, then “Install app” (some browsers call it “Add to Home screen”).'
+export const IOS_INSTALL_STEPS = t.install.iosSteps
+export const ANDROID_INSTALL_STEPS = t.install.androidSteps
 
 export type Platform = 'ios' | 'android' | 'other'
 

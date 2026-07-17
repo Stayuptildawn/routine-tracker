@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
+import { t, locale } from '../i18n'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
@@ -18,19 +19,13 @@ type Metric = 'tasks' | 'sets' | 'cardio'
 type Frame = 'daily' | 'weekly' | 'monthly' | 'half' | 'yearly'
 
 const METRICS: { id: Metric; label: string; icon: IconName; unit: string }[] = [
-  { id: 'tasks', label: 'Tasks', icon: 'tasks', unit: '' },
-  { id: 'sets', label: 'Sets', icon: 'dumbbell', unit: '' },
-  { id: 'cardio', label: 'Cardio', icon: 'run', unit: ' km' },
+  { id: 'tasks', label: t.reflect.metricTasks, icon: 'tasks', unit: '' },
+  { id: 'sets', label: t.reflect.metricSets, icon: 'dumbbell', unit: '' },
+  { id: 'cardio', label: t.reflect.metricCardio, icon: 'run', unit: ' km' },
 ]
 
 // every range ends now / today / this week / this month
-const FRAMES: { id: Frame; label: string; hint: string }[] = [
-  { id: 'daily', label: 'D', hint: 'last 24 hours' },
-  { id: 'weekly', label: 'W', hint: 'last 7 days' },
-  { id: 'monthly', label: 'M', hint: 'last 32 days' },
-  { id: 'half', label: '6M', hint: 'last 6 months, weekly' },
-  { id: 'yearly', label: 'Y', hint: 'last 12 months' },
-]
+const FRAMES: Frame[] = ['daily', 'weekly', 'monthly', 'half', 'yearly']
 
 const FRAME_BUCKET: Record<Frame, string> = {
   daily: 'hour',
@@ -57,13 +52,13 @@ function buildSlots(frame: Frame): Slot[] {
     for (let i = 23; i >= 0; i--) {
       const d = new Date(hour)
       d.setHours(d.getHours() - i)
-      slots.push({ key: d.toISOString().slice(0, 13), label: i % 6 === 0 ? `${d.getHours()}h` : '' })
+      slots.push({ key: d.toISOString().slice(0, 13), label: i % 6 === 0 ? t.reflect.hourLabel(d.getHours()) : '' })
     }
   } else if (frame === 'weekly') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
-      slots.push({ key: localDate(d), label: d.toLocaleDateString(undefined, { weekday: 'narrow' }) })
+      slots.push({ key: localDate(d), label: d.toLocaleDateString(locale, { weekday: 'narrow' }) })
     }
   } else if (frame === 'monthly') {
     for (let i = 31; i >= 0; i--) {
@@ -83,7 +78,7 @@ function buildSlots(frame: Frame): Slot[] {
   } else {
     for (let i = 11; i >= 0; i--) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
-      slots.push({ key: localDate(d), label: d.toLocaleDateString(undefined, { month: 'narrow' }) })
+      slots.push({ key: localDate(d), label: d.toLocaleDateString(locale, { month: 'narrow' }) })
     }
   }
   return slots
@@ -165,7 +160,7 @@ export default function Reflect({ visible }: { visible: boolean }) {
         const dayLogs = (tasksRes.data ?? []).filter((l) => l.date === date)
         stats.push({
           date,
-          dayName: d.toLocaleDateString(undefined, { weekday: 'short' }),
+          dayName: d.toLocaleDateString(locale, { weekday: 'short' }),
           done:
             dayLogs.filter((l) => l.status === 'done' || l.status === 'partial').length +
             sessionDates.filter((s) => s === date).length +
@@ -185,17 +180,15 @@ export default function Reflect({ visible }: { visible: boolean }) {
 
   return (
     <div className="reflect">
-      <h1>This week, gently</h1>
-      <p className="gentle">
-        Patterns, not judgment. No streaks here — a quiet day is information, not failure.
-      </p>
+      <h1>{t.reflect.title}</h1>
+      <p className="gentle">{t.reflect.subtitle}</p>
       {reflection && (() => {
         const monday = new Date()
         monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
         const thisWeek = reflection.week_start === localDate(monday)
         return (
           <div className="reflection-card">
-            <p className="eyebrow">{thisWeek ? 'Noticed this week' : 'Noticed recently'}</p>
+            <p className="eyebrow">{thisWeek ? t.reflect.noticedThisWeek : t.reflect.noticedRecently}</p>
             <p className="reflection-body">{reflection.body}</p>
           </div>
         )
@@ -215,30 +208,28 @@ export default function Reflect({ visible }: { visible: boolean }) {
       {!loaded ? null : totalDone > 0 ? (
         <div className="reflect-notes">
           <p>
-            You completed <strong>{totalDone}</strong> things this week — tasks, gym sessions and
-            cardio all count.
-            {strongest && strongest.done > 0 && <> {strongest.dayName} was your strongest day.</>}
+            {t.reflect.completedLead}
+            <strong>{totalDone}</strong>
+            {t.reflect.completedTail}
+            {strongest && strongest.done > 0 && <>{t.reflect.strongestDay(strongest.dayName)}</>}
           </p>
           {days.reduce((n, d) => n + d.skipped, 0) > 0 && (
-            <p>
-              You consciously skipped {days.reduce((n, d) => n + d.skipped, 0)} — that’s
-              self-management, not slacking.
-            </p>
+            <p>{t.reflect.skippedNote(days.reduce((n, d) => n + d.skipped, 0))}</p>
           )}
         </div>
       ) : (
-        <p className="gentle">Nothing logged yet this week. Whenever you’re ready.</p>
+        <p className="gentle">{t.reflect.nothingLogged}</p>
       )}
 
       <section className="reflect-bars explore-card">
         <div className="explore-inner">
           <h2>
-            Explore
+            {t.reflect.explore}
             <span className="routine-progress">
               {' '}
-              {FRAMES.find((f) => f.id === frame)?.hint}
+              {t.reflect.frames[frame]?.hint}
               {explore
-                ? ` · ${metric === 'cardio' ? `${Math.round(explore.values.reduce((a, b) => a + b, 0) * 10) / 10} km` : `${Math.round(explore.values.reduce((a, b) => a + b, 0))} total`}`
+                ? ` · ${metric === 'cardio' ? t.reflect.kmTotal(Math.round(explore.values.reduce((a, b) => a + b, 0) * 10) / 10) : t.reflect.total(Math.round(explore.values.reduce((a, b) => a + b, 0)))}`
                 : ''}
             </span>
           </h2>
@@ -251,8 +242,8 @@ export default function Reflect({ visible }: { visible: boolean }) {
           </div>
           <div className="energy-row explore-row">
             {FRAMES.map((f) => (
-              <button key={f.id} className={frame === f.id ? 'energy-btn active' : 'energy-btn'} onClick={() => setFrame(f.id)}>
-                {f.label}
+              <button key={f} className={frame === f ? 'energy-btn active' : 'energy-btn'} onClick={() => setFrame(f)}>
+                {t.reflect.frames[f]?.label}
               </button>
             ))}
           </div>
@@ -260,9 +251,13 @@ export default function Reflect({ visible }: { visible: boolean }) {
             <p className="gentle explore-stats">
               {(() => {
                 const vs = explore.values
-                const f = (v: number) => (metric === 'cardio' ? Math.round(v * 10) / 10 : Math.round(v * 10) / 10)
+                const f = (v: number) => Math.round(v * 10) / 10
                 const unit = metric === 'cardio' ? ' km' : ''
-                return `Min ${f(Math.min(...vs))}${unit} · Max ${f(Math.max(...vs))}${unit} · Avg ${f(vs.reduce((a, b) => a + b, 0) / vs.length)}${unit}`
+                return t.reflect.minMaxAvg(
+                  `${f(Math.min(...vs))}${unit}`,
+                  `${f(Math.max(...vs))}${unit}`,
+                  `${f(vs.reduce((a, b) => a + b, 0) / vs.length)}${unit}`,
+                )
               })()}
             </p>
           )}
@@ -286,30 +281,30 @@ export default function Reflect({ visible }: { visible: boolean }) {
               })()}
             </div>
           ) : (
-            <p className="gentle">Loading…</p>
+            <p className="gentle">{t.common.loading}</p>
           )}
         </div>
       </section>
 
       <p className="gentle export-row">
-        Your data is yours:
+        {t.reflect.dataYours}
         <button className="link" onClick={() => exportTaskLogs()}>
-          <Icon name="download" /> tasks CSV
+          <Icon name="download" /> {t.reflect.csvTasks}
         </button>
         <button className="link" onClick={() => exportWorkoutLogs()}>
-          <Icon name="download" /> workouts CSV
+          <Icon name="download" /> {t.reflect.csvWorkouts}
         </button>
         <button className="link" onClick={() => exportCardioLogs()}>
-          <Icon name="download" /> cardio CSV
+          <Icon name="download" /> {t.reflect.csvCardio}
         </button>
         <button className="link" onClick={() => exportTrainingSets()}>
-          <Icon name="download" /> training CSV
+          <Icon name="download" /> {t.reflect.csvTraining}
         </button>
         <button className="link" onClick={() => exportCheckins()}>
-          <Icon name="download" /> check-ins CSV
+          <Icon name="download" /> {t.reflect.csvCheckins}
         </button>
         <button className="link" onClick={() => exportReminders()}>
-          <Icon name="download" /> reminders CSV
+          <Icon name="download" /> {t.reflect.csvReminders}
         </button>
       </p>
     </div>

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { isDemo } from './demo'
 
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
@@ -11,6 +12,8 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 /** Push needs a service worker, the API, and a configured VAPID key.
  *  (iOS additionally requires the PWA installed to the home screen.) */
 export function pushSupported(): boolean {
+  // no push server behind the demo - hide the whole nudges UI there
+  if (isDemo) return false
   return 'serviceWorker' in navigator && 'PushManager' in window && !!VAPID_PUBLIC
 }
 

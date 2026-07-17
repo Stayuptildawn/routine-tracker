@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, configured } from './lib/supabase'
+import { isDemo, exitDemo } from './lib/demo'
 import { SEED_ROUTINES } from './lib/seedData'
+import { t } from './i18n'
 import { flushMessageQueue, flushTapQueue } from './lib/actions'
 import { flushOps } from './lib/offline'
 import { armBackGuard, onBackButton } from './lib/backButton'
@@ -23,11 +25,11 @@ import type { IconName } from './components/Icon'
 type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect' | 'reminders'
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: 'now', label: 'Now', icon: 'sun' },
-  { id: 'week', label: 'Week', icon: 'calendar' },
-  { id: 'gym', label: 'Workout', icon: 'dumbbell' },
-  { id: 'history', label: 'AI Log', icon: 'bot' },
-  { id: 'reflect', label: 'Reflect', icon: 'leaf' },
+  { id: 'now', label: t.app.tabNow, icon: 'sun' },
+  { id: 'week', label: t.app.tabWeek, icon: 'calendar' },
+  { id: 'gym', label: t.app.tabWorkout, icon: 'dumbbell' },
+  { id: 'history', label: t.app.tabAiLog, icon: 'bot' },
+  { id: 'reflect', label: t.app.tabReflect, icon: 'leaf' },
 ]
 
 /** Import the spreadsheet routines on first login. */
@@ -43,12 +45,12 @@ async function seedIfEmpty() {
     if (error || !routine) continue
     if (seed.tasks.length > 0) {
       await supabase.from('tasks').insert(
-        seed.tasks.map((t, j) => ({
+        seed.tasks.map((task, j) => ({
           routine_id: routine.id,
-          label: t.label,
+          label: task.label,
           sort_order: j,
-          tier: t.tier,
-          scheduled_days: t.days ?? [1, 2, 3, 4, 5, 6, 7],
+          tier: task.tier,
+          scheduled_days: task.days ?? [1, 2, 3, 4, 5, 6, 7],
         })),
       )
     }
@@ -131,18 +133,26 @@ export default function App() {
   if (!configured)
     return (
       <div className="center-note">
-        Missing Supabase credentials — copy .env.example to .env and fill it in (see README).
+        {t.app.missingCreds}
       </div>
     )
-  if (!ready) return <div className="center-note">Loading…</div>
+  if (!ready) return <div className="center-note">{t.common.loading}</div>
   if (!session) return <Auth />
   if (recovering) return <SetPassword onDone={() => setRecovering(false)} />
-  if (seeding) return <div className="center-note">Setting up your routines…</div>
+  if (seeding) return <div className="center-note">{t.app.seeding}</div>
 
   // screens stay mounted so switching back is instant (state survives,
   // no refetch flash); each refreshes itself in the background when shown
   return (
     <div className="app">
+      {isDemo && (
+        <div className="demo-badge" role="status">
+          {t.demo.badge}
+          <button className="link" onClick={exitDemo}>
+            {t.demo.exit}
+          </button>
+        </div>
+      )}
       <main className="content">
         <div hidden={tab !== 'now'}>
           <Now visible={tab === 'now'} onOpenReminders={() => setTab('reminders')} onOpenSettings={() => setSettingsOpen(true)} />
@@ -163,26 +173,26 @@ export default function App() {
           <Reflect visible={tab === 'reflect'} />
         </div>
       </main>
-      <nav className="tabbar" aria-label="Main">
-        {TABS.map((t) => {
-          const current = tab === t.id || (tab === 'reminders' && t.id === 'now')
+      <nav className="tabbar" aria-label={t.app.mainNav}>
+        {TABS.map((tb) => {
+          const current = tab === tb.id || (tab === 'reminders' && tb.id === 'now')
           return (
           <button
-            key={t.id}
+            key={tb.id}
             className={current ? 'tab active' : 'tab'}
             aria-current={current ? 'page' : undefined}
             onClick={() => {
-              setTab(t.id)
+              setTab(tb.id)
               window.scrollTo(0, 0)
             }}
           >
-            <span className="tab-icon"><Icon name={t.icon} /></span>
-            <span className="tab-label">{t.label}</span>
+            <span className="tab-icon"><Icon name={tb.icon} /></span>
+            <span className="tab-label">{tb.label}</span>
           </button>
           )
         })}
-        <button className="settings-rail" onClick={() => setSettingsOpen(true)} title="Settings">
-          <Icon name="settings" /> Settings
+        <button className="settings-rail" onClick={() => setSettingsOpen(true)} title={t.common.settings}>
+          <Icon name="settings" /> {t.common.settings}
         </button>
       </nav>
       {settings.mounted && (

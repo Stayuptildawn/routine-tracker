@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { PlannedSession, TrainingBlock, WorkoutPlan } from '../lib/types'
+import { t } from '../i18n'
 import Icon from '../components/Icon'
 
 export const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
 export const PHASE_KEYS = ['1-2', '3-4', '5-6']
+
+const muscleLabel = (m: string) => t.muscles[m] ?? m
 
 /** "4 x 8-10" -> sets "4", reps "8-10". Text without a leading count (e.g.
  *  "Rest") lands whole in reps so nothing a user typed ever disappears. */
@@ -207,19 +210,16 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
     <div className="edit-panel">
       <div className="edit-task-row plan-edit-actions">
         <button className="save" onClick={save} disabled={saving}>
-          {saving ? 'Saving…' : <><Icon name="check" /> Save changes</>}
+          {saving ? t.planEditor.saving : <><Icon name="check" /> {t.planEditor.saveChanges}</>}
         </button>
         <button className="cancel" onClick={onCancel} disabled={saving}>
-          <Icon name="x" /> Cancel
+          <Icon name="x" /> {t.common.cancel}
         </button>
       </div>
-      <p className="gentle">
-        Nothing is saved until you press Save — Cancel walks away untouched. Renames and notes reach this block's
-        remaining sets; you'll be asked about added or removed exercises.
-      </p>
+      <p className="gentle">{t.planEditor.note}</p>
 
       <div className="energy-row plan-row">
-        <span className="energy-label">Session</span>
+        <span className="energy-label">{t.planEditor.sessionLabel}</span>
         {tabs.map((s) => (
           <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
             {s}
@@ -233,7 +233,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
             <div key={r.key} className="edit-task-row plan-deleted">
               <span className="plan-deleted-name">{r.exercise}</span>
               <button className="link" onClick={() => patch(r.key, { deleted: false })}>
-                restore
+                {t.common.restore}
               </button>
             </div>
           )
@@ -245,21 +245,21 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
               <input value={r.exercise} onChange={(e) => patch(r.key, { exercise: e.target.value })} />
               <select value={r.muscle} onChange={(e) => patch(r.key, { muscle: e.target.value })}>
                 {MUSCLE_GROUPS.map((m) => (
-                  <option key={m}>{m}</option>
+                  <option key={m} value={m}>{muscleLabel(m)}</option>
                 ))}
               </select>
-              <button className="danger" disabled={pos === 0} onClick={() => move(r.key, -1)} aria-label="Move up">
+              <button className="danger" disabled={pos === 0} onClick={() => move(r.key, -1)} aria-label={t.planEditor.moveUp}>
                 <Icon name="arrow-up" />
               </button>
               <button
                 className="danger"
                 disabled={pos === visibleSplitKeys.length - 1}
                 onClick={() => move(r.key, 1)}
-                aria-label="Move down"
+                aria-label={t.planEditor.moveDown}
               >
                 <Icon name="arrow-down" />
               </button>
-              <button className="danger" title="Remove (undoable until Save)" onClick={() => remove(r.key)} aria-label="Remove">
+              <button className="danger" title={t.planEditor.removeTitle} onClick={() => remove(r.key)} aria-label={t.planEditor.remove}>
                 <Icon name="x" />
               </button>
             </div>
@@ -268,19 +268,19 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
                 const parsed = parseScheme(r.schemes[k] ?? '')
                 return (
                   <div key={k} className="scheme-field">
-                    <span className="scheme-wk">wk {k}</span>
+                    <span className="scheme-wk">{t.planEditor.wk(k)}</span>
                     <input
                       type="number"
                       inputMode="numeric"
                       min={0}
                       max={10}
-                      placeholder="0"
+                      placeholder={t.planEditor.zeroPh}
                       value={parsed.sets}
                       onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(e.target.value, parsed.reps) } })}
                     />
-                    <span className="scheme-x">sets ×</span>
+                    <span className="scheme-x">{t.planEditor.setsX}</span>
                     <input
-                      placeholder="reps, e.g. 8-10"
+                      placeholder={t.planEditor.repsPh}
                       value={parsed.reps}
                       onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(parsed.sets, e.target.value) } })}
                     />
@@ -291,7 +291,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
             <div className="edit-task-row">
               <input
                 value={r.note}
-                placeholder="note / form cue (shown in sessions)"
+                placeholder={t.planEditor.notePh}
                 onChange={(e) => patch(r.key, { note: e.target.value })}
               />
             </div>
@@ -303,7 +303,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         <input
           value={newSession}
           onChange={(e) => setNewSession(e.target.value)}
-          placeholder="New session name (e.g. Upper C)"
+          placeholder={t.planEditor.newSessionPh}
         />
         <button
           onClick={() => {
@@ -313,7 +313,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
             setNewSession('')
           }}
         >
-          Add session
+          {t.planEditor.addSession}
         </button>
       </div>
       <div className="add-task">
@@ -321,14 +321,14 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
           value={newEx.name}
           onChange={(e) => setNewEx({ ...newEx, name: e.target.value })}
           onKeyDown={(e) => e.key === 'Enter' && addExercise()}
-          placeholder={`New exercise for ${split ?? '…'}`}
+          placeholder={t.planEditor.newExercisePh(split ?? '…')}
         />
         <select value={newEx.muscle} onChange={(e) => setNewEx({ ...newEx, muscle: e.target.value })}>
           {MUSCLE_GROUPS.map((m) => (
-            <option key={m}>{m}</option>
+            <option key={m} value={m}>{muscleLabel(m)}</option>
           ))}
         </select>
-        <button onClick={addExercise}>Add</button>
+        <button onClick={addExercise}>{t.common.add}</button>
       </div>
     </div>
   )

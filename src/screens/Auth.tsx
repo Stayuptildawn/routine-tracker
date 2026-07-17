@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { enterDemo } from '../lib/demo'
+import { t } from '../i18n'
 import InstallPrompt from './InstallPrompt'
 
 type Mode = 'signin' | 'signup' | 'reset'
@@ -35,12 +37,12 @@ export default function Auth() {
 
   return (
     <div className="auth">
-      <h1>Routine Tracker</h1>
+      <h1>{t.auth.title}</h1>
       <InstallPrompt />
       <form onSubmit={submit}>
         <input
           type="email"
-          placeholder="Email"
+          placeholder={t.auth.emailPh}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -48,7 +50,7 @@ export default function Auth() {
         {mode !== 'reset' && (
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t.auth.passwordPh}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -56,18 +58,18 @@ export default function Auth() {
           />
         )}
         <button type="submit" disabled={busy}>
-          {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
+          {mode === 'signin' ? t.auth.signIn : mode === 'signup' ? t.auth.createAccount : t.auth.sendResetLink}
         </button>
       </form>
 
       {sent && mode === 'reset' && (
-        <div className="notice">Check your email for a link to set a new password.</div>
+        <div className="notice">{t.auth.resetSent}</div>
       )}
       {error && <div className="notice">{error}</div>}
 
       {mode === 'signin' && (
         <button className="link" onClick={() => { setMode('reset'); setError(null); setSent(false) }}>
-          Forgot your password?
+          {t.auth.forgotPassword}
         </button>
       )}
       <button
@@ -78,7 +80,10 @@ export default function Auth() {
           setSent(false)
         }}
       >
-        {mode === 'signin' ? 'First time? Create an account' : 'Have an account? Sign in'}
+        {mode === 'signin' ? t.auth.toSignUp : t.auth.toSignIn}
+      </button>
+      <button className="link demo-link" onClick={enterDemo}>
+        {t.demo.tryDemo}
       </button>
     </div>
   )

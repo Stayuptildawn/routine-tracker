@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { isDemo } from './demo'
+import { demoClient } from './demoClient'
 
 /** Tolerate common paste mistakes in env values: whitespace, quotes, missing
  * scheme, or the whole "NAME = value" line pasted into the value field. */
@@ -23,10 +26,12 @@ function isValidUrl(u: string | undefined): u is string {
   }
 }
 
-/** False until .env (or CI secrets) provide usable Supabase credentials. */
-export const configured = isValidUrl(url) && Boolean(key)
+/** False until .env (or CI secrets) provide usable Supabase credentials.
+ *  Demo mode needs no credentials at all. */
+export const configured = isDemo || (isValidUrl(url) && Boolean(key))
 
-export const supabase = createClient(
-  configured ? url! : 'https://placeholder.supabase.co',
-  configured ? key! : 'placeholder-key',
-)
+// In demo mode every query runs against the in-browser fake instead - the
+// entire app is unaware, it just talks to `supabase` as usual.
+export const supabase: SupabaseClient = isDemo
+  ? (demoClient as unknown as SupabaseClient)
+  : createClient(configured ? url! : 'https://placeholder.supabase.co', configured ? key! : 'placeholder-key')

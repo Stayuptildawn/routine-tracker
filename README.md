@@ -9,7 +9,13 @@ Built gentle enough for ADHD brains — which makes it lighter for every brain.<
 Self-hosted and free to run, no subscription.
 </p>
 
-<p align="center"><sub>React · Supabase · Gemini · installable PWA · AGPL-3.0</sub></p>
+<p align="center"><sub>React · Supabase · Gemini · installable PWA · 7 languages · AGPL-3.0</sub></p>
+
+<p align="center">
+  <a href="https://stayuptildawn.github.io/routine-tracker/?demo"><strong>▶ Try the live demo</strong></a>
+  — no account, no install; it runs entirely in your browser with a week of
+  sample data (the AI composer is the one part that needs a server).
+</p>
 
 <p align="center">
   <img src="docs/screenshots/now.jpg" width="32%" alt="The Now tab: one message box, energy pills, and the day's routines">
@@ -186,6 +192,16 @@ not add a new one.
 - Your data is yours: one-tap CSV export of tasks, workouts, training sets,
   cardio, recovery check-ins and reminders.
 
+### 🌍 Seven languages, real localization
+
+English, Français, Español, Deutsch, 中文, العربية and فارسی — switchable in
+Settings. This isn't a machine-translated skin: the seeded routines, the
+starter plan's safety cues and every screen are translated, Arabic and Farsi
+flip the entire layout right-to-left, and Farsi shows dates in the Jalali
+calendar. Every string lives in one typed file per language
+(`src/i18n/`), so adding a language is copy, translate, register — TypeScript
+flags anything a translation misses.
+
 ### ⚙️ And the basics done right
 
 Installable PWA, realtime sync across devices,
@@ -194,8 +210,11 @@ offline queues for messages, taps and gym logging. Tab switches are instant
 installed app the hardware back button behaves like a native app's: it closes
 whatever is open, then returns to the day, and never throws you out. No
 browser popups anywhere — destructive taps confirm in-app, dialogs trap
-keyboard focus properly. A settings screen with theme (auto/light/dark) and
-per-user timezone, fully editable routines, tasks and training plans.
+keyboard focus properly. A settings screen with theme (auto/light/dark),
+language and per-user timezone, fully editable routines, tasks and training
+plans. And a **live demo** ([try it](https://stayuptildawn.github.io/routine-tracker/?demo))
+that runs the whole app against an in-browser fake backend — no account, no
+server, data stays in your browser.
 
 ## Design
 

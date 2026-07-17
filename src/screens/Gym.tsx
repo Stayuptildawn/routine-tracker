@@ -5,6 +5,7 @@ import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan 
 import { phaseKey, recoveryAdjustments, setCount, startBlock } from '../lib/blocks'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
+import { t } from '../i18n'
 import Session from './Session'
 import { usePresence } from '../lib/overlay'
 import GymCardio from './GymCardio'
@@ -14,10 +15,12 @@ import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
-  { key: '1-2', name: 'Accumulation', maxWeek: 2 },
-  { key: '3-4', name: 'Intensification', maxWeek: 4 },
-  { key: '5-6', name: 'Realization', maxWeek: 6 },
+  { key: '1-2', name: t.gym.phases['1-2'], maxWeek: 2 },
+  { key: '3-4', name: t.gym.phases['3-4'], maxWeek: 4 },
+  { key: '5-6', name: t.gym.phases['5-6'], maxWeek: 6 },
 ]
+
+const muscleLabel = (m: string) => t.muscles[m] ?? m
 
 /** Monday of the week containing `date`, minus (week-1) weeks. */
 function programStartForWeek(week: number): string {
@@ -299,7 +302,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   useEffect(() => {
     if (!blockDone) return
     recoveryAdjustments().then((a) =>
-      setNextTweaks([...a.entries()].map(([m, d]) => `${m} ${d > 0 ? '+1' : '−1'} set`).join(' · ')),
+      setNextTweaks([...a.entries()].map(([m, d]) => t.gym.tweakSet(muscleLabel(m), d > 0)).join(' · ')),
     )
   }, [blockDone]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -311,27 +314,27 @@ export default function Gym({ visible }: { visible: boolean }) {
 
   return (
     <div className="gym">
-      <h1>Workout</h1>
+      <h1>{t.gym.title}</h1>
       <div className="energy-row seg-row">
         <button
           className={view === 'strength' ? 'energy-btn active' : 'energy-btn'}
           aria-pressed={view === 'strength'}
           onClick={() => setView('strength')}
         >
-          <Icon name="dumbbell" /> Strength
+          <Icon name="dumbbell" /> {t.gym.strength}
         </button>
         <button
           className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'}
           aria-pressed={view === 'cardio'}
           onClick={() => setView('cardio')}
         >
-          <Icon name="run" /> Cardio
+          <Icon name="run" /> {t.gym.cardio}
         </button>
       </div>
       {view === 'strength' && (
         <p className="gentle">
-          Sets, weights, reps — logged in a session, or from the Now tab:{' '}
-          <em>“bench 60kg 3x8, felt easy”</em>.
+          {t.gym.strengthHint}
+          <em>{t.gym.strengthHintExample}</em>.
         </p>
       )}
 
@@ -344,9 +347,9 @@ export default function Gym({ visible }: { visible: boolean }) {
           <section className="gym-day block-card">
             <h2>
               {block.name}
-              <span className="routine-progress"> week {blockWeek} of {block.total_weeks}</span>
+              <span className="routine-progress">{t.gym.weekOf(blockWeek, block.total_weeks)}</span>
             </h2>
-            <div className="weeks-grid" role="grid" aria-label="block sessions">
+            <div className="weeks-grid" role="grid" aria-label={t.gym.blockSessionsAria}>
               <div className="weeks-row weeks-head">
                 <span className="weeks-label"></span>
                 {weeks.map((w) => (
@@ -370,7 +373,7 @@ export default function Gym({ visible }: { visible: boolean }) {
                       <button
                         key={w}
                         className={cls}
-                        title={`${s.split_day} — week ${w}${s.completed_at ? ' ✓' : ''}`}
+                        title={t.gym.sessionCellTitle(s.split_day, w, !!s.completed_at)}
                         onClick={() => setActive(s)}
                       >
                         {s.completed_at ? <Icon name="check" /> : ''}
@@ -380,11 +383,11 @@ export default function Gym({ visible }: { visible: boolean }) {
                 </div>
               ))}
             </div>
-            <p className="gentle">Tap any cell to open that session — past weeks can be filled in late.</p>
+            <p className="gentle">{t.gym.tapCellHint}</p>
             {upNext && !blockDone && (
               <button className="start-session" onClick={() => setActive(upNext)}>
-                <Icon name="play" /> {upNext.date && !upNext.completed_at ? 'Continue' : 'Start'} {upNext.split_day}
-                <span className="routine-progress"> week {upNext.week_number}</span>
+                <Icon name="play" /> {upNext.date && !upNext.completed_at ? t.gym.continue : t.gym.start} {upNext.split_day}
+                <span className="routine-progress">{t.gym.weekTag(upNext.week_number)}</span>
               </button>
             )}
           </section>
@@ -394,18 +397,17 @@ export default function Gym({ visible }: { visible: boolean }) {
       {view === 'strength' && block && blockDone && (
         <section className="gym-day wrapup-card">
           <h2>
-            {block.name} — wrapped
+            {block.name}{t.gym.wrapped}
             <span className="routine-progress"> <Icon name="check" /></span>
           </h2>
           <p className="gentle">
-            {doneSessionCount} of {sessions.length} sessions handled ·{' '}
-            {loggedSets.filter((s) => s.logged_reps != null).length} hard sets logged.
-            {doneSessionCount < sessions.length && ' Open sessions stay available in the grid above.'}
+            {t.gym.wrapSummary(doneSessionCount, sessions.length, loggedSets.filter((s) => s.logged_reps != null).length)}
+            {doneSessionCount < sessions.length && t.gym.openSessionsStay}
           </p>
           <p className="gentle">
             {nextTweaks
-              ? `From your recovery check-ins: ${nextTweaks} — applied when the next block generates.`
-              : 'Your check-ins read as “right” across the board — the next block keeps the written volumes.'}
+              ? t.gym.tweaksFromCheckins(nextTweaks)
+              : t.gym.checkinsAllRight}
           </p>
           {confirmBlock === nextBlockNumber ? (
             <>
@@ -417,17 +419,17 @@ export default function Gym({ visible }: { visible: boolean }) {
                 }}
                 disabled={starting}
               >
-                {starting ? 'Generating…' : `Yes — generate Block ${nextBlockNumber}: 6 weeks of sessions and sets`}
+                {starting ? t.gym.generating : t.gym.yesGenerate(nextBlockNumber)}
               </button>
               <button className="link" onClick={() => setConfirmBlock(null)}>
-                Cancel
+                {t.common.cancel}
               </button>
             </>
           ) : (
             <button className="start-session" onClick={() => setConfirmBlock(nextBlockNumber)} disabled={starting}>
               {starting
-                ? 'Generating…'
-                : `▶ Start Block ${nextBlockNumber}${nextBlockNumber === 2 ? ' — Upper/Lower' : ''}${nextBlockNumber === (block.block ?? 1) ? ' (repeat)' : ''}, recovery-informed`}
+                ? t.gym.generating
+                : t.gym.startBlockLong(nextBlockNumber, nextBlockNumber === 2, nextBlockNumber === (block.block ?? 1))}
             </button>
           )}
         </section>
@@ -438,7 +440,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           <div className="start-block-confirm">
             {block && !sessions.every((s) => s.completed_at) && (
               <p className="gentle">
-                The current {block.name} isn't finished — the new block becomes the active one (nothing is deleted).
+                {t.gym.currentBlockUnfinished(block.name)}
               </p>
             )}
             <button
@@ -449,15 +451,15 @@ export default function Gym({ visible }: { visible: boolean }) {
               }}
               disabled={starting}
             >
-              {starting ? 'Generating…' : `Yes — generate Block ${planBlock}: 6 weeks of sessions and sets`}
+              {starting ? t.gym.generating : t.gym.yesGenerate(planBlock)}
             </button>
             <button className="link" onClick={() => setConfirmBlock(null)}>
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         ) : (
           <button className="start-session lone" onClick={() => setConfirmBlock(planBlock)} disabled={starting}>
-            {starting ? 'Generating…' : `▶ Start Block ${planBlock} (6 weeks from the plan)`}
+            {starting ? t.gym.generating : t.gym.startBlockFromPlan(planBlock)}
           </button>
         )
       )}
@@ -475,15 +477,14 @@ export default function Gym({ visible }: { visible: boolean }) {
 
       {view === 'strength' && overLine.map((mg) => (
         <div key={mg} className="notice vol-suggestion">
-          {mg} has said “over the line” a couple of times lately — want one set fewer next week? (Edit the plan
-          below; the current week stays as planned.)
+          {t.gym.overLineNotice(muscleLabel(mg))}
           <button
             className="link"
             onClick={() => {
               localStorage.setItem(`vol-sugg-${mg}`, '1')
               setOverLine(overLine.filter((m) => m !== mg))
             }}
-            aria-label="Dismiss"
+            aria-label={t.common.dismiss}
           >
             <Icon name="x" />
           </button>
@@ -493,8 +494,8 @@ export default function Gym({ visible }: { visible: boolean }) {
       {view === 'strength' && block && volume.size > 0 && (
         <section className="gym-day volume-card">
           <h2>
-            Volume picture
-            <span className="routine-progress"> hard sets per week</span>
+            {t.gym.volumePicture}
+            <span className="routine-progress">{t.gym.hardSetsPerWeek}</span>
           </h2>
           <div className="volume-grid">
             {[...volume.entries()].map(([mg, weeks]) => {
@@ -505,14 +506,14 @@ export default function Gym({ visible }: { visible: boolean }) {
               return (
                 <div key={mg} className="volume-muscle">
                   <div className="volume-head">
-                    <span className="volume-label">{mg}</span>
-                    <span className="volume-avg">{avg} avg</span>
+                    <span className="volume-label">{muscleLabel(mg)}</span>
+                    <span className="volume-avg">{t.gym.avg(avg)}</span>
                   </div>
                   <div className="volume-bars">
                     {weeks.map((n, i) => {
                       const state = i + 1 === currentWeek ? 'now' : i + 1 > currentWeek ? 'future' : ''
                       return (
-                        <div key={i} className="volume-col" title={`week ${i + 1}: ${n} sets`}>
+                        <div key={i} className="volume-col" title={t.gym.volumeColTitle(i + 1, n)}>
                           <span className={`volume-count ${state}`}>{n}</span>
                           <div className="volume-bar-wrap">
                             <div className={`volume-bar ${state}`} style={{ height: `${(n / max) * 100}%` }} />
@@ -531,32 +532,31 @@ export default function Gym({ visible }: { visible: boolean }) {
 
       {view === 'strength' && loaded && plans.length === 0 && (
         <section className="gym-day setup-card">
-          <h2>Set up your training</h2>
-          <p className="gentle">Two ways to begin — everything stays editable either way.</p>
+          <h2>{t.gym.setupTitle}</h2>
+          <p className="gentle">{t.gym.setupSubtitle}</p>
           <button className="start-session" onClick={useTemplate} disabled={settingUp}>
-            {settingUp ? 'Setting up…' : '▶ Use the starter plan'}
+            {settingUp ? t.gym.settingUp : t.gym.useStarter}
           </button>
           <p className="gentle">
-            A joint-friendly 6-week Push/Pull/Legs block plus an Upper/Lower follow-up — machines,
-            dumbbells and cables only, with an injury-safe cue on every exercise.
+            {t.gym.starterDesc}
           </p>
-          <p className="gentle setup-or">— or build your own —</p>
+          <p className="gentle setup-or">{t.gym.orBuildOwn}</p>
           <div className="add-task">
             <input
-              placeholder="First session name (e.g. Upper A)"
+              placeholder={t.gym.firstSessionPh}
               value={scratch.session}
               onChange={(e) => setScratch({ ...scratch, session: e.target.value })}
             />
           </div>
           <div className="add-task">
             <input
-              placeholder="First exercise"
+              placeholder={t.gym.firstExercisePh}
               value={scratch.exercise}
               onChange={(e) => setScratch({ ...scratch, exercise: e.target.value })}
             />
             <select value={scratch.muscle} onChange={(e) => setScratch({ ...scratch, muscle: e.target.value })}>
               {MUSCLE_GROUPS.map((m) => (
-                <option key={m}>{m}</option>
+                <option key={m} value={m}>{muscleLabel(m)}</option>
               ))}
             </select>
           </div>
@@ -569,9 +569,9 @@ export default function Gym({ visible }: { visible: boolean }) {
               value={scratch.sets}
               onChange={(e) => setScratch({ ...scratch, sets: e.target.value })}
             />
-            <span className="scheme-x">sets ×</span>
+            <span className="scheme-x">{t.gym.setsX}</span>
             <input
-              placeholder="reps, e.g. 10-12"
+              placeholder={t.gym.repsPh}
               value={scratch.reps}
               onChange={(e) => setScratch({ ...scratch, reps: e.target.value })}
             />
@@ -581,9 +581,9 @@ export default function Gym({ visible }: { visible: boolean }) {
             onClick={createOwnPlan}
             disabled={settingUp || !scratch.session.trim() || !scratch.exercise.trim()}
           >
-            {settingUp ? '…' : 'Create my plan'}
+            {settingUp ? '…' : t.gym.createMyPlan}
           </button>
-          <p className="gentle">You can add more sessions and exercises right after.</p>
+          <p className="gentle">{t.gym.addMoreAfter}</p>
         </section>
       )}
 
@@ -591,12 +591,12 @@ export default function Gym({ visible }: { visible: boolean }) {
         <section className="gym-day plan-card">
           <div className="routine-header">
             <h2>
-              The plan
-              <span className="routine-progress">{phase ? ` ${phase.name}` : week !== null && week > 6 ? ' deload / Block 2 soon' : ''}</span>
+              {t.gym.thePlan}
+              <span className="routine-progress">{phase ? ` ${phase.name}` : week !== null && week > 6 ? t.gym.deloadSoon : ''}</span>
             </h2>
             {!editingPlan && (
               <button className="energy-btn" onClick={() => setEditingPlan(true)}>
-                Edit
+                {t.common.Edit}
               </button>
             )}
           </div>
@@ -607,21 +607,21 @@ export default function Gym({ visible }: { visible: boolean }) {
                   key={b}
                   className={b === planBlock ? 'energy-btn active' : 'energy-btn'}
                   disabled={editingPlan}
-                  title={editingPlan ? 'Save or cancel the edit first' : undefined}
+                  title={editingPlan ? t.gym.saveEditFirst : undefined}
                   onClick={() => {
                     setPlanBlock(b)
                     const firstSplit = plans.find((p) => p.block === b)?.split_day ?? null
                     setSplit(firstSplit)
                   }}
                 >
-                  Block {b}
+                  {t.gym.blockBtn(b)}
                 </button>
               ))}
             </div>
           )}
           {!block && (
             <div className="energy-row plan-row">
-              <span className="energy-label">Week</span>
+              <span className="energy-label">{t.gym.weekLabel}</span>
               {[1, 2, 3, 4, 5, 6, 7].map((w) => (
                 <button
                   key={w}
@@ -635,7 +635,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           )}
           {!editingPlan && (
             <div className="energy-row plan-row">
-              <span className="energy-label">Session</span>
+              <span className="energy-label">{t.gym.sessionLabel}</span>
               {(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => (
                 <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
                   {s}
@@ -667,7 +667,7 @@ export default function Gym({ visible }: { visible: boolean }) {
               }}
             />
           )}
-          {splitCardio && !editingPlan && <p className="gentle plan-cardio">Cardio: {splitCardio}</p>}
+          {splitCardio && !editingPlan && <p className="gentle plan-cardio">{t.gym.planCardio(splitCardio)}</p>}
         </section>
       )}
 
@@ -675,18 +675,18 @@ export default function Gym({ visible }: { visible: boolean }) {
         <div className="notice vol-suggestion block-apply">
           <span>
             {[
-              blockApply.added.length > 0 ? `Added: ${blockApply.added.map((a) => a.exercise).join(', ')}` : null,
-              blockApply.removed.length > 0 ? `Removed: ${blockApply.removed.map((r) => r.exercise).join(', ')}` : null,
+              blockApply.added.length > 0 ? t.gym.addedList(blockApply.added.map((a) => a.exercise).join(', ')) : null,
+              blockApply.removed.length > 0 ? t.gym.removedList(blockApply.removed.map((r) => r.exercise).join(', ')) : null,
             ]
               .filter(Boolean)
               .join(' · ')}
-            {' — '}put this into {block.name}'s remaining sessions too, or only from the next block?
+            {t.gym.applyPrompt(block.name)}
           </span>
           <button className="link" onClick={applyToRunningBlock} disabled={applying}>
-            {applying ? 'Applying…' : 'Apply to this block'}
+            {applying ? t.gym.applying : t.gym.applyToBlock}
           </button>
           <button className="link" onClick={() => setBlockApply(null)} disabled={applying}>
-            Next block only
+            {t.gym.nextBlockOnly}
           </button>
         </div>
       )}
@@ -707,7 +707,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           </section>
         ))}
       {!loaded && <Skeleton cards={2} />}
-      {view === 'strength' && loaded && logs.length === 0 && <p className="gentle">No freeform lifts logged yet.</p>}
+      {view === 'strength' && loaded && logs.length === 0 && <p className="gentle">{t.gym.noFreeform}</p>}
 
       {sessionOverlay.mounted && (active ?? lastActive.current) && (
         <Session

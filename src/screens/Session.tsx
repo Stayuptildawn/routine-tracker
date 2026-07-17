@@ -4,6 +4,7 @@ import { useOverlay } from '../lib/overlay'
 import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
+import { t, locale } from '../i18n'
 import Icon from '../components/Icon'
 
 interface Props {
@@ -26,45 +27,17 @@ interface PrevSet {
 }
 
 // recovery check-in, in this app's voice - three quick questions per muscle
-const CHECKIN_QUESTIONS: { field: 'recovery' | 'effort' | 'amount'; label: string; options: [string, string][] }[] = [
-  {
-    field: 'recovery',
-    label: 'Recovered from last time?',
-    options: [
-      ['fresh', 'Fresh the whole time'],
-      ['ready_days_ago', 'Ready days ago'],
-      ['just_in_time', 'Just in time'],
-      ['still_worn', 'Still worn'],
-    ],
-  },
-  {
-    field: 'effort',
-    label: 'How hard did it work today?',
-    options: [
-      ['barely', 'Barely'],
-      ['solid', 'Solid work'],
-      ['everything', 'Everything it had'],
-    ],
-  },
-  {
-    field: 'amount',
-    label: 'How was the amount?',
-    options: [
-      ['could_take_more', 'Could take more'],
-      ['right', 'Right'],
-      ['stretch', 'A stretch'],
-      ['over_the_line', 'Over the line'],
-    ],
-  },
-]
+const CHECKIN_FIELDS: ('recovery' | 'effort' | 'amount')[] = ['recovery', 'effort', 'amount']
 
 type CheckinDraft = Partial<Record<'recovery' | 'effort' | 'amount', string>>
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
+const muscleLabel = (m: string) => t.muscles[m] ?? m
+
 /** "Jul 4, 2026" from a yyyy-mm-dd string. */
 const fmtDate = (iso: string) =>
-  new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  new Date(iso + 'T00:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Full-screen day view: every exercise with its set rows, RP-style overview. */
 export default function Session({ session, plans, onExit, closing }: Props) {
@@ -261,7 +234,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
     const toSkip = sets.filter((s) => s.exercise === exercise && !s.logged_at)
     if (toSkip.length === 0) return
     const after = sets.map((s) =>
-      toSkip.some((t) => t.id === s.id) ? { ...s, logged_at: new Date().toISOString() } : s,
+      toSkip.some((x) => x.id === s.id) ? { ...s, logged_at: new Date().toISOString() } : s,
     )
     setSets(after)
     await runOp({
@@ -302,7 +275,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
       data-closing={closing || undefined}
       role="dialog"
       aria-modal="true"
-      aria-label={`${session.split_day} session`}
+      aria-label={t.session.aria(session.split_day)}
     >
       <div className="player-rail" aria-hidden="true">
         <div className="player-rail-fill" style={{ transform: `scaleX(${sets.length ? handled / sets.length : 0})` }} />
@@ -310,15 +283,15 @@ export default function Session({ session, plans, onExit, closing }: Props) {
       <div className="player-inner">
         <div className="player-top">
           <span className="eyebrow">
-            Week {session.week_number} · {session.split_day} · {handled}/{sets.length} sets
+            {t.session.header(session.week_number, session.split_day, handled, sets.length)}
           </span>
           <button className="link" onClick={() => leaveRef.current()}>
-            exit
+            {t.session.exit}
           </button>
         </div>
 
         <div className="session-date">
-          <span><Icon name="calendar" /> Workout date</span>
+          <span><Icon name="calendar" /> {t.session.workoutDate}</span>
           {handled > 0 ? (
             <input type="date" value={sessionDate} onChange={(e) => updateSessionDate(e.target.value)} />
           ) : (
@@ -330,7 +303,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
           <div className="session-list">
             {allDone && reviewing && (
               <button className="link session-review-back" onClick={() => setReviewing(false)}>
-                ← done editing, back to finish
+                {t.session.doneEditingBack}
               </button>
             )}
             {exercises.map((exercise) => {
@@ -343,14 +316,14 @@ export default function Session({ session, plans, onExit, closing }: Props) {
               return (
                 <div key={exercise} className={`exercise-card${exDone ? ' done' : ''}${isCurrent ? ' current' : ''}`}>
                   <div className="exercise-head">
-                    {muscle && <span className="muscle-badge">{muscle}</span>}
+                    {muscle && <span className="muscle-badge">{muscleLabel(muscle)}</span>}
                     <span className="session-target">{exSets[0]?.target_scheme ?? ''}</span>
                   </div>
                   <h2>{exercise}</h2>
                   {plan?.safety_note && !exDone && <p className="session-cue"><Icon name="shield" /> {plan.safety_note}</p>}
                   {prev && prev.length > 0 && !exDone && (
                     <p className="session-last">
-                      last time: {prev.map((p) => `${p.weight ?? '–'}×${p.reps ?? '–'}`).join('  ')}
+                      {t.session.lastTime(prev.map((p) => `${p.weight ?? '–'}×${p.reps ?? '–'}`).join('  '))}
                     </p>
                   )}
                   <div className="set-rows">
@@ -364,15 +337,15 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                           {done ? (
                             <span className="set-logged">
                               {set.logged_weight != null || set.logged_reps != null
-                                ? `${set.logged_weight ?? '–'} kg × ${set.logged_reps ?? '–'}`
-                                : 'skipped'}
+                                ? t.session.kgReps(String(set.logged_weight ?? '–'), String(set.logged_reps ?? '–'))
+                                : t.session.skipped}
                             </span>
                           ) : (
                             <>
                               <input
                                 type="number"
                                 inputMode="decimal"
-                                placeholder={ph.weight || 'kg'}
+                                placeholder={ph.weight || t.session.kgPh}
                                 value={draft.weight}
                                 onChange={(e) =>
                                   setDrafts(new Map(drafts).set(set.id, { ...draft, weight: e.target.value }))
@@ -382,7 +355,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                               <input
                                 type="number"
                                 inputMode="numeric"
-                                placeholder={ph.reps || 'reps'}
+                                placeholder={ph.reps || t.session.repsPh}
                                 value={draft.reps}
                                 onChange={(e) =>
                                   setDrafts(new Map(drafts).set(set.id, { ...draft, reps: e.target.value }))
@@ -393,8 +366,8 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                           <button
                             className={done ? 'set-check done' : 'set-check'}
                             onClick={() => toggleSet(set)}
-                            aria-label={done ? 'Edit set' : 'Log set'}
-                            title={done ? 'Edit set' : 'Log set'}
+                            aria-label={done ? t.session.editSet : t.session.logSet}
+                            title={done ? t.session.editSet : t.session.logSet}
                           >
                             <Icon name={done ? 'pencil' : 'check'} />
                           </button>
@@ -404,7 +377,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                   </div>
                   {!exDone && (
                     <button className="link session-skip" onClick={() => skipExercise(exercise)}>
-                      skip this exercise
+                      {t.session.skipExercise}
                     </button>
                   )}
                 </div>
@@ -420,12 +393,10 @@ export default function Session({ session, plans, onExit, closing }: Props) {
               <div className="session-body checkin">
                 <div className="checkin-head">
                   <span className="checkin-check"><Icon name="check" /></span>
-                  <h2>{session.split_day} done. Good work.</h2>
+                  <h2>{t.session.doneGoodWork(session.split_day)}</h2>
                   {trained.length > 0 && (
                     <p className="gentle">
-                      {hadSaved
-                        ? 'Your earlier answers are loaded — edit freely, leaving saves.'
-                        : 'Quick check-in if you feel like it — skip is always fine.'}
+                      {hadSaved ? t.session.earlierAnswers : t.session.quickCheckin}
                     </p>
                   )}
                 </div>
@@ -434,20 +405,20 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                   const draft = checkin.get(muscle) ?? {}
                   return (
                     <div key={muscle} className="checkin-muscle">
-                      <span className="muscle-badge">{muscle}</span>
-                      {CHECKIN_QUESTIONS.map((q) => (
-                        <div key={q.field} className="checkin-q">
-                          <span className="energy-label">{q.label}</span>
+                      <span className="muscle-badge">{muscleLabel(muscle)}</span>
+                      {CHECKIN_FIELDS.map((field) => (
+                        <div key={field} className="checkin-q">
+                          <span className="energy-label">{t.session.questions[field].label}</span>
                           <div className="checkin-pills">
-                            {q.options.map(([value, label]) => (
+                            {Object.entries(t.session.questions[field].options).map(([value, label]) => (
                               <button
                                 key={value}
-                                className={draft[q.field] === value ? 'energy-btn active' : 'energy-btn'}
+                                className={draft[field] === value ? 'energy-btn active' : 'energy-btn'}
                                 onClick={() =>
                                   setCheckin(
                                     new Map(checkin).set(muscle, {
                                       ...draft,
-                                      [q.field]: draft[q.field] === value ? undefined : value,
+                                      [field]: draft[field] === value ? undefined : value,
                                     }),
                                   )
                                 }
@@ -464,10 +435,10 @@ export default function Session({ session, plans, onExit, closing }: Props) {
 
                 <div className="player-buttons checkin-buttons">
                   <button className="player-done" onClick={saveAndClose} disabled={saving}>
-                    {saving ? '…' : 'Save & close'}
+                    {saving ? '…' : t.session.saveClose}
                   </button>
                   <button className="link" onClick={() => setReviewing(true)}>
-                    <Icon name="pencil" /> Edit a logged set
+                    <Icon name="pencil" /> {t.session.editLoggedSet}
                   </button>
                 </div>
               </div>

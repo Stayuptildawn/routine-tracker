@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { describeAction, undoAiAction } from '../lib/actions'
+import { t, locale } from '../i18n'
 import Icon from '../components/Icon'
 import type { AiAction } from '../lib/types'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
-
-const STATUS_LABEL: Record<AiAction['status'], string> = {
-  applied: 'AI-sorted',
-  confirmed: 'Confirmed',
-  undone: 'Undone',
-}
 
 export default function History({ visible }: { visible: boolean }) {
   const [items, setItems] = useState<AiAction[]>([])
@@ -40,12 +35,13 @@ export default function History({ visible }: { visible: boolean }) {
 
   return (
     <div className="history">
-      <h1>AI action log</h1>
-      <p className="gentle">Everything the AI did, and what you said. Anything can be undone.</p>
+      <h1>{t.history.title}</h1>
+      <p className="gentle">{t.history.subtitle}</p>
       {counts && counts.kept + counts.undone > 0 && (
         <p className="gentle ai-stats">
-          Accuracy so far: <strong>{Math.round((counts.kept / (counts.kept + counts.undone)) * 100)}%</strong>{' '}
-          — {counts.kept} kept, {counts.undone} undone.
+          {t.history.accuracyLead}
+          <strong>{Math.round((counts.kept / (counts.kept + counts.undone)) * 100)}%</strong>
+          {t.history.accuracyTail(counts.kept, counts.undone)}
         </p>
       )}
       {items.map((item) => (
@@ -62,10 +58,10 @@ export default function History({ visible }: { visible: boolean }) {
             })}
           </div>
           <div className="ai-meta">
-            <span className={`badge ${item.status}`}>{STATUS_LABEL[item.status]}</span>
+            <span className={`badge ${item.status}`}>{t.history.statusLabels[item.status]}</span>
             <span className="ai-time">
               {/* same "12 Jul, 14:32" shape as the Reminders cleared list */}
-              {new Date(item.created_at).toLocaleString(undefined, {
+              {new Date(item.created_at).toLocaleString(locale, {
                 day: 'numeric',
                 month: 'short',
                 hour: '2-digit',
@@ -75,9 +71,9 @@ export default function History({ visible }: { visible: boolean }) {
             {item.status !== 'undone' && (
               <ConfirmButton
                 className="link"
-                label="Undo"
-                confirmLabel="revert all of this?"
-                title="Reverts everything this message did (listed above)"
+                label={t.common.undo}
+                confirmLabel={t.history.undoConfirm}
+                title={t.history.undoTitle}
                 onConfirm={() => undo(item)}
               />
             )}
@@ -86,7 +82,7 @@ export default function History({ visible }: { visible: boolean }) {
       ))}
       {!loaded && <Skeleton cards={3} />}
       {loaded && items.length === 0 && (
-        <p className="gentle">No AI actions yet — try the message box on the Now tab.</p>
+        <p className="gentle">{t.history.noActions}</p>
       )}
     </div>
   )

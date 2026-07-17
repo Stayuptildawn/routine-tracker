@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
+import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
 
@@ -15,9 +16,9 @@ interface Props {
 }
 
 const THEME_OPTIONS: [Theme, IconName, string][] = [
-  ['auto', 'circle-half', 'Auto'],
-  ['light', 'sun', 'Light'],
-  ['dark', 'moon', 'Dark'],
+  ['auto', 'circle-half', t.settings.themeAuto],
+  ['light', 'sun', t.settings.themeLight],
+  ['dark', 'moon', t.settings.themeDark],
 ]
 
 const FALLBACK_ZONES = [
@@ -71,11 +72,11 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
 
   async function savePassword() {
     if (pw.length < 6) {
-      setPwMsg('Use at least 6 characters.')
+      setPwMsg(t.settings.pwTooShort)
       return
     }
     if (pw !== pw2) {
-      setPwMsg('The two passwords don’t match.')
+      setPwMsg(t.settings.pwMismatch)
       return
     }
     setPwBusy(true)
@@ -84,7 +85,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
     setPwBusy(false)
     setPw('')
     setPw2('')
-    setPwMsg(error ? error.message : 'Password saved. Use it to sign in next time.')
+    setPwMsg(error ? error.message : t.settings.pwSaved)
   }
 
   // Escape and the installed-PWA back button close Settings like the close link
@@ -97,19 +98,19 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
       data-closing={closing || undefined}
       role="dialog"
       aria-modal="true"
-      aria-label="Settings"
+      aria-label={t.settings.title}
     >
       <div className="player-inner">
         <div className="player-top">
-          <span className="eyebrow">Settings</span>
+          <span className="eyebrow">{t.settings.title}</span>
           <button className="link" onClick={onClose}>
-            close
+            {t.settings.close}
           </button>
         </div>
 
         <div className="settings-body">
           <section className="settings-section">
-            <h2>Theme</h2>
+            <h2>{t.settings.theme}</h2>
             <div className="energy-row">
               {THEME_OPTIONS.map(([value, icon, label]) => (
                 <button
@@ -122,13 +123,31 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                 </button>
               ))}
             </div>
-            <p className="gentle">Auto follows your device.</p>
+            <p className="gentle">{t.settings.autoFollows}</p>
           </section>
 
+          {availableLanguages.length > 1 && (
+            <section className="settings-section">
+              <h2>{t.settings.language}</h2>
+              <div className="energy-row">
+                {availableLanguages.map((l) => (
+                  <button
+                    key={l.id}
+                    className={lang === l.id ? 'energy-btn active' : 'energy-btn'}
+                    aria-pressed={lang === l.id}
+                    onClick={() => setLanguage(l.id)}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="settings-section">
-            <h2>Timezone</h2>
+            <h2>{t.settings.timezone}</h2>
             {tzSaved === null ? (
-              <p className="gentle">Loading…</p>
+              <p className="gentle">{t.common.loading}</p>
             ) : (
               <>
                 <select className="settings-tz" value={tz} onChange={(e) => saveTz(e.target.value)}>
@@ -139,13 +158,13 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                   ))}
                 </select>
                 <p className="gentle">
-                  Used by push nudges, the Sunday reflection and the Telegram bot.
-                  {!tzSaved && ` Not saved yet — pick one to confirm (your device says ${deviceTz}).`}
-                  {tzSaved && ' Saved.'}
+                  {t.settings.tzNote}
+                  {!tzSaved && t.settings.tzNotSaved(deviceTz)}
+                  {tzSaved && t.settings.tzSaved}
                 </p>
                 {!tzSaved && (
                   <button className="start-session" onClick={() => saveTz(deviceTz)}>
-                    Use my device timezone ({deviceTz})
+                    {t.settings.useDeviceTz(deviceTz)}
                   </button>
                 )}
               </>
@@ -153,14 +172,14 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
           </section>
 
           <section className="settings-section">
-            <h2>Account</h2>
+            <h2>{t.settings.account}</h2>
             <dl className="account-info">
-              <dt>Email</dt>
+              <dt>{t.settings.email}</dt>
               <dd>{email || '…'}</dd>
               {createdAt && (
                 <>
-                  <dt>Member since</dt>
-                  <dd>{new Date(createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</dd>
+                  <dt>{t.settings.memberSince}</dt>
+                  <dd>{new Date(createdAt).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })}</dd>
                 </>
               )}
             </dl>
@@ -168,7 +187,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
             <div className="settings-pw">
               <input
                 type="password"
-                placeholder="New password"
+                placeholder={t.settings.newPasswordPh}
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
                 minLength={6}
@@ -176,7 +195,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
               />
               <input
                 type="password"
-                placeholder="Repeat new password"
+                placeholder={t.settings.repeatPasswordPh}
                 value={pw2}
                 onChange={(e) => setPw2(e.target.value)}
                 minLength={6}
@@ -188,39 +207,39 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                 onClick={savePassword}
                 disabled={pwBusy || pw.length < 6 || pw !== pw2}
               >
-                {pwBusy ? '…' : 'Save password'}
+                {pwBusy ? '…' : t.settings.savePassword}
               </button>
             </div>
             <p className="gentle">
               {pwMsg ??
                 (pw && pw2 && pw !== pw2
-                  ? 'The two passwords don’t match yet.'
-                  : 'If you were invited by email, set a password here so you can sign back in later.')}
+                  ? t.settings.pwMismatchYet
+                  : t.settings.invitedNote)}
             </p>
 
             {confirmSignOut ? (
               <div className="sign-out-confirm">
-                <p className="gentle">Sign out{email ? ` of ${email}` : ''}?</p>
+                <p className="gentle">{t.settings.signOutQ(email)}</p>
                 <div className="sign-out-actions">
                   <button className="sign-out" onClick={() => supabase.auth.signOut()}>
-                    Yes, sign out
+                    {t.settings.yesSignOut}
                   </button>
                   <button className="link" onClick={() => setConfirmSignOut(false)}>
-                    Cancel
+                    {t.common.cancel}
                   </button>
                 </div>
               </div>
             ) : (
               <button className="sign-out" onClick={() => setConfirmSignOut(true)}>
-                Sign out
+                {t.settings.signOut}
               </button>
             )}
           </section>
 
           <section className="settings-section">
-            <h2>About</h2>
+            <h2>{t.settings.about}</h2>
             <p className="gentle">
-              This app is free software under the{' '}
+              {t.settings.aboutBeforeLicense}
               <a
                 className="text-link"
                 href="https://github.com/Stayuptildawn/routine-tracker/blob/main/LICENSE"
@@ -229,7 +248,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
               >
                 AGPL-3.0
               </a>
-              . You’re free to read it, run it and change it — and the full source is right here.
+              {t.settings.aboutAfterLicense}
             </p>
             <a
               className="text-link"
@@ -237,7 +256,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Source code on GitHub →
+              {t.settings.sourceCode}
             </a>
           </section>
         </div>

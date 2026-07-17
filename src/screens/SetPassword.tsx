@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { t } from '../i18n'
 
 // Shown when someone arrives via a recovery/invite link with a session but
 // no usable password. They set one here (typed twice), then land in the app.
@@ -12,11 +13,11 @@ export default function SetPassword({ onDone }: { onDone: () => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (pw.length < 6) {
-      setError('Use at least 6 characters.')
+      setError(t.setPassword.tooShort)
       return
     }
     if (pw !== pw2) {
-      setError('The two passwords don’t match.')
+      setError(t.setPassword.mismatch)
       return
     }
     setBusy(true)
@@ -29,12 +30,12 @@ export default function SetPassword({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="auth">
-      <h1>Set a password</h1>
-      <p className="gentle">Pick a password so you can sign in next time.</p>
+      <h1>{t.setPassword.title}</h1>
+      <p className="gentle">{t.setPassword.subtitle}</p>
       <form onSubmit={submit}>
         <input
           type="password"
-          placeholder="New password"
+          placeholder={t.setPassword.newPasswordPh}
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           required
@@ -43,14 +44,14 @@ export default function SetPassword({ onDone }: { onDone: () => void }) {
         />
         <input
           type="password"
-          placeholder="Repeat new password"
+          placeholder={t.setPassword.repeatPasswordPh}
           value={pw2}
           onChange={(e) => setPw2(e.target.value)}
           required
           minLength={6}
         />
         <button type="submit" disabled={busy || pw.length < 6 || pw !== pw2}>
-          {busy ? '…' : 'Set password'}
+          {busy ? '…' : t.setPassword.submit}
         </button>
       </form>
       {error && <div className="notice">{error}</div>}
