@@ -88,6 +88,13 @@ export async function maybeTrainingReview(
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('user_settings').select('cardio_target_km').eq('user_id', userId).maybeSingle(),
     ])
+  // the written plan itself, so advice can speak to it (fetched after
+  // blockRes since the snapshot should be the active block's plan)
+  const plansRes = blockRes.data
+    ? await supabase.from('workout_plans')
+        .select('split_day, exercise, muscle_group, schemes, cardio')
+        .eq('user_id', userId).eq('block', blockRes.data.block).order('sort_order')
+    : { data: [] }
 
   // ---- 12-week series (the trend context) ----
   const sessions = Array(WEEKS).fill(0)
@@ -181,9 +188,29 @@ export async function maybeTrainingReview(
   const targetKm = settingsRes.data?.cardio_target_km
 
   const block = blockRes.data
+  const blockWeek = block
+    ? Math.max(1, Math.min(Math.floor((Date.parse(weekStart) - Date.parse(block.start_date)) / (7 * 86400000)) + 1, block.total_weeks))
+    : 0
   const blockLine = block
-    ? `They are in week ${Math.max(1, Math.min(Math.floor((Date.parse(weekStart) - Date.parse(block.start_date)) / (7 * 86400000)) + 1, block.total_weeks))} of a ${block.total_weeks}-week block (block ${block.block}).`
+    ? `They are in week ${blockWeek} of a ${block.total_weeks}-week block (block ${block.block}).`
     : 'They train from a plan but have no active block right now.'
+
+  // the plan as written, with this week's phase scheme (same phase keys the
+  // app uses: weeks 1-2 / 3-4 / 5-6)
+  const phase = blockWeek <= 2 ? '1-2' : blockWeek <= 4 ? '3-4' : '5-6'
+  const bySplit = new Map<string, { line: string; cardio: string | null }[]>()
+  for (const p of plansRes.data ?? []) {
+    const schemes = (p.schemes ?? {}) as Record<string, string>
+    const scheme = schemes[phase] ?? Object.values(schemes)[0] ?? '?'
+    bySplit.set(p.split_day, [
+      ...(bySplit.get(p.split_day) ?? []),
+      { line: `  - ${p.exercise} (${p.muscle_group ?? '?'}): ${scheme}`, cardio: p.cardio ?? null },
+    ])
+  }
+  const planLines = [...bySplit.entries()].map(([day, rows]) => {
+    const cardio = rows.find((r) => r.cardio)?.cardio
+    return `${day}:\n${rows.map((r) => r.line).join('\n')}${cardio ? `\n  cardio: ${cardio}` : ''}`
+  })
 
   const prompt = `You are a careful strength & conditioning assistant reviewing a recreational
 lifter's week. You value joint health and long-term consistency over fast progress.
@@ -197,6 +224,11 @@ CONTEXT - weekly series since logging began ${span} week(s) ago, oldest to newes
 Average per active week: ${activeAvg(wSessions)} sessions, ${activeAvg(wSets)} hard sets, ${activeAvg(wCardioKm)} km.
 Trend (first half vs second half): sessions ${trends.sessions}, hard sets ${trends.sets}, cardio ${trends.cardioKm}.
 ${blockLine}
+
+THEIR WRITTEN PLAN for this week (sets x reps are the plan's own targets for
+the current phase - the plan already periodizes, so a scheme change between
+phases is intentional, not a suggestion to make):
+${planLines.join('\n') || 'no written plan'}
 
 LAST WEEK (${prevStart} to ${addDays(weekStart, -1)}) in detail:
 Strength work:
@@ -212,14 +244,20 @@ Reply with JSON: two string fields, both written in ${LANGUAGE_NAMES[lang]}.
 
 "pattern": 2-3 sentences naming the clearest trend ACROSS the weeks (not one
 week alone), using at least one real number or average from the series, and
-bringing in logged feedback where it fits. If things trend down or plateau,
+bringing in logged feedback where it fits. Where it sharpens the point, place
+the trend inside their program (which block week they are entering, how the
+logged work tracks the written plan). If things trend down or plateau,
 say it plainly and without blame - rest is part of training. If only a few
 weeks exist, say the pattern is still forming.
 
 "advice": 3 to 5 suggestions for the coming week, each on its own line
 starting with "- ". Each one concrete: name the exercise or muscle group
 exactly as written in the data, and ground it in a specific number or
-feedback entry. Hard safety rules, in priority order:
+feedback entry. Anchor every suggestion to THEIR WRITTEN PLAN above - compare
+what was logged against what the plan prescribes (e.g. sets done vs the
+written scheme, planned exercises that went untouched, weight relative to the
+scheme's rep range) rather than treating the logs as free-floating numbers.
+Hard safety rules, in priority order:
 1. A muscle whose check-ins said "over the line" (or effort "everything",
    recovery "still worn") gets LESS, never more: one set fewer, longer rest,
    or lighter weight. This overrules every progression rule.
