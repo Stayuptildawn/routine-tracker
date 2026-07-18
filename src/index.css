@@ -2334,8 +2334,11 @@ select option {
 }
 
 @media (max-width: 600px) {
-  /* the name field gets its own line; select + buttons wrap below */
-  .edit-task-row > input:first-child {
+  /* the name field gets its own line; select + buttons wrap below
+     (the exercise-name field is an input wrapped in .exercise-ac) */
+  .edit-task-row > input:first-child,
+  .edit-task-row > .exercise-ac:first-child,
+  .add-task > .exercise-ac:first-child {
     flex: 1 1 100%;
   }
 }
@@ -2511,7 +2514,12 @@ select option {
 .exercise-ac-list {
   position: absolute;
   top: calc(100% + 2px);
-  inset-inline: 0;
+  /* anchored to the input's start edge but allowed to grow past a narrow
+     input, so suggestions stay readable wherever the field ends up small */
+  inset-inline-start: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(88vw, 26rem);
   z-index: 30;
   display: flex;
   flex-direction: column;
