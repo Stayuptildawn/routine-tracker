@@ -45,17 +45,6 @@ export async function flushMessageQueue(): Promise<number> {
   return sent
 }
 
-/** On-demand, kind-but-truthful read of the training PATTERN over ~12 weeks. */
-export async function trainingReflection(): Promise<{ comment: string; noData: boolean }> {
-  const { data, error } = await supabase.functions.invoke<{ comment?: string; noData?: boolean; error?: string }>(
-    'training-reflection',
-    { body: { date: localDate() } },
-  )
-  if (error) throw error
-  if (data?.error) throw new Error(data.error)
-  return { comment: data?.comment ?? '', noData: !!data?.noData }
-}
-
 export function queuedMessageCount(): number {
   return (JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]') as string[]).length
 }

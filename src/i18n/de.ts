@@ -204,6 +204,8 @@ export const de: Strings = {
       `${muscle} hat zuletzt ein paarmal „über der Grenze“ gemeldet — nächste Woche einen Satz weniger? (Bearbeite den Plan unten; die laufende Woche bleibt wie geplant.)`,
     volumePicture: 'Volumenbild',
     hardSetsPerWeek: ' harte Sätze pro Woche',
+    coachTitle: 'Coach-Notiz',
+    coachSub: ' aus den Logs der letzten Woche',
     avg: (n: number) => `${n} Ø`,
     volumeColTitle: (week: number, sets: number) => `Woche ${week}: ${sets} Sätze`,
     setupTitle: 'Richte dein Training ein',
@@ -359,6 +361,7 @@ export const de: Strings = {
     subtitle: 'Muster, kein Urteil. Keine Streaks — ein ruhiger Tag ist Information, kein Scheitern.',
     noticedThisWeek: 'Diese Woche aufgefallen',
     noticedRecently: 'Kürzlich aufgefallen',
+    trainingTitle: 'Trainingsmuster',
     completedLead: 'Du hast ',
     completedTail: ' Dinge diese Woche geschafft — Aufgaben, Trainingseinheiten und Ausdauer zählen alle.',
     strongestDay: (day: string) => ` ${day} war dein stärkster Tag.`,
@@ -466,6 +469,10 @@ export const de: Strings = {
       'In der echten App liest eine KI diese Nachricht und hakt Aufgaben ab, protokolliert Training oder legt Erinnerungen an. Die Demo hat keinen Server, es wurde also nichts geändert — alles andere ist voll interaktiv.',
     reflection:
       'Die Morgen hielten diese Woche stand — fünf von sieben Tagen, und die zwei Ausrutscher folgten auf lange Nächte. Die Datenlage zeigt auf den Schlaf, nicht auf die Disziplin.',
+    trainingBody:
+      'Die harten Sätze sind in sechs Wochen von 38 auf 52 pro Woche gestiegen, das Cardio blieb bei rund 8 km, und deine Check-ins meldeten weiter „passt“. Die Basis wächst ohne Überlastung.',
+    trainingAdvice:
+      '- Das Flat DB Bench Press erreichte zweimal das obere Ende des Bereichs — erwäge +2,5 kg in der nächsten Einheit.\n- Die Quads meldeten zweimal „grenzwertig“; halte das Leg-Press-Volumen diese Woche konstant.\n- Cardio stieg um 9 % — bleib diese Woche bei der Distanz, bevor du erhöhst.',
     reminder1: '💊 Das Folgerezept abholen',
     reminder2: 'Zahnarzttermin vereinbaren',
     reminder3: 'Den Versicherungsbrief scannen und ablegen',

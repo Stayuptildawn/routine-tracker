@@ -13,6 +13,8 @@ type Row = Record<string, unknown>
 type Db = Record<string, Row[]>
 
 const DB_KEY = 'demo-db'
+// bump when seed() gains content - returning visitors reseed and see it
+const SEED_VERSION = '2'
 
 // ---------- storage ----------
 
@@ -23,7 +25,7 @@ function loadDb(): Db {
   const raw = localStorage.getItem(DB_KEY)
   // demo data is language-specific seed content - switching language reseeds
   // (it's throwaway data, and mixed-language routines would look broken)
-  if (raw && localStorage.getItem(DB_KEY + '-lang') === lang) {
+  if (raw && localStorage.getItem(DB_KEY + '-lang') === lang && localStorage.getItem(DB_KEY + '-v') === SEED_VERSION) {
     try {
       db = JSON.parse(raw) as Db
       return db
@@ -33,6 +35,7 @@ function loadDb(): Db {
   }
   db = seed()
   localStorage.setItem(DB_KEY + '-lang', lang)
+  localStorage.setItem(DB_KEY + '-v', SEED_VERSION)
   saveDb()
   return db
 }
@@ -217,6 +220,16 @@ function seed(): Db {
   monday.setDate(monday.getDate() - (isoWeekday() - 1))
   data.reflections = [
     { id: crypto.randomUUID(), week_start: localDate(monday), body: t.demo.reflection, created_at: isoNDaysAgo(0, 8) },
+  ]
+
+  data.training_reviews = [
+    {
+      id: crypto.randomUUID(),
+      week_start: localDate(monday),
+      body: t.demo.trainingBody,
+      advice: t.demo.trainingAdvice,
+      created_at: isoNDaysAgo(0, 8),
+    },
   ]
 
   data.ai_actions = [

@@ -204,6 +204,8 @@ export const cs: Strings = {
       `${muscle} v poslední době párkrát hlásí „přes čáru“ — co příští týden o sérii míň? (Uprav plán níže; tenhle týden zůstává, jak je.)`,
     volumePicture: 'Obraz objemu',
     hardSetsPerWeek: ' tvrdých sérií týdně',
+    coachTitle: 'Poznámka kouče',
+    coachSub: ' z logů minulého týdne',
     avg: (n: number) => `prům. ${n}`,
     volumeColTitle: (week: number, sets: number) => `týden ${week}: ${sets} sérií`,
     setupTitle: 'Nachystej si trénink',
@@ -359,6 +361,7 @@ export const cs: Strings = {
     subtitle: 'Vzorce, ne známky. Žádné šňůry — klidný den je informace, ne selhání.',
     noticedThisWeek: 'Postřeh z tohoto týdne',
     noticedRecently: 'Postřeh z poslední doby',
+    trainingTitle: 'Tréninkové vzorce',
     completedLead: 'Tento týden jsi dokončil ',
     completedTail: ' věcí — úkoly, posilovna i kardio se počítají všechny.',
     strongestDay: (day: string) => ` Nejsilnější den bylo ${day}.`,
@@ -467,6 +470,10 @@ export const cs: Strings = {
       'Ve skutečné aplikaci si tuhle zprávu přečte AI a odškrtá úkoly, zapíše trénink nebo založí připomenutí za tebe. Demo nemá server, takže se nic nezměnilo — všechno ostatní je plně interaktivní.',
     reflection:
       'Rána tento týden držela — pět dní ze sedmi, a oba výpadky přišly po pozdním usínání. Data ukazují, že pákou je spánek, ne disciplína.',
+    trainingBody:
+      'Tvrdé série vyrostly za šest týdnů z 38 na 52 týdně, kardio drží kolem 8 km a zpětná vazba pořád říkala „akorát“. Základ roste bez přetížení.',
+    trainingAdvice:
+      '- Flat DB Bench Press dvakrát dosáhl horní hranice rozsahu — zvaž +2,5 kg na příštím tréninku.\n- Kvadricepsy dvakrát hlásily „na hraně“; zkus tento týden nechat objem Leg Pressu stejný.\n- Kardio stouplo o 9 % — tento týden drž stejnou vzdálenost, než přidáš.',
     reminder1: '💊 Vyzvednout prodloužený recept',
     reminder2: 'Objednat se k zubaři',
     reminder3: 'Naskenovat a založit dopis od pojišťovny',

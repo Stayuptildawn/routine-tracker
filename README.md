@@ -167,6 +167,12 @@ not add a new one.
   Off-plan lifts count too: *"hammer curls 14kg 3x12"* typed in the composer
   gets tagged with its muscle group and shows up in the weekly chart instead
   of disappearing.
+- Once a week, an AI **coach's note**: it reads last week's sets, reps,
+  weights, per-muscle volume, recovery check-ins and cardio feel against the
+  12-week trend, and suggests 3–5 small, safety-first tweaks (one increment
+  at a time, less for anything that felt "over the line", cardio capped at
+  +10% a week). Advisory only — it never edits your plan. The long-view
+  sibling, a **Training patterns** card, lands on the Reflect tab.
 - The plan is fully yours to edit: exercises, sessions, form cues, and sets ×
   reps per phase as plain fields (no format to memorize). Exercise names
   autocomplete from a 1,289-exercise database as you type, and picking one

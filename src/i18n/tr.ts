@@ -202,6 +202,8 @@ export const tr: Strings = {
       `${muscle} son zamanlarda birkaç kez “sınırın üstünde” dedi — gelecek hafta bir set azaltalım mı? (Aşağıdan planı düzenle; bu hafta olduğu gibi kalır.)`,
     volumePicture: 'Hacim tablosu',
     hardSetsPerWeek: ' haftalık gerçek set',
+    coachTitle: 'Koç notu',
+    coachSub: ' geçen haftanın kayıtlarından',
     avg: (n: number) => `ort ${n}`,
     volumeColTitle: (week: number, sets: number) => `${week}. hafta: ${sets} set`,
     setupTitle: 'Antrenmanını kur',
@@ -357,6 +359,7 @@ export const tr: Strings = {
     subtitle: 'Yargı değil, örüntü. Burada seri yok — sakin bir gün bilgidir, başarısızlık değil.',
     noticedThisWeek: 'Bu hafta göze çarpan',
     noticedRecently: 'Son günlerde göze çarpan',
+    trainingTitle: 'Antrenman örüntüleri',
     completedLead: 'Bu hafta ',
     completedTail: ' şey tamamladın — görevler, salon seansları ve kardiyo hepsi sayılır.',
     strongestDay: (day: string) => ` En güçlü günün ${day} oldu.`,
@@ -464,6 +467,10 @@ export const tr: Strings = {
       'Gerçek uygulamada bu mesajı bir AI okur ve senin yerine görevleri işaretler, antrenman kaydeder ya da hatırlatma oluşturur. Demonun sunucusu yok, o yüzden hiçbir şey değişmedi — geri kalan her şey tamamen etkileşimli.',
     reflection:
       'Sabahlar bu hafta yerli yerindeydi — yedi günün beşi, kaçan iki gün de geç yatılan gecelerin ertesiydi. Veriler kaldıracın disiplin değil uyku olduğunu söylüyor.',
+    trainingBody:
+      'Gerçek setler altı haftada haftalık 38’den 52’ye çıktı, kardiyo 8 km civarında sabit kaldı ve geri bildirimlerin hep «tam kararında» dedi. Taban zorlanmadan büyüyor.',
+    trainingAdvice:
+      '- Flat DB Bench Press iki kez aralığın üst sınırına ulaştı — bir sonraki antrenmanda +2,5 kg’ı düşünebilirsin.\n- Kuadrisepsler iki kez «sınırda» dedi; bu hafta Leg Press hacmini sabit tutmayı dene.\n- Kardiyo %9 arttı — eklemeden önce bu hafta aynı mesafede kal.',
     reminder1: '💊 Yenilenen reçeteyi eczaneden al',
     reminder2: 'Diş hekiminden randevu al',
     reminder3: 'Sigorta mektubunu tarayıp arşivle',

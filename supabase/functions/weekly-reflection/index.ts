@@ -15,6 +15,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { GEMINI_MODELS } from '../_shared/interpret.ts'
 import { LANGUAGE_NAMES, normLang } from '../_shared/lang.ts'
 import { userNow, addDays } from '../_shared/localtime.ts'
+import { maybeTrainingReview } from '../_shared/trainingReview.ts'
 
 // English-only by design: non-English reflections rely on the prompt-level
 // ban (translated equivalents can't be enumerated reliably), and English
@@ -74,6 +75,17 @@ Deno.serve(async (req) => {
       const inWindow = (m: number) => minutes >= m && minutes < m + WINDOW_MIN
       if (!force && !inWindow(MORNING_MIN) && !inWindow(NIGHT_MIN)) continue
       const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
+
+      // weekly training review (trend read + plan advice): once per week,
+      // self-healing - the first pass that finds no row for this week writes
+      // it. Runs before the routine guards below so a user who lifts but has
+      // no routine tasks still gets one.
+      try {
+        await maybeTrainingReview(supabase, user.id, lang, weekStart, force)
+      } catch (err) {
+        console.error('training-review error:', user.id, err)
+      }
+
       const prevStart = addDays(weekStart, -7)
       const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
       const prevDates = Array.from({ length: 7 }, (_, i) => addDays(prevStart, i))

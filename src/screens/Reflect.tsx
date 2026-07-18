@@ -92,6 +92,7 @@ interface Reflection {
 export default function Reflect({ visible }: { visible: boolean }) {
   const [days, setDays] = useState<DayStat[]>([])
   const [reflection, setReflection] = useState<Reflection | null>(null)
+  const [training, setTraining] = useState<Reflection | null>(null) // weekly AI training review (trend part)
   const [loaded, setLoaded] = useState(false)
   const [metric, setMetric] = useState<Metric>('tasks')
   const [frame, setFrame] = useState<Frame>('daily')
@@ -135,6 +136,13 @@ export default function Reflect({ visible }: { visible: boolean }) {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => setReflection(data as Reflection | null))
+    supabase
+      .from('training_reviews')
+      .select('week_start, body')
+      .order('week_start', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setTraining(data as Reflection | null))
   }, [visible])
 
   useEffect(() => {
@@ -193,6 +201,12 @@ export default function Reflect({ visible }: { visible: boolean }) {
           </div>
         )
       })()}
+      {training && (
+        <div className="reflection-card">
+          <p className="eyebrow">{t.reflect.trainingTitle}</p>
+          <p className="reflection-body">{training.body}</p>
+        </div>
+      )}
       {!loaded && <Skeleton cards={1} />}
       <div className="reflect-bars" style={loaded ? undefined : { display: 'none' }}>
         {days.map((d) => (

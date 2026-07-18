@@ -199,6 +199,8 @@ export const zh: Strings = {
       `${muscle}最近几次反馈“超出承受”——下周少练一组如何？（在下方编辑计划；本周保持原样。）`,
     volumePicture: '训练量全景',
     hardSetsPerWeek: ' 每周正式组数',
+    coachTitle: '教练笔记',
+    coachSub: ' 来自上周的记录',
     avg: (n: number) => `均 ${n}`,
     volumeColTitle: (week: number, sets: number) => `第 ${week} 周：${sets} 组`,
     setupTitle: '搭建你的训练',
@@ -343,6 +345,7 @@ export const zh: Strings = {
     subtitle: '看规律，不做评判。这里没有连胜纪录——安静的一天是信息，不是失败。',
     noticedThisWeek: '本周观察',
     noticedRecently: '近期观察',
+    trainingTitle: '训练规律',
     completedLead: '本周你完成了 ',
     completedTail: ' 件事——任务、力量课和有氧都算数。',
     strongestDay: (day: string) => `${day}是你最有劲头的一天。`,
@@ -448,6 +451,10 @@ export const zh: Strings = {
     aiUnavailable:
       '在正式应用里，AI 会读取这条消息，替你勾掉任务、记录训练或归档提醒。演示没有服务器，所以什么都没有改变——其余功能全部可以真实操作。',
     reflection: '这周早晨都稳住了——七天里有五天，两次没做到都跟前一晚熬夜有关。数据指向的是睡眠，不是自律。',
+    trainingBody:
+      '六周里每周正式组数从 38 升到 52，有氧稳定在 8 公里左右，你的恢复反馈一直是「合适」。基础在稳步增长，没有过度。',
+    trainingAdvice:
+      '- 平板哑铃卧推有两次达到目标次数上限——下次训练可以考虑加 2.5 公斤。\n- 股四头肌两次反馈「接近极限」；这周腿举的组数保持不变试试。\n- 有氧上升了 9%——这周先保持距离，再考虑增加。',
     reminder1: '💊 去取续配的处方药',
     reminder2: '预约牙医',
     reminder3: '扫描并归档保险信件',

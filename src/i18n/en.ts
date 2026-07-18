@@ -220,6 +220,8 @@ export const en = {
       `${muscle} has said “over the line” a couple of times lately — want one set fewer next week? (Edit the plan below; the current week stays as planned.)`,
     volumePicture: 'Volume picture',
     hardSetsPerWeek: ' hard sets per week',
+    coachTitle: 'Coach’s note',
+    coachSub: ' from last week’s logs',
     avg: (n: number) => `${n} avg`,
     volumeColTitle: (week: number, sets: number) => `week ${week}: ${sets} sets`,
     setupTitle: 'Set up your training',
@@ -375,6 +377,7 @@ export const en = {
     subtitle: 'Patterns, not judgment. No streaks here — a quiet day is information, not failure.',
     noticedThisWeek: 'Noticed this week',
     noticedRecently: 'Noticed recently',
+    trainingTitle: 'Training patterns',
     completedLead: 'You completed ',
     completedTail: ' things this week — tasks, gym sessions and cardio all count.',
     strongestDay: (day: string) => ` ${day} was your strongest day.`,
@@ -483,6 +486,10 @@ export const en = {
       'In the live app an AI reads this message and checks off tasks, logs workouts or files reminders for you. The demo has no server, so nothing was changed — everything else is fully interactive.',
     reflection:
       'Mornings held steady this week — five of seven days, and the two misses were both late nights. The evidence says sleep, not discipline, is the lever.',
+    trainingBody:
+      'Hard sets climbed from 38 to 52 per week across six weeks while cardio held near 8 km, and your check-ins kept reading “right”. The base is growing without strain.',
+    trainingAdvice:
+      '- Flat DB Bench Press reached the top of its rep range twice — consider +2.5 kg next session.\n- Quads said “stretch” twice; try holding Leg Press volume steady this week.\n- Cardio trended up 9% — keep this week at the same distance before adding more.',
     reminder1: '💊 Pick up the prescription refill',
     reminder2: 'Book a dentist appointment',
     reminder3: 'Scan and file the insurance letter',

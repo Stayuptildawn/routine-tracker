@@ -205,6 +205,8 @@ export const es: Strings = {
       `${muscle} ha dicho «demasiado» un par de veces últimamente — ¿una serie menos la próxima semana? (Edita el plan abajo; la semana actual se queda como está.)`,
     volumePicture: 'Mapa de volumen',
     hardSetsPerWeek: ' series efectivas por semana',
+    coachTitle: 'Nota del coach',
+    coachSub: ' según los registros de la semana pasada',
     avg: (n: number) => `${n} media`,
     volumeColTitle: (week: number, sets: number) => `semana ${week}: ${sets} series`,
     setupTitle: 'Prepara tu entrenamiento',
@@ -360,6 +362,7 @@ export const es: Strings = {
     subtitle: 'Patrones, no juicios. Aquí no hay rachas — un día tranquilo es información, no un fracaso.',
     noticedThisWeek: 'Observado esta semana',
     noticedRecently: 'Observado hace poco',
+    trainingTitle: 'Patrones de entrenamiento',
     completedLead: 'Completaste ',
     completedTail: ' cosas esta semana — tareas, sesiones de gimnasio y cardio cuentan por igual.',
     strongestDay: (day: string) => ` El ${day} fue tu día más fuerte.`,
@@ -467,6 +470,10 @@ export const es: Strings = {
       'En la aplicación real una IA lee este mensaje y marca tareas, registra entrenos o archiva recordatorios por ti. La demo no tiene servidor, así que nada cambió — todo lo demás es totalmente interactivo.',
     reflection:
       'Las mañanas aguantaron esta semana — cinco de siete días, y los dos fallos vinieron tras noches largas. La evidencia señala al sueño, no a la disciplina.',
+    trainingBody:
+      'Las series efectivas subieron de 38 a 52 por semana en seis semanas, con el cardio estable en torno a 8 km, y tus valoraciones seguían marcando «bien». La base crece sin forzar.',
+    trainingAdvice:
+      '- El Flat DB Bench Press llegó dos veces al tope de su rango — considera +2,5 kg en la próxima sesión.\n- Los cuádriceps marcaron «al límite» dos veces; prueba a mantener el volumen del Leg Press esta semana.\n- El cardio subió un 9 % — mantén la distancia esta semana antes de añadir más.',
     reminder1: '💊 Recoger la receta renovada',
     reminder2: 'Pedir cita con el dentista',
     reminder3: 'Escanear y archivar la carta del seguro',

@@ -7,6 +7,18 @@ deployed alongside).
 ## 2026-07-18
 
 ### Added
+- **A weekly AI training review, in two parts.** Once a week the server reads
+  your training story — the 12-week trend in sessions, hard sets and cardio
+  km, plus last week's actual sets, reps, weights, muscle volumes, recovery
+  check-ins and cardio feel — and writes two things: a **Training patterns**
+  card on Reflect naming the clearest trend, and a **Coach's note** on the
+  Workout tab with 3-5 concrete, safety-first suggestions for the coming week
+  (one small increment at a time, less for anything that said "over the
+  line", cardio capped at +10%). It's advisory only — the AI never touches
+  your plan; you apply what you like in the plan editor. This replaces the
+  old on-demand "Find my training pattern" button, which had quietly become
+  unreachable; the review now generates itself and catches up automatically
+  if a week's first pass is missed.
 - **Four more languages: Türkçe, Русский, Čeština, 日本語.** The app now
   speaks eleven languages. As with the existing ones, the whole surface is
   covered — interface, seeded routines and plan content, the "also translate

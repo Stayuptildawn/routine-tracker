@@ -204,6 +204,8 @@ export const fr: Strings = {
       `${muscle} a répondu « trop » plusieurs fois récemment — une série de moins la semaine prochaine ? (Modifiez le plan ci-dessous ; la semaine en cours reste telle quelle.)`,
     volumePicture: 'Volume d’entraînement',
     hardSetsPerWeek: ' séries effectives par semaine',
+    coachTitle: 'Note du coach',
+    coachSub: ' d’après les logs de la semaine passée',
     avg: (n: number) => `${n} moy`,
     volumeColTitle: (week: number, sets: number) => `semaine ${week} : ${sets} séries`,
     setupTitle: 'Préparez votre entraînement',
@@ -359,6 +361,7 @@ export const fr: Strings = {
     subtitle: 'Des tendances, pas un jugement. Pas de séries ici — un jour calme est une information, pas un échec.',
     noticedThisWeek: 'Remarqué cette semaine',
     noticedRecently: 'Remarqué récemment',
+    trainingTitle: 'Tendances d’entraînement',
     completedLead: 'Vous avez accompli ',
     completedTail: ' choses cette semaine — tâches, séances et cardio comptent tous.',
     strongestDay: (day: string) => ` ${day} a été votre meilleur jour.`,
@@ -466,6 +469,10 @@ export const fr: Strings = {
       'Dans l’application réelle, une IA lit ce message et coche des tâches, note des séances ou classe des rappels pour vous. La démo n’a pas de serveur, donc rien n’a changé — tout le reste est pleinement interactif.',
     reflection:
       'Les matins ont tenu bon cette semaine — cinq jours sur sept, et les deux ratés suivaient des couchers tardifs. Les faits désignent le sommeil, pas la discipline.',
+    trainingBody:
+      'Les séries effectives sont passées de 38 à 52 par semaine en six semaines, le cardio restant autour de 8 km, et tes bilans indiquaient toujours « juste bien ». La base grandit sans forcer.',
+    trainingAdvice:
+      '- Le Flat DB Bench Press a atteint deux fois le haut de sa fourchette — envisage +2,5 kg à la prochaine séance.\n- Les quadriceps ont dit « limite » deux fois ; essaie de garder le volume du Leg Press cette semaine.\n- Le cardio a monté de 9 % — garde la même distance cette semaine avant d’ajouter.',
     reminder1: '💊 Récupérer l’ordonnance renouvelée',
     reminder2: 'Prendre rendez-vous chez le dentiste',
     reminder3: 'Scanner et classer la lettre de l’assurance',

@@ -43,6 +43,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [loggedSets, setLoggedSets] = useState<{ muscle_group: string | null; session_id: string; logged_reps: number | null }[]>([])
   const [cardio, setCardio] = useState<CardioLog[]>([])
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
+  const [review, setReview] = useState<{ advice: string; week_start: string } | null>(null) // weekly AI coach note
   const [nextTweaks, setNextTweaks] = useState<string | null>(null) // wrap-up preview
   const [active, setActive] = useState<PlannedSession | null>(null)
   // the session screen keeps rendering its last value while the exit plays
@@ -77,14 +78,16 @@ export default function Gym({ visible }: { visible: boolean }) {
   editingRef.current = editingPlan
 
   const load = useCallback(async () => {
-    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes] = await Promise.all([
+    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
       supabase.from('user_settings').select('program_start, cardio_target_km').maybeSingle(),
       supabase.from('workout_logs').select('date').order('date', { ascending: true }).limit(1).maybeSingle(),
       supabase.from('training_blocks').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
+      supabase.from('training_reviews').select('advice, week_start').order('week_start', { ascending: false }).limit(1).maybeSingle(),
     ])
+    setReview((reviewRes.data as { advice: string; week_start: string } | null) ?? null)
     setCardio((cardioAllRes.data as CardioLog[]) ?? [])
     const logRows = (logsRes.data as WorkoutLog[]) ?? []
     const planRows = (plansRes.data as WorkoutPlan[]) ?? []
@@ -505,6 +508,16 @@ export default function Gym({ visible }: { visible: boolean }) {
           </button>
         </div>
       ))}
+
+      {view === 'strength' && review && (
+        <section className="gym-day training-card">
+          <h2>
+            {t.gym.coachTitle}
+            <span className="routine-progress">{t.gym.coachSub}</span>
+          </h2>
+          <p className="training-body">{review.advice}</p>
+        </section>
+      )}
 
       {view === 'strength' && block && volume.size > 0 && (
         <section className="gym-day volume-card">
