@@ -14,9 +14,10 @@ deployed alongside).
   lookup across the language packs — no AI, works between any two languages,
   keeps all history attached, and never touches anything you wrote or renamed
   yourself. Reminder categories follow along so nothing folds into "Other".
-  Both actions are deliberate now: picking a language is a draft you confirm
-  with Save (and the app returns to Settings after the switch, not the Now
-  tab), and the translate button double-checks before renaming anything.
+  The flow is deliberate: languages live in a dropdown, picking one is a
+  draft you confirm with Save, the app returns to Settings after the switch
+  (not the Now tab), and the translation is offered once as a yes/no popup
+  right after the new language loads - it never sits in the UI otherwise.
 - **Exercise autocomplete**: the plan editor and the training setup card now
   suggest from 1,289 exercise names as you type, and picking one fills in the
   muscle group automatically. The database is a trimmed extract of the

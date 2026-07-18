@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
 import { translateSeededContent } from '../lib/translateContent'
 import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
-import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
 
@@ -53,6 +52,12 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
   // language is a draft: nothing changes until Save (a switch reloads the
   // app, so an accidental tap must never fire it)
   const [langDraft, setLangDraft] = useState(lang)
+  // set by Save just before the reload: the reopened Settings offers - once -
+  // to also translate the seeded content into the fresh language
+  const [offerTranslate, setOfferTranslate] = useState(() => sessionStorage.getItem('offer-translate') === '1')
+  useEffect(() => {
+    sessionStorage.removeItem('offer-translate')
+  }, [])
 
   useEffect(() => {
     supabase
@@ -136,25 +141,22 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
           {availableLanguages.length > 1 && (
             <section className="settings-section">
               <h2>{t.settings.language}</h2>
-              <div className="energy-row">
+              <select className="settings-tz" value={langDraft} onChange={(e) => setLangDraft(e.target.value)}>
                 {availableLanguages.map((l) => (
-                  <button
-                    key={l.id}
-                    className={langDraft === l.id ? 'energy-btn active' : 'energy-btn'}
-                    aria-pressed={langDraft === l.id}
-                    onClick={() => setLangDraft(l.id)}
-                  >
+                  <option key={l.id} value={l.id}>
                     {l.name}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
               {langDraft !== lang && (
                 <div className="sign-out-actions">
                   <button
                     className="save"
                     onClick={async () => {
-                      // come back to Settings after the reload, not the Now tab
+                      // come back to Settings after the reload, not the Now
+                      // tab - and offer the content translation there, once
                       sessionStorage.setItem('reopen-settings', '1')
+                      sessionStorage.setItem('offer-translate', '1')
                       // the server needs to know too: the weekly reflection is
                       // written in this language and nudges use its strings
                       await supabase
@@ -171,23 +173,6 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                   </button>
                 </div>
               )}
-              <ConfirmButton
-                className="start-session"
-                label={translating ? '…' : t.settings.translateContent}
-                confirmLabel={t.settings.translateContentConfirm}
-                onConfirm={async () => {
-                  if (translating) return
-                  setTranslating(true)
-                  try {
-                    setTranslated(await translateSeededContent(lang))
-                  } finally {
-                    setTranslating(false)
-                  }
-                }}
-              />
-              <p className="gentle">
-                {translated !== null ? t.settings.translateContentDone(translated) : t.settings.translateContentNote}
-              </p>
             </section>
           )}
 
@@ -308,6 +293,47 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
           </section>
         </div>
       </div>
+
+      {offerTranslate && (
+        <div className="install-help-backdrop" onClick={() => !translating && setOfferTranslate(false)}>
+          <div
+            className="install-help"
+            role="dialog"
+            aria-label={t.settings.translateContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="install-title">{t.settings.translateContent}</p>
+            <p className="install-body">
+              {translated !== null ? t.settings.translateContentDone(translated) : t.settings.translateContentNote}
+            </p>
+            {translated === null ? (
+              <div className="install-actions">
+                <button
+                  className="start-session"
+                  disabled={translating}
+                  onClick={async () => {
+                    setTranslating(true)
+                    try {
+                      setTranslated(await translateSeededContent(lang))
+                    } finally {
+                      setTranslating(false)
+                    }
+                  }}
+                >
+                  {translating ? '…' : t.settings.translateNow}
+                </button>
+                <button className="link install-later" onClick={() => setOfferTranslate(false)}>
+                  {t.settings.translateSkip}
+                </button>
+              </div>
+            ) : (
+              <button className="start-session" onClick={() => setOfferTranslate(false)}>
+                {t.common.close}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

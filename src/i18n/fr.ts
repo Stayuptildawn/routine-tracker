@@ -409,7 +409,8 @@ export const fr: Strings = {
     autoFollows: 'Auto suit votre appareil.',
     language: 'Langue',
     translateContent: 'Traduire aussi mes routines et mon plan par défaut',
-    translateContentConfirm: 'Vraiment traduire — renommer le contenu par défaut dans cette langue ?',
+    translateNow: 'Les traduire',
+    translateSkip: 'Non, les laisser tels quels',
     translateContentNote:
       'Renomme les routines, tâches et consignes standard dans cette langue. Tout ce que vous avez écrit ou renommé vous-même reste intact.',
     translateContentDone: (n: number) => (n === 0 ? 'Plus rien à traduire.' : `${n} éléments traduits.`),

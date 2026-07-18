@@ -425,7 +425,8 @@ export const en = {
     autoFollows: 'Auto follows your device.',
     language: 'Language',
     translateContent: 'Also translate my default routines & plan',
-    translateContentConfirm: 'Really translate — rename the default content to this language?',
+    translateNow: 'Translate them',
+    translateSkip: 'No, keep them as they are',
     translateContentNote:
       'Renames the standard routines, tasks and plan cues into this language. Anything you wrote or renamed yourself is left untouched.',
     translateContentDone: (n: number) => (n === 0 ? 'Nothing left to translate.' : `Translated ${n} items.`),
