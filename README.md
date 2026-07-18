@@ -235,6 +235,11 @@ Functions, pg_cron) · Gemini Flash-Lite · GitHub Pages · Web Push · PWA
 No chart libraries, no drag-and-drop libraries, no CSS framework. The bars are
 plain divs and the whole design system is one CSS file.
 
+Exercise-name autocomplete is powered by a trimmed extract (names + muscle
+groups only, ~9 KB gzipped, loaded on demand) of the MIT-licensed
+[exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) by Hasan
+Eyildirim — regenerate it with `scripts/build-exercise-db.mjs`.
+
 ## How many users can this handle?
 
 Honestly, it's built for one person, me. I have cleaned up the roughest

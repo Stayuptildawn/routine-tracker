@@ -2490,6 +2490,61 @@ select option {
   margin-top: var(--sp-2);
 }
 
+/* exercise-name autocomplete: an input plus a floating suggestion list */
+.exercise-ac {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.exercise-ac input {
+  width: 100%;
+}
+
+.exercise-ac-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  inset-inline: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+}
+
+.exercise-ac-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+  border-radius: 0;
+}
+
+.exercise-ac-item:hover,
+.exercise-ac-item.active {
+  background: var(--surface-2);
+}
+
+.exercise-ac-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exercise-ac-muscle {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
 .add-task input {
   flex: 1;
   padding: var(--sp-2) var(--sp-3);

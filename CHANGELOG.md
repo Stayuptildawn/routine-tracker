@@ -4,6 +4,19 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-07-18
+
+### Added
+- **Exercise autocomplete**: the plan editor and the training setup card now
+  suggest from 1,289 exercise names as you type, and picking one fills in the
+  muscle group automatically. The database is a trimmed extract of the
+  MIT-licensed exercises-dataset (names + muscle groups only, ~9 KB gzipped)
+  that loads on demand — app startup and the installed size are untouched.
+- **Freeform lifts now count in the volume picture.** Telling the composer
+  "hammer curls 14kg 3x12" tags the log with its muscle group (your plan is
+  checked first, then the exercise database), so off-plan work shows up in
+  the weekly hard-set chart instead of disappearing.
+
 ## 2026-07-17
 
 ### Added

@@ -6,6 +6,7 @@
 // deno-lint-ignore-file no-explicit-any
 
 import { addDays, userNow } from './localtime.ts'
+import { muscleForExercise } from './exerciseDb.ts'
 import { LANGUAGE_NAMES, normLang, SERVER_STRINGS } from './lang.ts'
 import type { Lang } from './lang.ts'
 import {
@@ -257,7 +258,7 @@ User message: "${text}"`
   async function getPlanContext() {
     if (planContext) return planContext
     const [{ data: plans }, { data: block }, { data: settings }, { data: first }] = await Promise.all([
-      supabase.from('workout_plans').select('split_day, exercise, schemes').eq('user_id', userId),
+      supabase.from('workout_plans').select('split_day, exercise, schemes, muscle_group').eq('user_id', userId),
       supabase
         .from('training_blocks')
         .select('start_date')
@@ -403,6 +404,8 @@ User message: "${text}"`
           week_number: week,
           split_day: plan?.split_day ?? null,
           target_scheme: (phase && plan?.schemes?.[phase]) ?? null,
+          // the plan knows best; the bundled exercise db covers everything else
+          muscle_group: plan?.muscle_group ?? muscleForExercise(action.exercise),
         })
         .select('id')
         .single()

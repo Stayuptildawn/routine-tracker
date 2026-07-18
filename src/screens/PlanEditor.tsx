@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { PlannedSession, TrainingBlock, WorkoutPlan } from '../lib/types'
 import { t } from '../i18n'
 import Icon from '../components/Icon'
+import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
 
 export const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
 export const PHASE_KEYS = ['1-2', '3-4', '5-6']
@@ -317,10 +318,11 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         </button>
       </div>
       <div className="add-task">
-        <input
+        <ExerciseAutocomplete
           value={newEx.name}
-          onChange={(e) => setNewEx({ ...newEx, name: e.target.value })}
-          onKeyDown={(e) => e.key === 'Enter' && addExercise()}
+          onChange={(name) => setNewEx({ ...newEx, name })}
+          onPick={(name, muscle) => setNewEx({ ...newEx, name, muscle })}
+          onEnter={addExercise}
           placeholder={t.planEditor.newExercisePh(split ?? '…')}
         />
         <select value={newEx.muscle} onChange={(e) => setNewEx({ ...newEx, muscle: e.target.value })}>

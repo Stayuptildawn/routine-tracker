@@ -13,6 +13,7 @@ import PlanEditor, { MUSCLE_GROUPS, composeScheme } from './PlanEditor'
 import type { BlockApplyDiff } from './PlanEditor'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
+import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
   { key: '1-2', name: t.gym.phases['1-2'], maxWeek: 2 },
@@ -280,6 +281,20 @@ export default function Gym({ visible }: { visible: boolean }) {
       const arr = volume.get(s.muscle_group) ?? Array(block.total_weeks).fill(0)
       arr[wk - 1]++
       volume.set(s.muscle_group, arr)
+    }
+    // freeform lifts (composer/Telegram) count too - interpret tags their
+    // muscle group, and their date places them in a block week
+    for (const log of logs) {
+      if (!log.muscle_group || !log.sets?.length) continue
+      const wk =
+        Math.floor(
+          (new Date(log.date + 'T00:00:00').getTime() - new Date(block.start_date + 'T00:00:00').getTime()) /
+            (7 * 86400000),
+        ) + 1
+      if (wk < 1 || wk > block.total_weeks) continue
+      const arr = volume.get(log.muscle_group) ?? Array(block.total_weeks).fill(0)
+      arr[wk - 1] += log.sets.length
+      volume.set(log.muscle_group, arr)
     }
   }
 
@@ -549,10 +564,11 @@ export default function Gym({ visible }: { visible: boolean }) {
             />
           </div>
           <div className="add-task">
-            <input
+            <ExerciseAutocomplete
               placeholder={t.gym.firstExercisePh}
               value={scratch.exercise}
-              onChange={(e) => setScratch({ ...scratch, exercise: e.target.value })}
+              onChange={(exercise) => setScratch({ ...scratch, exercise })}
+              onPick={(exercise, muscle) => setScratch({ ...scratch, exercise, muscle })}
             />
             <select value={scratch.muscle} onChange={(e) => setScratch({ ...scratch, muscle: e.target.value })}>
               {MUSCLE_GROUPS.map((m) => (

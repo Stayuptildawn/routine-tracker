@@ -39,6 +39,7 @@ export interface WorkoutLog {
   target_scheme: string | null
   sets: { kg: number; reps: number }[] | null
   notes: string | null
+  muscle_group?: string | null // tagged by interpret (plan match, then exercise db)
 }
 
 export type ReminderStatus = 'auto' | 'reassigned' | 'dismissed' | 'done'

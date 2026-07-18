@@ -27,6 +27,11 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      injectManifest: {
+        // the exercise database chunk is on-demand (plan editing only) -
+        // keeping it out of the precache keeps installs light
+        globIgnores: ['**/exerciseDb-*.js'],
+      },
       manifest: {
         name: 'Routine Tracker',
         short_name: 'Routines',
