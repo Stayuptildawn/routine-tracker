@@ -40,6 +40,7 @@ jobs:
         if: env.SUPABASE_ACCESS_TOKEN != ''
         run: |
           supabase functions deploy interpret-message --project-ref "$PROJECT_REF"
+          supabase functions deploy training-reflection --project-ref "$PROJECT_REF"
           supabase functions deploy telegram-webhook --no-verify-jwt --project-ref "$PROJECT_REF"
           supabase functions deploy send-nudges --no-verify-jwt --project-ref "$PROJECT_REF"
           supabase functions deploy weekly-reflection --no-verify-jwt --project-ref "$PROJECT_REF"
