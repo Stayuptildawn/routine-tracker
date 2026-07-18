@@ -6,6 +6,10 @@ import { de } from './de'
 import { zh } from './zh'
 import { ar } from './ar'
 import { fa } from './fa'
+import { tr } from './tr'
+import { ru } from './ru'
+import { cs } from './cs'
+import { ja } from './ja'
 
 // The language registry. Adding a language is two steps:
 //   1. copy en.ts -> xx.ts and translate the values (each pack is typed as
@@ -19,7 +23,7 @@ export type { Strings } from './en'
 
 // exported for the content translator (lib/contentMaps.ts), which maps
 // seeded data between packs - all packs are statically bundled anyway
-export const languages: Record<string, Strings> = { en, fr, es, de, zh, ar, fa }
+export const languages: Record<string, Strings> = { en, fr, es, de, zh, ar, fa, tr, ru, cs, ja }
 
 const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('lang') : null
 export const lang = stored && languages[stored] ? stored : 'en'

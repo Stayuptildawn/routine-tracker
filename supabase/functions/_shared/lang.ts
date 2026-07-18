@@ -3,7 +3,7 @@
 // (nudge bodies, deterministic query answers, the reflection prompt's target
 // language) resolves through here. Pure data + pure functions, no Deno APIs.
 
-export const KNOWN_LANGS = ['en', 'fr', 'es', 'de', 'zh', 'ar', 'fa'] as const
+export const KNOWN_LANGS = ['en', 'fr', 'es', 'de', 'zh', 'ar', 'fa', 'tr', 'ru', 'cs', 'ja'] as const
 export type Lang = (typeof KNOWN_LANGS)[number]
 
 /** Anything (body param, db value, null) -> a known pack id, default en. */
@@ -21,6 +21,10 @@ export const LANGUAGE_NAMES: Record<Lang, string> = {
   zh: 'Simplified Chinese',
   ar: 'Arabic',
   fa: 'Persian (Farsi)',
+  tr: 'Turkish',
+  ru: 'Russian',
+  cs: 'Czech',
+  ja: 'Japanese',
 }
 
 interface ServerStrings {
@@ -146,5 +150,65 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     today: 'امروز',
     yesterday: 'دیروز',
     daysAgo: (n, date) => `${n} روز پیش (${date})`,
+  },
+  tr: {
+    routineReady: (name) => `${name} hazır; sen ne zaman istersen.`,
+    dueToday: (text, more) => `🔔 Bugün için: ${text}${more > 0 ? ` (+${more} tane daha)` : ''}`,
+    reflectHeadsUp: 'Bu akşamki değerlendirme günü 22:00\'de okuyor — aklında kalanları not etmek için iyi bir an.',
+    nothingOnHold: 'Beklemede bir şey yok.',
+    onHold: (list) => `Beklemede: ${list}.`,
+    byDue: (date, time) => ` (son: ${date}${time ? ` ${time}` : ''})`,
+    lastDone: (label, when) => `${label}: en son ${when} yapıldı.`,
+    noRecord: (label) => `${label}: henüz kaydı yok.`,
+    nothingLoggedFor: (exercise) => `${exercise}: henüz bir kayıt yok.`,
+    lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
+    today: 'bugün',
+    yesterday: 'dün',
+    daysAgo: (n, date) => `${n} gün önce (${date})`,
+  },
+  ru: {
+    routineReady: (name) => `${name} ждёт — начинай, когда захочешь.`,
+    dueToday: (text, more) => `🔔 На сегодня: ${text}${more > 0 ? ` (+ещё ${more})` : ''}`,
+    reflectHeadsUp: 'Вечерняя рефлексия читает день в 22:00 — самое время записать то, что ещё не записано.',
+    nothingOnHold: 'Ничего не отложено.',
+    onHold: (list) => `Отложено: ${list}.`,
+    byDue: (date, time) => ` (до ${date}${time ? ` ${time}` : ''})`,
+    lastDone: (label, when) => `${label}: последний раз — ${when}.`,
+    noRecord: (label) => `${label}: записей пока нет.`,
+    nothingLoggedFor: (exercise) => `${exercise}: пока ничего не записано.`,
+    lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
+    today: 'сегодня',
+    yesterday: 'вчера',
+    daysAgo: (n, date) => `${n} дн. назад (${date})`,
+  },
+  cs: {
+    routineReady: (name) => `${name} čeká — začni, kdy budeš chtít.`,
+    dueToday: (text, more) => `🔔 Dnes má termín: ${text}${more > 0 ? ` (+${more} dalších)` : ''}`,
+    reflectHeadsUp: 'Večerní reflexe čte den ve 22:00 — dobrá chvíle zapsat, co ještě zbývá.',
+    nothingOnHold: 'Nic nečeká.',
+    onHold: (list) => `Čeká: ${list}.`,
+    byDue: (date, time) => ` (do ${date}${time ? ` ${time}` : ''})`,
+    lastDone: (label, when) => `${label}: naposledy ${when}.`,
+    noRecord: (label) => `${label}: zatím žádný záznam.`,
+    nothingLoggedFor: (exercise) => `${exercise}: zatím nic nezapsáno.`,
+    lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
+    today: 'dnes',
+    yesterday: 'včera',
+    daysAgo: (n, date) => `před ${n} dny (${date})`,
+  },
+  ja: {
+    routineReady: (name) => `${name}の準備ができています。いつでもどうぞ。`,
+    dueToday: (text, more) => `🔔 今日が期限：${text}${more > 0 ? `（ほか ${more} 件）` : ''}`,
+    reflectHeadsUp: '今夜のふりかえりは22:00に一日を読み取ります — まだ記録していないことを書き留めるのによい頃合いです。',
+    nothingOnHold: '保留中のものはありません。',
+    onHold: (list) => `保留中：${list}。`,
+    byDue: (date, time) => `（${date}${time ? ` ${time}` : ''} まで）`,
+    lastDone: (label, when) => `${label}：最後に行ったのは${when}です。`,
+    noRecord: (label) => `${label}：まだ記録がありません。`,
+    nothingLoggedFor: (exercise) => `${exercise}：まだ記録がありません。`,
+    lastWorkout: (exercise, when, sets) => `${exercise}、${when}${sets ? `：${sets}` : ''}。`,
+    today: '今日',
+    yesterday: '昨日',
+    daysAgo: (n, date) => `${n} 日前（${date}）`,
   },
 }

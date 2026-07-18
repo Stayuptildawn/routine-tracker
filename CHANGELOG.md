@@ -7,6 +7,11 @@ deployed alongside).
 ## 2026-07-18
 
 ### Added
+- **Four more languages: Türkçe, Русский, Čeština, 日本語.** The app now
+  speaks eleven languages. As with the existing ones, the whole surface is
+  covered — interface, seeded routines and plan content, the "also translate
+  my content" flow, push nudges, composer answers and the weekly reflection
+  (server-side text follows the new packs too).
 - **"Also translate my routines & plan"** (Settings → Language): switching
   language changes the interface, but your routines, tasks and plan cues are
   data seeded in whatever language was active at sign-up. This one-tap action
