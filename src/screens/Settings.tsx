@@ -149,7 +149,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                 ))}
               </select>
               {langDraft !== lang && (
-                <div className="sign-out-actions">
+                <div className="sign-out-actions lang-save-row">
                   <button
                     className="save"
                     onClick={async () => {

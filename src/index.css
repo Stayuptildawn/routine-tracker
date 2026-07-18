@@ -649,6 +649,12 @@ select option {
   gap: var(--sp-2);
 }
 
+/* the language Save/Cancel pair sits directly under the dropdown - without
+   this it collides with the select's border */
+.lang-save-row {
+  margin-top: var(--sp-3);
+}
+
 .sign-out-actions .sign-out {
   margin-top: 0;
   width: auto;
