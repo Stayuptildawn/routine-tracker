@@ -13,6 +13,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'
+import { json } from '../_shared/http.ts'
 import { addDays, userNow } from '../_shared/localtime.ts'
 import { normLang, SERVER_STRINGS } from '../_shared/lang.ts'
 
@@ -22,10 +23,6 @@ const WINDOW_MIN = 5 // must match the cron cadence
 const TIMED_TOLERANCE_MIN = 15
 const REMINDER_WINDOW_START = 9 * 60 // due-today reminders go out after 09:00 local
 const REFLECT_PUSH_MIN = 21 * 60 + 30 // 21:30 local - half an hour before the nightly reflection reads the day
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-}
 
 Deno.serve(async (req) => {
   if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {

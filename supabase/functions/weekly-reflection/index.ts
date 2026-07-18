@@ -12,7 +12,8 @@
 // checked after - a vague reflection is worse than none.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { GEMINI_MODELS } from '../_shared/interpret.ts'
+import { askGemini } from '../_shared/gemini.ts'
+import { json } from '../_shared/http.ts'
 import { LANGUAGE_NAMES, normLang } from '../_shared/lang.ts'
 import { userNow, addDays } from '../_shared/localtime.ts'
 import { maybeTrainingReview } from '../_shared/trainingReview.ts'
@@ -23,31 +24,7 @@ import { maybeTrainingReview } from '../_shared/trainingReview.ts'
 const FORBIDDEN =
   /\b(failed|failure|missed|only|just|should|behind|lazy|slipped)\b|great job|keep it up|well done|good work|stay(ing)? consistent|consistency/i
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-}
-
-async function askGemini(prompt: string): Promise<string | null> {
-  for (const model of GEMINI_MODELS) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.6 },
-        }),
-      },
-    )
-    if (res.ok) {
-      const data = await res.json()
-      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null
-    }
-    if (res.status !== 503 && res.status !== 429) break
-  }
-  return null
-}
+const ask = async (prompt: string) => (await askGemini(prompt, { temperature: 0.6 })).text
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -211,10 +188,10 @@ be in ${LANGUAGE_NAMES[lang]}): "Bedtime Routine landed 6 of 7 nights and
 both low-energy days still closed out every core task. Want to try giving
 Study Time the same 9am slot where 4 of its 5 completions happened?"`
 
-      let body = await askGemini(prompt)
+      let body = await ask(prompt)
       if (!body) continue
       if (FORBIDDEN.test(body)) {
-        body = await askGemini(prompt + `\n\nYour previous draft broke the rules (generic or banned wording). Rewrite it: specific names and numbers, no filler.`)
+        body = await ask(prompt + `\n\nYour previous draft broke the rules (generic or banned wording). Rewrite it: specific names and numbers, no filler.`)
         if (!body || FORBIDDEN.test(body)) continue
       }
 

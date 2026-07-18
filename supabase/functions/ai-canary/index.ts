@@ -10,35 +10,20 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'
-import { GEMINI_MODELS } from '../_shared/interpret.ts'
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-}
+import { askGemini } from '../_shared/gemini.ts'
+import { json } from '../_shared/http.ts'
 
 Deno.serve(async (req) => {
   if (req.headers.get('x-cron-secret') !== Deno.env.get('CANARY_SECRET')) {
     return new Response('forbidden', { status: 403 })
   }
 
-  let lastError = ''
-  for (const model of GEMINI_MODELS) {
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Reply with the single word: ok' }] }],
-          generationConfig: { maxOutputTokens: 10, temperature: 0 },
-        }),
-      })
-      if (res.ok) return json({ ok: true, model })
-      lastError = `${model}: HTTP ${res.status}`
-      if (![503, 429, 404].includes(res.status)) break // same fatality rules as the parser
-    } catch (err) {
-      lastError = `${model}: ${err}`
-    }
-  }
+  // same model chain and fatality rules as the parser, via the shared helper
+  const { model, error: lastError } = await askGemini('Reply with the single word: ok', {
+    maxOutputTokens: 10,
+    temperature: 0,
+  })
+  if (model) return json({ ok: true, model })
 
   // every model failed - tell the owner while it's still morning
   try {

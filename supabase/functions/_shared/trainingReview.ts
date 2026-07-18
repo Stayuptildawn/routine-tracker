@@ -11,7 +11,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 
-import { GEMINI_MODELS } from './interpret.ts'
+import { askGeminiJson } from './gemini.ts'
 import { LANGUAGE_NAMES } from './lang.ts'
 import type { Lang } from './lang.ts'
 import { addDays } from './localtime.ts'
@@ -277,30 +277,13 @@ Both fields: no exclamation marks, no emoji, no greetings or preamble, no
 generic praise ("great job", "keep it up"), and never ${LANGUAGE_NAMES[lang]}
 words meaning failed, missed, only, just, should, behind, lazy.`
 
-  let parsed: { pattern?: string; advice?: string } | null = null
-  for (const model of GEMINI_MODELS) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: reviewSchema, temperature: 0.4, maxOutputTokens: 2048 },
-      }),
-    })
-    if (res.ok) {
-      const d = await res.json()
-      try {
-        parsed = JSON.parse(d.candidates?.[0]?.content?.parts?.[0]?.text ?? '')
-      } catch {
-        parsed = null
-      }
-      if (parsed?.pattern && parsed?.advice) break
-      parsed = null
-      continue // malformed reply - let the next model try
-    }
-    if (res.status !== 503 && res.status !== 429) break
-  }
-  if (!parsed?.pattern || !parsed?.advice) return false
+  const { data: parsed } = await askGeminiJson<{ pattern: string; advice: string }>(
+    prompt,
+    reviewSchema,
+    { temperature: 0.4 },
+    (d) => Boolean(d.pattern && d.advice),
+  )
+  if (!parsed) return false
 
   // models sometimes join the "- " bullets with spaces instead of newlines;
   // the UI renders on pre-line, so put each suggestion back on its own line
