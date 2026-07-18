@@ -424,6 +424,10 @@ export const en = {
     themeDark: 'Dark',
     autoFollows: 'Auto follows your device.',
     language: 'Language',
+    translateContent: 'Also translate my routines & plan',
+    translateContentNote:
+      'Renames the standard routines, tasks and plan cues into this language. Anything you wrote or renamed yourself is left untouched.',
+    translateContentDone: (n: number) => (n === 0 ? 'Nothing left to translate.' : `Translated ${n} items.`),
     timezone: 'Timezone',
     tzNote: 'Used by push nudges, the Sunday reflection and the Telegram bot.',
     tzNotSaved: (deviceTz: string) => ` Not saved yet — pick one to confirm (your device says ${deviceTz}).`,

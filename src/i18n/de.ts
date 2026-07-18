@@ -408,6 +408,10 @@ export const de: Strings = {
     themeDark: 'Dunkel',
     autoFollows: 'Auto folgt deinem Gerät.',
     language: 'Sprache',
+    translateContent: 'Auch meine Routinen & meinen Plan übersetzen',
+    translateContentNote:
+      'Benennt die Standard-Routinen, -Aufgaben und -Hinweise in diese Sprache um. Alles, was du selbst geschrieben oder umbenannt hast, bleibt unangetastet.',
+    translateContentDone: (n: number) => (n === 0 ? 'Nichts mehr zu übersetzen.' : `${n} Einträge übersetzt.`),
     timezone: 'Zeitzone',
     tzNote: 'Wird von Push-Erinnerungen, dem Sonntagsrückblick und dem Telegram-Bot genutzt.',
     tzNotSaved: (deviceTz: string) => ` Noch nicht gespeichert — wähle eine zum Bestätigen (dein Gerät meldet ${deviceTz}).`,

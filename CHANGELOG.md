@@ -7,6 +7,13 @@ deployed alongside).
 ## 2026-07-18
 
 ### Added
+- **"Also translate my routines & plan"** (Settings → Language): switching
+  language changes the interface, but your routines, tasks and plan cues are
+  data seeded in whatever language was active at sign-up. This one-tap action
+  renames all standard seeded content into the current language by exact
+  lookup across the language packs — no AI, works between any two languages,
+  keeps all history attached, and never touches anything you wrote or renamed
+  yourself. Reminder categories follow along so nothing folds into "Other".
 - **Exercise autocomplete**: the plan editor and the training setup card now
   suggest from 1,289 exercise names as you type, and picking one fills in the
   muscle group automatically. The database is a trimmed extract of the

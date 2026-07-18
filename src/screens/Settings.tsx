@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
+import { translateSeededContent } from '../lib/translateContent'
 import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
@@ -46,6 +47,8 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
   const [pwMsg, setPwMsg] = useState<string | null>(null)
   const [pwBusy, setPwBusy] = useState(false)
   const [confirmSignOut, setConfirmSignOut] = useState(false)
+  const [translating, setTranslating] = useState(false)
+  const [translated, setTranslated] = useState<number | null>(null)
 
   useEffect(() => {
     supabase
@@ -149,6 +152,23 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                   </button>
                 ))}
               </div>
+              <button
+                className="start-session"
+                disabled={translating}
+                onClick={async () => {
+                  setTranslating(true)
+                  try {
+                    setTranslated(await translateSeededContent(lang))
+                  } finally {
+                    setTranslating(false)
+                  }
+                }}
+              >
+                {translating ? '…' : t.settings.translateContent}
+              </button>
+              <p className="gentle">
+                {translated !== null ? t.settings.translateContentDone(translated) : t.settings.translateContentNote}
+              </p>
             </section>
           )}
 

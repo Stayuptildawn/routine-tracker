@@ -17,7 +17,9 @@ import { fa } from './fa'
 
 export type { Strings } from './en'
 
-const languages: Record<string, Strings> = { en, fr, es, de, zh, ar, fa }
+// exported for the content translator (lib/contentMaps.ts), which maps
+// seeded data between packs - all packs are statically bundled anyway
+export const languages: Record<string, Strings> = { en, fr, es, de, zh, ar, fa }
 
 const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('lang') : null
 export const lang = stored && languages[stored] ? stored : 'en'

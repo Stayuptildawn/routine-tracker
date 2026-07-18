@@ -409,6 +409,10 @@ export const es: Strings = {
     themeDark: 'Oscuro',
     autoFollows: 'Auto sigue a tu dispositivo.',
     language: 'Idioma',
+    translateContent: 'Traducir también mis rutinas y mi plan',
+    translateContentNote:
+      'Renombra las rutinas, tareas y pautas estándar a este idioma. Lo que escribiste o renombraste tú queda intacto.',
+    translateContentDone: (n: number) => (n === 0 ? 'No queda nada por traducir.' : `${n} elementos traducidos.`),
     timezone: 'Zona horaria',
     tzNote: 'La usan los avisos, la reflexión del domingo y el bot de Telegram.',
     tzNotSaved: (deviceTz: string) => ` Aún sin guardar — elige una para confirmar (tu dispositivo dice ${deviceTz}).`,
