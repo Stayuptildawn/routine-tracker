@@ -89,12 +89,12 @@ export async function maybeTrainingReview(
       supabase.from('user_settings').select('cardio_target_km').eq('user_id', userId).maybeSingle(),
     ])
   // the written plan itself, so advice can speak to it (fetched after
-  // blockRes since the snapshot should be the active block's plan)
-  const plansRes = blockRes.data
-    ? await supabase.from('workout_plans')
-        .select('split_day, exercise, muscle_group, schemes, cardio')
-        .eq('user_id', userId).eq('block', blockRes.data.block).order('sort_order')
-    : { data: [] }
+  // blockRes since the snapshot should be the active block's plan; with no
+  // block running, their block-1 plan still gives the advice something real
+  // to anchor to - custom "build your own" plans live in the same table)
+  const plansRes = await supabase.from('workout_plans')
+    .select('split_day, exercise, muscle_group, schemes, cardio')
+    .eq('user_id', userId).eq('block', blockRes.data?.block ?? 1).order('sort_order')
 
   // ---- 12-week series (the trend context) ----
   const sessions = Array(WEEKS).fill(0)
