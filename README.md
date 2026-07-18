@@ -275,7 +275,8 @@ are, in the order they'd break:
 2. **Supabase Realtime: 200 concurrent connections.** An open app holds one
    or two, so about **100–150 simultaneously open apps**.
 3. **Everything else is far away.** Edge Functions allow 500K
-   invocations/month (the two 15-minute crons use ~6K), the 500MB database
+   invocations/month (the cron jobs — nudges every 5 minutes, reflections
+   every 15, the daily canary — use ~12K), the 500MB database
    is years of personal data (a whole 6-week training block is ~700 tiny
    rows), and GitHub Pages barely notices a 450KB app.
 
@@ -351,7 +352,10 @@ CLI uploads automatically (the dashboard paste-editor can't).
   with `--no-verify-jwt`, enable the `pg_cron` and `pg_net` extensions, and
   schedule a `net.http_post` to it **every 15 minutes** with an
   `x-cron-secret` header. The function itself decides when to actually write:
-  twice a day per user (morning and night), in that user's timezone. One
+  twice a day per user (morning and night), in that user's timezone. The same
+  pass also writes the weekly training review (the coach's note on the
+  Workout tab and the Training patterns card on Reflect) once per user per
+  week — self-healing, no extra cron needed. One
   gotcha that cost me an afternoon: pass `timeout_milliseconds := 20000` in
   the `net.http_post` call — pg_net's default is 5 seconds, which kills the
   function exactly when it has real work to do.
@@ -423,9 +427,12 @@ One lesson from running this on the small models is baked in: anything
 time-shaped is never left to the model's arithmetic. *"in 10 mins"*, *"at
 5pm"*, *"tomorrow"*, *"yesterday"* are all resolved deterministically in
 code against your clock and timezone; the model only has to point at the
-right task or reminder. Repeated actions get deduped, the action list is
-capped, and a model that returns broken JSON just falls through to the next
-one in the chain.
+right task or reminder. Repeated actions get deduped and the action list is
+capped. Every AI call in the project — the parser, the reflections, the
+weekly training review, the canary — goes through one shared helper
+(`supabase/functions/_shared/gemini.ts`) that owns the model chain and its
+fallthrough rules: overload, quota, a retired model name or truncated JSON
+all mean "try the next model", so one bad model never takes the feature down.
 
 ## License
 
