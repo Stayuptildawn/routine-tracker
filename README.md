@@ -9,7 +9,7 @@ Built gentle enough for ADHD brains — which makes it lighter for every brain.<
 Self-hosted and free to run, no subscription.
 </p>
 
-<p align="center"><sub>React · Supabase · Gemini · installable PWA · 7 languages · AGPL-3.0</sub></p>
+<p align="center"><sub>React · Supabase · Gemini · installable PWA · 11 languages · AGPL-3.0</sub></p>
 
 <p align="center">
   <a href="https://stayuptildawn.github.io/routine-tracker/?demo"><strong>▶ Try the live demo</strong></a>
@@ -164,8 +164,13 @@ not add a new one.
   edit.
 - A **volume picture** (hard sets per muscle per week) and a **cardio view**
   with quick logging, weekly distance, and pace — runs, walks, cycles, swims.
+  Off-plan lifts count too: *"hammer curls 14kg 3x12"* typed in the composer
+  gets tagged with its muscle group and shows up in the weekly chart instead
+  of disappearing.
 - The plan is fully yours to edit: exercises, sessions, form cues, and sets ×
-  reps per phase as plain fields (no format to memorize). Nothing saves until
+  reps per phase as plain fields (no format to memorize). Exercise names
+  autocomplete from a 1,289-exercise database as you type, and picking one
+  fills in the muscle group for you. Nothing saves until
   you press Save — Cancel really cancels, deletes are undoable until then —
   and if you change the plan mid-block, the app asks whether the running
   block's remaining sessions should pick it up or leave it for the next one.
@@ -192,13 +197,18 @@ not add a new one.
 - Your data is yours: one-tap CSV export of tasks, workouts, training sets,
   cardio, recovery check-ins and reminders.
 
-### 🌍 Seven languages, real localization
+### 🌍 Eleven languages, real localization
 
-English, Français, Español, Deutsch, 中文, العربية and فارسی — switchable in
-Settings. This isn't a machine-translated skin: the seeded routines, the
-starter plan's safety cues and every screen are translated, Arabic and Farsi
-flip the entire layout right-to-left, and Farsi shows dates in the Jalali
-calendar. Every string lives in one typed file per language
+English, Français, Español, Deutsch, 中文, العربية, فارسی, Türkçe, Русский,
+Čeština and 日本語 — switchable in Settings. This isn't a machine-translated
+skin: the seeded routines, the starter plan's safety cues and every screen are
+translated, Arabic and Farsi flip the entire layout right-to-left, and Farsi
+shows dates in the Jalali calendar. The server side follows along too — push
+nudges, the composer's answers and the AI reflections all arrive in your
+language. And since your routines were seeded in whatever language was active
+at sign-up, switching offers a one-tap translation of that seeded content into
+the new language (exact lookup across the packs, no AI, your own words are
+never touched). Every string lives in one typed file per language
 (`src/i18n/`), so adding a language is copy, translate, register — TypeScript
 flags anything a translation misses.
 
