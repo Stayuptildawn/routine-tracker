@@ -2517,7 +2517,9 @@ select option {
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
 }
 
-.exercise-ac-item {
+/* double-class scoping so contextual button skins (.add-task button's amber
+   fill, .edit-task-row's danger red) can never restyle the suggestions */
+.exercise-ac-list .exercise-ac-item {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -2525,11 +2527,15 @@ select option {
   padding: var(--sp-2) var(--sp-3);
   text-align: start;
   border-radius: 0;
+  background: none;
+  color: var(--text);
+  font-weight: 400;
 }
 
-.exercise-ac-item:hover,
-.exercise-ac-item.active {
-  background: var(--surface-2);
+.exercise-ac-list .exercise-ac-item:hover,
+.exercise-ac-list .exercise-ac-item.active {
+  background: var(--accent-soft);
+  color: var(--text);
 }
 
 .exercise-ac-name {

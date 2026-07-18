@@ -243,7 +243,11 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         return (
           <div key={r.key} className="edit-task">
             <div className="edit-task-row">
-              <input value={r.exercise} onChange={(e) => patch(r.key, { exercise: e.target.value })} />
+              <ExerciseAutocomplete
+                value={r.exercise}
+                onChange={(exercise) => patch(r.key, { exercise })}
+                onPick={(exercise, muscle) => patch(r.key, { exercise, muscle })}
+              />
               <select value={r.muscle} onChange={(e) => patch(r.key, { muscle: e.target.value })}>
                 {MUSCLE_GROUPS.map((m) => (
                   <option key={m} value={m}>{muscleLabel(m)}</option>
