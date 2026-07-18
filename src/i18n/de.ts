@@ -408,7 +408,8 @@ export const de: Strings = {
     themeDark: 'Dunkel',
     autoFollows: 'Auto folgt deinem Gerät.',
     language: 'Sprache',
-    translateContent: 'Auch meine Routinen & meinen Plan übersetzen',
+    translateContent: 'Auch meine Standard-Routinen & meinen Standard-Plan übersetzen',
+    translateContentConfirm: 'Wirklich übersetzen — die Standard-Inhalte werden in diese Sprache umbenannt?',
     translateContentNote:
       'Benennt die Standard-Routinen, -Aufgaben und -Hinweise in diese Sprache um. Alles, was du selbst geschrieben oder umbenannt hast, bleibt unangetastet.',
     translateContentDone: (n: number) => (n === 0 ? 'Nichts mehr zu übersetzen.' : `${n} Einträge übersetzt.`),

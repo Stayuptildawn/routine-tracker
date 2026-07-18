@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
 import { translateSeededContent } from '../lib/translateContent'
 import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
+import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
 
@@ -49,6 +50,9 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
   const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [translating, setTranslating] = useState(false)
   const [translated, setTranslated] = useState<number | null>(null)
+  // language is a draft: nothing changes until Save (a switch reloads the
+  // app, so an accidental tap must never fire it)
+  const [langDraft, setLangDraft] = useState(lang)
 
   useEffect(() => {
     supabase
@@ -136,26 +140,43 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                 {availableLanguages.map((l) => (
                   <button
                     key={l.id}
-                    className={lang === l.id ? 'energy-btn active' : 'energy-btn'}
-                    aria-pressed={lang === l.id}
-                    onClick={async () => {
-                      // the server needs to know too: the weekly reflection is
-                      // written in this language and nudges use its strings
-                      await supabase
-                        .from('user_settings')
-                        .upsert({ language: l.id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-                        .then(() => {}, () => {}) // offline: the UI still switches
-                      setLanguage(l.id)
-                    }}
+                    className={langDraft === l.id ? 'energy-btn active' : 'energy-btn'}
+                    aria-pressed={langDraft === l.id}
+                    onClick={() => setLangDraft(l.id)}
                   >
                     {l.name}
                   </button>
                 ))}
               </div>
-              <button
+              {langDraft !== lang && (
+                <div className="sign-out-actions">
+                  <button
+                    className="save"
+                    onClick={async () => {
+                      // come back to Settings after the reload, not the Now tab
+                      sessionStorage.setItem('reopen-settings', '1')
+                      // the server needs to know too: the weekly reflection is
+                      // written in this language and nudges use its strings
+                      await supabase
+                        .from('user_settings')
+                        .upsert({ language: langDraft, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+                        .then(() => {}, () => {}) // offline: the UI still switches
+                      setLanguage(langDraft)
+                    }}
+                  >
+                    {t.common.save}
+                  </button>
+                  <button className="energy-btn" onClick={() => setLangDraft(lang)}>
+                    {t.common.cancel}
+                  </button>
+                </div>
+              )}
+              <ConfirmButton
                 className="start-session"
-                disabled={translating}
-                onClick={async () => {
+                label={translating ? '…' : t.settings.translateContent}
+                confirmLabel={t.settings.translateContentConfirm}
+                onConfirm={async () => {
+                  if (translating) return
                   setTranslating(true)
                   try {
                     setTranslated(await translateSeededContent(lang))
@@ -163,9 +184,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                     setTranslating(false)
                   }
                 }}
-              >
-                {translating ? '…' : t.settings.translateContent}
-              </button>
+              />
               <p className="gentle">
                 {translated !== null ? t.settings.translateContentDone(translated) : t.settings.translateContentNote}
               </p>

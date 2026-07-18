@@ -409,7 +409,8 @@ export const es: Strings = {
     themeDark: 'Oscuro',
     autoFollows: 'Auto sigue a tu dispositivo.',
     language: 'Idioma',
-    translateContent: 'Traducir también mis rutinas y mi plan',
+    translateContent: 'Traducir también mis rutinas y plan predeterminados',
+    translateContentConfirm: '¿Traducir de verdad? — renombra el contenido predeterminado a este idioma',
     translateContentNote:
       'Renombra las rutinas, tareas y pautas estándar a este idioma. Lo que escribiste o renombraste tú queda intacto.',
     translateContentDone: (n: number) => (n === 0 ? 'No queda nada por traducir.' : `${n} elementos traducidos.`),

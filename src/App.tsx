@@ -63,7 +63,12 @@ export default function App() {
   const [seeding, setSeeding] = useState(true)
   const [tab, setTab] = useState<Tab>('now')
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  // saving a language reloads the app; this flag brings the user back to
+  // Settings instead of dropping them on the Now tab
+  const [settingsOpen, setSettingsOpen] = useState(() => sessionStorage.getItem('reopen-settings') === '1')
+  useEffect(() => {
+    sessionStorage.removeItem('reopen-settings')
+  }, [])
   const settings = usePresence(settingsOpen)
   const [recovering, setRecovering] = useState(false)
 
