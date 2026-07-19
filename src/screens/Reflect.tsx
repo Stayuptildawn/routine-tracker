@@ -89,10 +89,17 @@ interface Reflection {
   body: string
 }
 
+interface TrainingReview {
+  week_start: string
+  body: string
+  advice: string
+}
+
 export default function Reflect({ visible }: { visible: boolean }) {
   const [days, setDays] = useState<DayStat[]>([])
   const [reflection, setReflection] = useState<Reflection | null>(null)
-  const [training, setTraining] = useState<Reflection | null>(null) // weekly AI training review (trend part)
+  const [training, setTraining] = useState<TrainingReview[]>([]) // weekly AI training reviews, newest first
+  const [showPastReviews, setShowPastReviews] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [metric, setMetric] = useState<Metric>('tasks')
   const [frame, setFrame] = useState<Frame>('daily')
@@ -138,11 +145,10 @@ export default function Reflect({ visible }: { visible: boolean }) {
       .then(({ data }) => setReflection(data as Reflection | null))
     supabase
       .from('training_reviews')
-      .select('week_start, body')
+      .select('week_start, body, advice')
       .order('week_start', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setTraining(data as Reflection | null))
+      .limit(12)
+      .then(({ data }) => setTraining((data as TrainingReview[]) ?? []))
   }, [visible])
 
   useEffect(() => {
@@ -201,10 +207,32 @@ export default function Reflect({ visible }: { visible: boolean }) {
           </div>
         )
       })()}
-      {training && (
+      {training.length > 0 && (
         <div className="reflection-card">
           <p className="eyebrow">{t.reflect.trainingTitle}</p>
-          <p className="reflection-body">{training.body}</p>
+          <p className="reflection-body">{training[0].body}</p>
+        </div>
+      )}
+      {training.length > 1 && (
+        <div className="training-history">
+          <button className="link" onClick={() => setShowPastReviews((v) => !v)}>
+            <Icon name={showPastReviews ? 'arrow-up' : 'arrow-down'} /> {t.reflect.pastWeeks(training.length - 1)}
+          </button>
+          {showPastReviews &&
+            training.slice(1).map((r) => {
+              const start = new Date(r.week_start + 'T00:00:00')
+              const end = new Date(start)
+              end.setDate(end.getDate() + 6)
+              const label = `${start.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`
+              return (
+                <div key={r.week_start} className="reflection-card">
+                  <p className="eyebrow">{label}</p>
+                  <p className="reflection-body">{r.body}</p>
+                  <p className="eyebrow">{t.gym.coachTitle}</p>
+                  <p className="reflection-body training-body">{r.advice}</p>
+                </div>
+              )
+            })}
         </div>
       )}
       {!loaded && <Skeleton cards={1} />}

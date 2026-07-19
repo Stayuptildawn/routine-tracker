@@ -362,6 +362,7 @@ export const de: Strings = {
     noticedThisWeek: 'Diese Woche aufgefallen',
     noticedRecently: 'Kürzlich aufgefallen',
     trainingTitle: 'Trainingsmuster',
+    pastWeeks: (n: number) => `Vergangene Wochen (${n})`,
     completedLead: 'Du hast ',
     completedTail: ' Dinge diese Woche geschafft — Aufgaben, Trainingseinheiten und Ausdauer zählen alle.',
     strongestDay: (day: string) => ` ${day} war dein stärkster Tag.`,
@@ -418,7 +419,7 @@ export const de: Strings = {
       'Benennt die Standard-Routinen, -Aufgaben und -Hinweise in diese Sprache um. Alles, was du selbst geschrieben oder umbenannt hast, bleibt unangetastet.',
     translateContentDone: (n: number) => (n === 0 ? 'Nichts mehr zu übersetzen.' : `${n} Einträge übersetzt.`),
     timezone: 'Zeitzone',
-    tzNote: 'Wird von Push-Erinnerungen, dem Sonntagsrückblick und dem Telegram-Bot genutzt.',
+    tzNote: 'Wird von Push-Erinnerungen und dem Sonntagsrückblick genutzt.',
     tzNotSaved: (deviceTz: string) => ` Noch nicht gespeichert — wähle eine zum Bestätigen (dein Gerät meldet ${deviceTz}).`,
     tzSaved: ' Gespeichert.',
     useDeviceTz: (tz: string) => `Zeitzone meines Geräts verwenden (${tz})`,
@@ -466,7 +467,7 @@ export const de: Strings = {
     email: 'demo@example.com',
     noAccounts: 'Das ist die Demo — es gibt keine Konten. Beende die Demo, um dich anzumelden.',
     aiUnavailable:
-      'In der echten App liest eine KI diese Nachricht und hakt Aufgaben ab, protokolliert Training oder legt Erinnerungen an. Die Demo hat keinen Server, es wurde also nichts geändert — alles andere ist voll interaktiv.',
+      'In der echten App liest eine KI diese Nachricht. Die Demo hat keinen Server, nur einen kleinen Stellvertreter für einfache Muster — ein Aufgabenname aus deiner Liste, „bench 60kg 3x8“, „ran 5k in 25 min“ oder „remind me to…“. Diese Nachricht wurde nicht erkannt, es wurde also nichts geändert — alles andere ist voll interaktiv.',
     reflection:
       'Die Morgen hielten diese Woche stand — fünf von sieben Tagen, und die zwei Ausrutscher folgten auf lange Nächte. Die Datenlage zeigt auf den Schlaf, nicht auf die Disziplin.',
     trainingBody:

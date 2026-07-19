@@ -363,6 +363,7 @@ export const es: Strings = {
     noticedThisWeek: 'Observado esta semana',
     noticedRecently: 'Observado hace poco',
     trainingTitle: 'Patrones de entrenamiento',
+    pastWeeks: (n: number) => `Semanas anteriores (${n})`,
     completedLead: 'Completaste ',
     completedTail: ' cosas esta semana — tareas, sesiones de gimnasio y cardio cuentan por igual.',
     strongestDay: (day: string) => ` El ${day} fue tu día más fuerte.`,
@@ -419,7 +420,7 @@ export const es: Strings = {
       'Renombra las rutinas, tareas y pautas estándar a este idioma. Lo que escribiste o renombraste tú queda intacto.',
     translateContentDone: (n: number) => (n === 0 ? 'No queda nada por traducir.' : `${n} elementos traducidos.`),
     timezone: 'Zona horaria',
-    tzNote: 'La usan los avisos, la reflexión del domingo y el bot de Telegram.',
+    tzNote: 'La usan los avisos y la reflexión del domingo.',
     tzNotSaved: (deviceTz: string) => ` Aún sin guardar — elige una para confirmar (tu dispositivo dice ${deviceTz}).`,
     tzSaved: ' Guardada.',
     useDeviceTz: (tz: string) => `Usar la zona horaria de mi dispositivo (${tz})`,
@@ -467,7 +468,7 @@ export const es: Strings = {
     email: 'demo@example.com',
     noAccounts: 'Esto es la demo — no hay cuentas. Sal de la demo para iniciar sesión.',
     aiUnavailable:
-      'En la aplicación real una IA lee este mensaje y marca tareas, registra entrenos o archiva recordatorios por ti. La demo no tiene servidor, así que nada cambió — todo lo demás es totalmente interactivo.',
+      'En la aplicación real una IA lee este mensaje. La demo no tiene servidor, solo un pequeño sustituto que conoce frases sencillas — el nombre de una tarea de tu lista, «bench 60kg 3x8», «ran 5k in 25 min» o «remind me to…». Este mensaje no se reconoció, así que nada cambió — todo lo demás es totalmente interactivo.',
     reflection:
       'Las mañanas aguantaron esta semana — cinco de siete días, y los dos fallos vinieron tras noches largas. La evidencia señala al sueño, no a la disciplina.',
     trainingBody:

@@ -362,6 +362,7 @@ export const fr: Strings = {
     noticedThisWeek: 'Remarqué cette semaine',
     noticedRecently: 'Remarqué récemment',
     trainingTitle: 'Tendances d’entraînement',
+    pastWeeks: (n: number) => `Semaines passées (${n})`,
     completedLead: 'Vous avez accompli ',
     completedTail: ' choses cette semaine — tâches, séances et cardio comptent tous.',
     strongestDay: (day: string) => ` ${day} a été votre meilleur jour.`,
@@ -418,7 +419,7 @@ export const fr: Strings = {
       'Renomme les routines, tâches et consignes standard dans cette langue. Tout ce que vous avez écrit ou renommé vous-même reste intact.',
     translateContentDone: (n: number) => (n === 0 ? 'Plus rien à traduire.' : `${n} éléments traduits.`),
     timezone: 'Fuseau horaire',
-    tzNote: 'Utilisé par les rappels, le bilan du dimanche et le bot Telegram.',
+    tzNote: 'Utilisé par les rappels et le bilan du dimanche.',
     tzNotSaved: (deviceTz: string) => ` Pas encore enregistré — choisissez-en un pour confirmer (votre appareil indique ${deviceTz}).`,
     tzSaved: ' Enregistré.',
     useDeviceTz: (tz: string) => `Utiliser le fuseau de mon appareil (${tz})`,
@@ -466,7 +467,7 @@ export const fr: Strings = {
     email: 'demo@example.com',
     noAccounts: 'Ceci est la démo — il n’y a pas de comptes. Quittez la démo pour vous connecter.',
     aiUnavailable:
-      'Dans l’application réelle, une IA lit ce message et coche des tâches, note des séances ou classe des rappels pour vous. La démo n’a pas de serveur, donc rien n’a changé — tout le reste est pleinement interactif.',
+      'Dans l’application réelle, une IA lit ce message. La démo n’a pas de serveur, seulement un petit remplaçant qui connaît des tournures simples — un nom de tâche de votre liste, « bench 60kg 3x8 », « ran 5k in 25 min » ou « remind me to… ». Ce message n’a pas été reconnu, donc rien n’a changé — tout le reste est pleinement interactif.',
     reflection:
       'Les matins ont tenu bon cette semaine — cinq jours sur sept, et les deux ratés suivaient des couchers tardifs. Les faits désignent le sommeil, pas la discipline.',
     trainingBody:

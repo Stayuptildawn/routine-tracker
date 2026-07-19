@@ -2920,6 +2920,17 @@ select option {
   white-space: pre-line; /* advice arrives as "- " lines */
 }
 
+/* past training reviews on Reflect */
+.training-history {
+  margin-top: var(--sp-3);
+}
+.training-history .reflection-card .eyebrow + .reflection-body {
+  margin-bottom: var(--sp-3);
+}
+.training-history .reflection-card .training-body {
+  margin: 0;
+}
+
 /* ---------- explore (3-year charts) ---------- */
 .explore-card {
   display: block; /* overrides reflect-bars' flex */

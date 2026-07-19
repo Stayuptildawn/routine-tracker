@@ -360,6 +360,7 @@ export const tr: Strings = {
     noticedThisWeek: 'Bu hafta göze çarpan',
     noticedRecently: 'Son günlerde göze çarpan',
     trainingTitle: 'Antrenman örüntüleri',
+    pastWeeks: (n: number) => `Geçmiş haftalar (${n})`,
     completedLead: 'Bu hafta ',
     completedTail: ' şey tamamladın — görevler, salon seansları ve kardiyo hepsi sayılır.',
     strongestDay: (day: string) => ` En güçlü günün ${day} oldu.`,
@@ -416,7 +417,7 @@ export const tr: Strings = {
       'Standart rutinleri, görevleri ve plan notlarını bu dile çevirir. Kendi yazdığın ya da adını değiştirdiğin hiçbir şeye dokunulmaz.',
     translateContentDone: (n: number) => (n === 0 ? 'Çevrilecek bir şey kalmadı.' : `${n} öğe çevrildi.`),
     timezone: 'Saat dilimi',
-    tzNote: 'Bildirimler, pazar günkü değerlendirme ve Telegram botu bunu kullanır.',
+    tzNote: 'Bildirimler ve pazar günkü değerlendirme bunu kullanır.',
     tzNotSaved: (deviceTz: string) => ` Henüz kaydedilmedi — onaylamak için birini seç (cihazın ${deviceTz} diyor).`,
     tzSaved: ' Kaydedildi.',
     useDeviceTz: (tz: string) => `Cihazımın saat dilimini kullan (${tz})`,
@@ -464,7 +465,7 @@ export const tr: Strings = {
     email: 'demo@example.com',
     noAccounts: 'Bu bir demo — hesap yok. Giriş yapmak için demodan çık.',
     aiUnavailable:
-      'Gerçek uygulamada bu mesajı bir AI okur ve senin yerine görevleri işaretler, antrenman kaydeder ya da hatırlatma oluşturur. Demonun sunucusu yok, o yüzden hiçbir şey değişmedi — geri kalan her şey tamamen etkileşimli.',
+      'Gerçek uygulamada bu mesajı bir AI okur. Demonun sunucusu yok; yalnızca basit kalıpları bilen küçük bir vekili var — listenden bir görev adı, "bench 60kg 3x8", "ran 5k in 25 min" ya da "remind me to…". Bu mesaj tanınmadı, o yüzden hiçbir şey değişmedi — geri kalan her şey tamamen etkileşimli.',
     reflection:
       'Sabahlar bu hafta yerli yerindeydi — yedi günün beşi, kaçan iki gün de geç yatılan gecelerin ertesiydi. Veriler kaldıracın disiplin değil uyku olduğunu söylüyor.',
     trainingBody:

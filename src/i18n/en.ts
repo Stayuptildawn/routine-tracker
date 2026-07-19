@@ -378,6 +378,7 @@ export const en = {
     noticedThisWeek: 'Noticed this week',
     noticedRecently: 'Noticed recently',
     trainingTitle: 'Training patterns',
+    pastWeeks: (n: number) => `Past weeks (${n})`,
     completedLead: 'You completed ',
     completedTail: ' things this week — tasks, gym sessions and cardio all count.',
     strongestDay: (day: string) => ` ${day} was your strongest day.`,
@@ -434,7 +435,7 @@ export const en = {
       'Renames the standard routines, tasks and plan cues into this language. Anything you wrote or renamed yourself is left untouched.',
     translateContentDone: (n: number) => (n === 0 ? 'Nothing left to translate.' : `Translated ${n} items.`),
     timezone: 'Timezone',
-    tzNote: 'Used by push nudges, the Sunday reflection and the Telegram bot.',
+    tzNote: 'Used by push nudges and the Sunday reflection.',
     tzNotSaved: (deviceTz: string) => ` Not saved yet — pick one to confirm (your device says ${deviceTz}).`,
     tzSaved: ' Saved.',
     useDeviceTz: (tz: string) => `Use my device timezone (${tz})`,
@@ -483,7 +484,7 @@ export const en = {
     email: 'demo@example.com',
     noAccounts: 'This is the demo — there are no accounts. Exit the demo to sign in.',
     aiUnavailable:
-      'In the live app an AI reads this message and checks off tasks, logs workouts or files reminders for you. The demo has no server, so nothing was changed — everything else is fully interactive.',
+      'In the live app an AI reads this message. The demo has no server, only a tiny stand-in that knows simple patterns — a task name from your list, "bench 60kg 3x8", "ran 5k in 25 min" or "remind me to…". This message it couldn\'t place, so nothing was changed — everything else is fully interactive.',
     reflection:
       'Mornings held steady this week — five of seven days, and the two misses were both late nights. The evidence says sleep, not discipline, is the lever.',
     trainingBody:

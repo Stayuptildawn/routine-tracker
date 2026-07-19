@@ -346,6 +346,7 @@ export const zh: Strings = {
     noticedThisWeek: '本周观察',
     noticedRecently: '近期观察',
     trainingTitle: '训练规律',
+    pastWeeks: (n: number) => `过往几周（${n}）`,
     completedLead: '本周你完成了 ',
     completedTail: ' 件事——任务、力量课和有氧都算数。',
     strongestDay: (day: string) => `${day}是你最有劲头的一天。`,
@@ -401,7 +402,7 @@ export const zh: Strings = {
     translateContentNote: '把标准的流程、任务和动作要点改成这个语言。你自己写的或改过名的内容不会被动。',
     translateContentDone: (n: number) => (n === 0 ? '没有需要翻译的了。' : `已翻译 ${n} 项。`),
     timezone: '时区',
-    tzNote: '用于推送提醒、周日回顾和 Telegram 机器人。',
+    tzNote: '用于推送提醒和周日回顾。',
     tzNotSaved: (deviceTz: string) => ` 尚未保存——选择一个以确认（你的设备显示为 ${deviceTz}）。`,
     tzSaved: ' 已保存。',
     useDeviceTz: (tz: string) => `使用设备时区（${tz}）`,
@@ -449,7 +450,7 @@ export const zh: Strings = {
     email: 'demo@example.com',
     noAccounts: '这是演示模式——没有账号。退出演示后即可登录。',
     aiUnavailable:
-      '在正式应用里，AI 会读取这条消息，替你勾掉任务、记录训练或归档提醒。演示没有服务器，所以什么都没有改变——其余功能全部可以真实操作。',
+      '在正式应用里，这条消息由 AI 来读取。演示没有服务器，只有一个只认识简单说法的小替身——你清单里的任务名、“bench 60kg 3x8”、“ran 5k in 25 min”或“remind me to…”。这条消息没有被识别，所以什么都没有改变——其余功能全部可以真实操作。',
     reflection: '这周早晨都稳住了——七天里有五天，两次没做到都跟前一晚熬夜有关。数据指向的是睡眠，不是自律。',
     trainingBody:
       '六周里每周正式组数从 38 升到 52，有氧稳定在 8 公里左右，你的恢复反馈一直是「合适」。基础在稳步增长，没有过度。',

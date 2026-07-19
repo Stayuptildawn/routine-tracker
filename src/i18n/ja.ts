@@ -358,6 +358,7 @@ export const ja: Strings = {
     noticedThisWeek: '今週気づいたこと',
     noticedRecently: '最近気づいたこと',
     trainingTitle: 'トレーニングの傾向',
+    pastWeeks: (n: number) => `過去の週（${n}）`,
     completedLead: '今週やりとげたのは',
     completedTail: '件 — タスクもジムも有酸素も、全部数に入ります。',
     strongestDay: (day: string) => ` いちばん動けた日は${day}曜でした。`,
@@ -414,7 +415,7 @@ export const ja: Strings = {
       '標準のルーティン・タスク・プランのコツをこの言語に変えます。自分で書いたり名前を変えたりしたものには触れません。',
     translateContentDone: (n: number) => (n === 0 ? '翻訳するものはもうありません。' : `${n}件を翻訳しました。`),
     timezone: 'タイムゾーン',
-    tzNote: '通知、日曜のふりかえり、Telegram ボットが使います。',
+    tzNote: '通知と日曜のふりかえりが使います。',
     tzNotSaved: (deviceTz: string) => ` まだ未保存です — 選んで確定してください（端末は ${deviceTz} です）。`,
     tzSaved: ' 保存済み。',
     useDeviceTz: (tz: string) => `端末のタイムゾーンを使う（${tz}）`,
@@ -462,7 +463,7 @@ export const ja: Strings = {
     email: 'demo@example.com',
     noAccounts: 'これはデモです — アカウントはありません。ログインするにはデモを終了してください。',
     aiUnavailable:
-      '本物のアプリでは、このメッセージを AI が読んで、タスクのチェックやトレーニングの記録、リマインダーの作成を代わりに行います。デモにはサーバーがないため何も変わっていません — それ以外はすべて実際に操作できます。',
+      '本物のアプリでは、このメッセージを AI が読み取ります。デモにはサーバーがなく、簡単なパターンだけを知る小さな代役がいるだけです — リストのタスク名、「bench 60kg 3x8」「ran 5k in 25 min」「remind me to…」など。このメッセージは認識できなかったため、何も変わっていません — それ以外はすべて実際に操作できます。',
     reflection:
       '今週の朝は安定していました — 7日のうち5日。できなかった2日はどちらも夜ふかしの翌日でした。データが指すのは睡眠であって、根性ではありません。',
     trainingBody:

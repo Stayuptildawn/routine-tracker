@@ -362,6 +362,7 @@ export const cs: Strings = {
     noticedThisWeek: 'Postřeh z tohoto týdne',
     noticedRecently: 'Postřeh z poslední doby',
     trainingTitle: 'Tréninkové vzorce',
+    pastWeeks: (n: number) => `Minulé týdny (${n})`,
     completedLead: 'Tento týden jsi dokončil ',
     completedTail: ' věcí — úkoly, posilovna i kardio se počítají všechny.',
     strongestDay: (day: string) => ` Nejsilnější den bylo ${day}.`,
@@ -419,7 +420,7 @@ export const cs: Strings = {
     translateContentDone: (n: number) =>
       n === 0 ? 'Není co překládat.' : `Přeloženo ${n} ${n === 1 ? 'položka' : n < 5 ? 'položky' : 'položek'}.`,
     timezone: 'Časové pásmo',
-    tzNote: 'Používají ho notifikace, nedělní ohlédnutí a Telegram bot.',
+    tzNote: 'Používají ho notifikace a nedělní ohlédnutí.',
     tzNotSaved: (deviceTz: string) => ` Zatím neuloženo — potvrď výběrem (zařízení hlásí ${deviceTz}).`,
     tzSaved: ' Uloženo.',
     useDeviceTz: (tz: string) => `Použít pásmo mého zařízení (${tz})`,
@@ -467,7 +468,7 @@ export const cs: Strings = {
     email: 'demo@example.com',
     noAccounts: 'Tohle je demo — účty tu nejsou. Pro přihlášení demo opusť.',
     aiUnavailable:
-      'Ve skutečné aplikaci si tuhle zprávu přečte AI a odškrtá úkoly, zapíše trénink nebo založí připomenutí za tebe. Demo nemá server, takže se nic nezměnilo — všechno ostatní je plně interaktivní.',
+      'Ve skutečné aplikaci si tuhle zprávu přečte AI. Demo nemá server, jen malou náhradu, která zná jednoduché obraty — název úkolu z tvého seznamu, „bench 60kg 3x8“, „ran 5k in 25 min“ nebo „remind me to…“. Tuhle zprávu nerozpoznala, takže se nic nezměnilo — všechno ostatní je plně interaktivní.',
     reflection:
       'Rána tento týden držela — pět dní ze sedmi, a oba výpadky přišly po pozdním usínání. Data ukazují, že pákou je spánek, ne disciplína.',
     trainingBody:
