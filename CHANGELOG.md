@@ -4,6 +4,43 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-07-19
+
+### Added
+- **Past training reviews on Reflect.** The Training patterns card now keeps
+  its history: a "Past weeks" toggle underneath unfolds up to eleven earlier
+  weeks, each with the trend that was seen and the coach's note that was
+  given — so you can look back at what the advice was while you were in it.
+- **The demo's composer now actually does things.** A tiny deterministic
+  stand-in (no server, plain regexes) handles the classic phrasings — a task
+  name from your list, "bench 60kg 3x8", "ran 5k in 25 min at 152 bpm",
+  "remind me to water the plants in 10 mins" — writes real demo rows, and
+  records a real undo batch, so the apply/undo/AI-log loop is finally
+  demonstrable offline. Anything it can't place falls back to an honest
+  explainer.
+- A unit-test suite over the AI composer's apply logic (trust thresholds,
+  dedupe, the action cap, deterministic time fallbacks, planned-set filling,
+  reminder clearing) against an in-memory database — the most
+  regression-prone path in the app is no longer guarded only by the live
+  smoke test. CI also typechecks the edge functions as Deno code now.
+
+### Changed
+- **The volume picture counts sets in the week you did them.** Hard sets
+  used to land on the plan week their session belonged to, so catching up on
+  last week's session inflated a week you didn't actually train. Planned and
+  freeform sets now both bucket by the day they were logged — the same
+  calendar view the weekly coach's note reads, so the two finally agree.
+
+### Removed
+- **The Telegram bot is gone** — the one feature tied to an outside social
+  platform, and the last single-user holdout. The function, its secrets and
+  the setup docs are all removed; the Android share sheet remains the
+  hands-free way into the composer.
+
+### Fixed
+- Background jobs (reflections, training reviews, nudge-adjacent state) now
+  page through all accounts instead of silently stopping at the first ten.
+
 ## 2026-07-18
 
 ### Added

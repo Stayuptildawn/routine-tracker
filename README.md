@@ -14,7 +14,9 @@ Self-hosted and free to run, no subscription.
 <p align="center">
   <a href="https://stayuptildawn.github.io/routine-tracker/?demo"><strong>▶ Try the live demo</strong></a>
   — no account, no install; it runs entirely in your browser with a week of
-  sample data (the AI composer is the one part that needs a server).
+  sample data. Even the AI composer has a stand-in: simple phrasings
+  (task names, "bench 60kg 3x8", "ran 5k in 25 min", "remind me to…")
+  really apply, with undo and the AI log working.
 </p>
 
 <p align="center">
@@ -109,9 +111,8 @@ not add a new one.
   yesterday"* lands on yesterday's row, and undoing it fixes yesterday too.
   Cardio takes the whole story in one line — *"ran 5k in 25 min at 152 bpm,
   felt easy"* logs distance, time, heart rate and the recovery answer.
-- The same brain is reachable from a **Telegram bot** (text it from anywhere,
-  it replies with what it did) and from Android's **share sheet** (share text
-  into the app, it lands in the message box for review).
+- The same brain is reachable from Android's **share sheet**: share text
+  into the app from anywhere and it lands in the message box for review.
 - It scores its own confidence, so it never bluffs. What it's sure of applies
   instantly with one-tap undo, the maybes come back as "Did you mean...?" chips
   you tap to confirm, and anything it's genuinely unsure about does nothing at
@@ -259,10 +260,10 @@ Eyildirim — regenerate it with `scripts/build-exercise-db.mjs`.
 ## How many users can this handle?
 
 Honestly, it's built for one person, me. I have cleaned up the roughest
-single-user parts (each user picks their own timezone in Settings, and the
-starter routines and workout plan are opt-in now), but the main thing still
-tied to one account is the Telegram bot. Signups are meant to be off once you
-create your account.
+single-user parts over time — each user picks their own timezone and language
+in Settings, the starter routines and workout plan are opt-in, and every
+background job walks all accounts — so a handful of accounts on one instance
+works fine. Signups are meant to be off once your own account exists.
 
 That said, since people ask, here's where the free-tier ceilings actually
 are, in the order they'd break:
@@ -308,10 +309,9 @@ message can't reach past your account.
 
 Now the honest limits. This is a personal project I host myself, and no
 security company has audited it. The per-user isolation is solid at the
-database level, but a few parts, like the Telegram bot, still assume it's only
-me. Some background jobs run with higher access and rely on my code to stay
-scoped to the right person, so that part needs care instead of trusting the
-database to catch a mistake. And GitHub Pages does not let me set a couple of
+database level, but some background jobs run with higher access and rely on
+my code to stay scoped to the right person, so that part needs care instead
+of trusting the database to catch a mistake. And GitHub Pages does not let me set a couple of
 extra security headers I would add if I ran the server myself.
 
 None of this worries me for what the project is, but I would rather tell you
@@ -343,11 +343,6 @@ CLI uploads automatically (the dashboard paste-editor can't).
 
 **Optional extras**, each independent:
 
-- **Telegram bot**: create a bot with @BotFather, set secrets
-  `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_LINK_CODE`,
-  `USER_TIMEZONE` (IANA name), deploy `telegram-webhook` with
-  `--no-verify-jwt`, register the webhook with `secret_token`, then DM the
-  bot `/link <your-code>`.
 - **AI reflections**: set a `CRON_SECRET` secret, deploy `weekly-reflection`
   with `--no-verify-jwt`, enable the `pg_cron` and `pg_net` extensions, and
   schedule a `net.http_post` to it **every 15 minutes** with an
@@ -407,9 +402,9 @@ quota.
 
 ## How the AI input works
 
-The interpret core (`supabase/functions/_shared/interpret.ts`, shared by the
-app's `interpret-message` and the Telegram webhook) receives your text plus
-today's date, weekday and local clock, loads today's scheduled tasks and your
+The interpret core (`supabase/functions/_shared/interpret.ts`, behind the
+app's `interpret-message` function) receives your text plus today's date,
+weekday and local clock, loads today's scheduled tasks and your
 open reminders, and asks Gemini for a structured list of actions: check-offs
 (today or a past day), workout sets, cardio (with heart rate and how it
 felt), creating reminders (with due dates and times), clearing reminders,
@@ -418,8 +413,7 @@ applied immediately (still undoable, every batch is recorded in
 `ai_actions`), the 0.6–0.9 ones come back as one-tap confirm chips, and below
 that nothing happens at all. If a planned training session is open today,
 logged sets fill the session's planned sets instead of the freeform log, so
-the composer, the Telegram bot and the session player all write the same
-rows. The day's tasks and open reminders are injected straight into the
+the composer and the session player write the same rows. The day's tasks and open reminders are injected straight into the
 prompt as candidates, which at personal scale works better than embeddings
 and costs basically nothing.
 
