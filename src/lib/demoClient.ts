@@ -524,6 +524,158 @@ function exploreBuckets(args: { metric: string; bucket: string; start_ts: string
   return [...acc.entries()].map(([b, v]) => ({ b, v }))
 }
 
+// ---------- demo composer: a tiny deterministic stand-in for the AI ----------
+// The real parser needs a server; the demo gets regexes that cover the
+// README's example phrasings - check-offs by task name (works in every
+// language, it matches the seeded labels), "bench 60kg 3x8", "ran 5k in
+// 25 min at 152 bpm" and "remind me to ...". Real rows are written and a
+// real undo batch is recorded, so the whole apply/undo/AI-log loop is
+// demonstrable offline. Anything it can't place falls back to the explainer.
+
+function demoInterpret(text: string): {
+  ai_action_id: string | null
+  applied: Row[]
+  suggestions: Row[]
+  answers: string[]
+} {
+  const today = localDate()
+  const nowIso = new Date().toISOString()
+  const applied: Row[] = []
+  const lower = text.toLowerCase()
+  const num = (s: string) => parseFloat(s.replace(',', '.'))
+
+  const reminderM = text.match(/remind me to\s+(.+)/i)
+  const setsM = text.match(/(.+?)\s+(\d+(?:[.,]\d+)?)\s*(?:kg)?\s+(\d{1,2})\s*[x×]\s*(\d{1,2})\b/i)
+  const cardioKind = /\b(ran|run|jog\w*)\b/.test(lower)
+    ? 'run'
+    : /\bwalk\w*\b/.test(lower)
+      ? 'walk'
+      : /\b(cycle\w*|biked?)\b/.test(lower)
+        ? 'cycle'
+        : /\b(swam|swim)\b/.test(lower)
+          ? 'swim'
+          : null
+
+  if (reminderM) {
+    // one reminder, with the same light time handling the real parser has
+    let dueDate: string | null = null
+    let dueTime: string | null = null
+    const rel = lower.match(/in\s+(\d+)\s*min/)
+    const abs = lower.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/)
+    if (rel) {
+      const d = new Date(Date.now() + parseInt(rel[1], 10) * 60000)
+      dueTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      dueDate = localDate(d)
+    } else if (abs) {
+      let h = parseInt(abs[1], 10)
+      if (abs[3] === 'pm' && h < 12) h += 12
+      if (abs[3] === 'am' && h === 12) h = 0
+      dueTime = `${String(h).padStart(2, '0')}:${abs[2] ?? '00'}`
+    }
+    if (!dueDate) {
+      if (/\btomorrow\b/.test(lower)) {
+        const d = new Date()
+        d.setDate(d.getDate() + 1)
+        dueDate = localDate(d)
+      } else if (dueTime) dueDate = today
+    }
+    const raw = reminderM[1].replace(/\s+(in\s+\d+\s*min\w*|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?|tomorrow)\b/gi, '').trim()
+    const row: Row = {
+      id: crypto.randomUUID(),
+      user_id: DEMO_USER.id,
+      raw_text: raw.charAt(0).toUpperCase() + raw.slice(1),
+      ai_category: 'Other',
+      final_category: 'Other',
+      ai_confidence: 0.95,
+      routine_id: null,
+      status: 'auto',
+      due_date: dueDate,
+      due_time: dueTime,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }
+    rowsFor('reminders').push(row)
+    applied.push({ type: 'create_reminder', reminder_id: row.id, text: row.raw_text, category: 'Other', due_date: dueDate, due_time: dueTime })
+  } else if (setsM && !/\b(km|bpm)\b/.test(lower)) {
+    const [, exercise, kg, nSets, reps] = setsM
+    const sets = Array.from({ length: parseInt(nSets, 10) }, () => ({ kg: num(kg), reps: parseInt(reps, 10) }))
+    const row: Row = {
+      id: crypto.randomUUID(),
+      user_id: DEMO_USER.id,
+      date: today,
+      exercise: exercise.trim(),
+      sets,
+      notes: null,
+      week_number: null,
+      split_day: null,
+      target_scheme: null,
+      muscle_group: null,
+      created_at: nowIso,
+    }
+    rowsFor('workout_logs').push(row)
+    applied.push({ type: 'log_workout', workout_log_id: row.id, exercise: row.exercise, sets })
+  } else if (cardioKind) {
+    const dist = lower.match(/(\d+(?:[.,]\d+)?)\s*(?:km|k\b)/)
+    const mins = lower.match(/(\d+(?:[.,]\d+)?)\s*min/)
+    const bpm = lower.match(/(\d{2,3})\s*bpm/)
+    if (dist || mins) {
+      const row: Row = {
+        id: crypto.randomUUID(),
+        user_id: DEMO_USER.id,
+        date: today,
+        kind: cardioKind,
+        minutes: mins ? num(mins[1]) : null,
+        distance_km: dist ? num(dist[1]) : null,
+        avg_hr: bpm ? parseInt(bpm[1], 10) : null,
+        notes: null,
+        effort: null,
+        body: null,
+        amount: null,
+        created_at: nowIso,
+      }
+      rowsFor('cardio_logs').push(row)
+      applied.push({ type: 'log_cardio', cardio_log_id: row.id, kind: cardioKind, minutes: row.minutes, distance_km: row.distance_km, avg_hr: row.avg_hr })
+    }
+  }
+
+  if (applied.length === 0) {
+    // task check-off by label: any seeded task whose label-words show up
+    const weekday = isoWeekday()
+    const activeRoutines = new Set(rowsFor('routines').filter((r) => r.active !== false).map((r) => r.id))
+    for (const task of rowsFor('tasks')) {
+      if (!activeRoutines.has(task.routine_id)) continue
+      if (!(task.scheduled_days as number[] | null)?.includes(weekday)) continue
+      const words = String(task.label).toLowerCase().split(/\s+/).filter((w) => w.length >= 3)
+      if (words.length === 0 || !words.some((w) => lower.includes(w))) continue
+      const logs = rowsFor('task_logs')
+      let log = logs.find((l) => l.task_id === task.id && l.date === today)
+      if (log) {
+        log.status = 'done'
+        log.completed_via = 'ai_text'
+        log.logged_at = nowIso
+      } else {
+        log = { id: crypto.randomUUID(), task_id: task.id, date: today, status: 'done', completed_via: 'ai_text', notes: null, logged_at: nowIso, created_at: nowIso }
+        logs.push(log)
+      }
+      applied.push({ type: 'check_task', task_id: task.id, label: task.label, status: 'done', log_id: log.id, log_date: today })
+    }
+  }
+
+  let aiActionId: string | null = null
+  if (applied.length > 0) {
+    const batch: Row = { id: crypto.randomUUID(), user_id: DEMO_USER.id, raw_text: text, actions: applied, status: 'applied', created_at: nowIso }
+    rowsFor('ai_actions').push(batch)
+    aiActionId = batch.id as string
+    saveDb()
+  }
+  return {
+    ai_action_id: aiActionId,
+    applied,
+    suggestions: [],
+    answers: applied.length === 0 ? [t.demo.aiUnavailable] : [],
+  }
+}
+
 // ---------- the client ----------
 
 const DEMO_USER = {
@@ -587,12 +739,9 @@ export const demoClient = {
   removeChannel() {},
 
   functions: {
-    async invoke(name: string) {
+    async invoke(name: string, opts?: { body?: { text?: string } }) {
       if (name === 'interpret-message') {
-        return {
-          data: { ai_action_id: null, applied: [], suggestions: [], answers: [t.demo.aiUnavailable] },
-          error: null,
-        }
+        return { data: demoInterpret(opts?.body?.text ?? ''), error: null }
       }
       return { data: { error: t.demo.aiUnavailable }, error: null }
     },
