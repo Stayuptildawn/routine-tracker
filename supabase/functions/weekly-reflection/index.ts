@@ -1,7 +1,9 @@
 // weekly-reflection: two specific sentences about the week so far. pg_cron
 // fires this every 15 minutes; each user gets a fresh reflection twice a day
-// in THEIR timezone - a morning pass (09:00) and a closing pass (22:00, after
-// the pre-reflection nudge has reminded them to log the day). Deploy with
+// in THEIR timezone - a morning pass and a closing pass (after the 21:30
+// pre-reflection nudge has reminded them to log the day). Each user's passes
+// sit at a stable per-user minute within the 45 minutes after 09:00 / 22:00,
+// so a whole timezone's cohort never lands on a single tick. Deploy with
 // verify_jwt OFF - authenticated by the x-cron-secret header instead. A
 // manual run can pass {"force": true} to skip the time windows.
 //
@@ -15,7 +17,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { askGemini } from '../_shared/gemini.ts'
 import { json } from '../_shared/http.ts'
 import { LANGUAGE_NAMES, normLang } from '../_shared/lang.ts'
-import { userNow, addDays } from '../_shared/localtime.ts'
+import { userNow, addDays, userSpreadMinutes } from '../_shared/localtime.ts'
 import { maybeTrainingReview } from '../_shared/trainingReview.ts'
 
 // English-only by design: non-English reflections rely on the prompt-level
@@ -31,6 +33,7 @@ const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const MORNING_MIN = 9 * 60 // 09:00 local - the week-so-far card refreshes
 const NIGHT_MIN = 22 * 60 // 22:00 local - the closing pass, after the day is logged
 const WINDOW_MIN = 15 // must match the cron cadence
+const SPREAD_MIN = 45 // per-user jitter span; night pass still ends before midnight
 
 Deno.serve(async (req) => {
   if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
@@ -56,7 +59,8 @@ Deno.serve(async (req) => {
       const { data: us } = await supabase.from('user_settings').select('timezone, language').eq('user_id', user.id).maybeSingle()
       const lang = normLang(us?.language)
       const { date, weekday, minutes } = userNow(us?.timezone)
-      const inWindow = (m: number) => minutes >= m && minutes < m + WINDOW_MIN
+      const offset = userSpreadMinutes(user.id, SPREAD_MIN)
+      const inWindow = (m: number) => minutes >= m + offset && minutes < m + offset + WINDOW_MIN
       if (!force && !inWindow(MORNING_MIN) && !inWindow(NIGHT_MIN)) continue
       const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
 

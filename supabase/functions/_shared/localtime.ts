@@ -27,6 +27,20 @@ export function userNow(preferred?: string | null): { date: string; weekday: num
   return { date, weekday, minutes: h * 60 + m }
 }
 
+/** Stable per-user minute offset in [0, spread): spreads one timezone's
+ *  cohort across several cron ticks instead of a single one. Deterministic
+ *  on purpose (FNV-1a of the user id) - the processing window is exactly
+ *  one cron tick wide, so if a user's offset moved between ticks they could
+ *  be processed twice or skipped entirely. */
+export function userSpreadMinutes(userId: string, spread: number): number {
+  let h = 2166136261
+  for (let i = 0; i < userId.length; i++) {
+    h ^= userId.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (h >>> 0) % spread
+}
+
 /** date ± n days, in yyyy-mm-dd (pure date math, timezone-free). */
 export function addDays(date: string, n: number): string {
   const d = new Date(date + 'T00:00:00Z')

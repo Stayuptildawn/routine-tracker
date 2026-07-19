@@ -25,6 +25,11 @@ deployed alongside).
   smoke test. CI also typechecks the edge functions as Deno code now.
 
 ### Changed
+- The two daily reflection passes now land at a stable per-user minute
+  within the 45 minutes after 09:00 / 22:00 local, instead of everyone at
+  the hour sharp — one timezone's users no longer all hit the same server
+  pass. Routine anchors, reminder nudges and the 21:30 pre-reflection push
+  keep their exact times; the closing pass still runs after it.
 - **The volume picture counts sets in the week you did them.** Hard sets
   used to land on the plan week their session belonged to, so catching up on
   last week's session inflated a week you didn't actually train. Planned and
