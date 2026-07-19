@@ -1,7 +1,8 @@
-// Shared interpret+apply core, used by interpret-message (browser, RLS client)
-// and telegram-webhook (service-role client). Because the service role
-// bypasses RLS and auth.uid() defaults, every query here scopes by an explicit
-// userId and every insert sets user_id explicitly - do not remove those.
+// The interpret+apply core behind interpret-message. Kept separate from the
+// wrapper so it can be driven with any Supabase client: the browser's RLS
+// client in production, a fake one in tests. Every query scopes by an
+// explicit userId and every insert sets user_id explicitly - do not remove
+// those; they are what keeps a non-RLS client safe.
 
 // deno-lint-ignore-file no-explicit-any
 
@@ -96,7 +97,7 @@ function daysAgo(date: string, today: string, lang: Lang): string {
 /** Parse free text into actions and apply them for the given user.
  *  `time` is the user's local clock (HH:MM) so relative times resolve.
  *  `langParam` is the client's i18n pack id; when absent it's read from
- *  user_settings so Telegram gets the same language as the app. */
+ *  user_settings. */
 export async function interpretAndApply(
   supabase: any,
   userId: string,
@@ -308,8 +309,8 @@ User message: "${text}"`
       if (!action.exercise) continue
       const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-      // a planned session opened today takes the sets first (Session Player /
-      // Telegram parity); anything else falls through to the freeform log
+      // a planned session opened today takes the sets first (Session Player
+      // parity); anything else falls through to the freeform log
       const { data: openSession } = await supabase
         .from('planned_sessions')
         .select('id, split_day')
@@ -550,27 +551,4 @@ User message: "${text}"`
   }
 
   return { ai_action_id: aiActionId, applied, suggestions, answers, raw_actions: parsed.actions ?? [] }
-}
-
-/** One line of plain text per applied action - for chat replies. */
-export function describeApplied(a: Record<string, any>): string {
-  switch (a.type) {
-    case 'check_task':
-      return `${a.status === 'skipped' ? '⏭' : '✓'} ${a.label}`
-    case 'log_workout': {
-      const sets = a.sets?.map((s: { kg: number; reps: number }) => `${s.kg}kg×${s.reps}`).join(', ')
-      const planned = a.planned_set_ids ? ` → ${a.split_day} session` : ''
-      return `🏋️ ${a.exercise}${sets ? ` — ${sets}` : ''}${planned}`
-    }
-    case 'log_cardio':
-      return `🏃 ${a.kind}${a.distance_km ? ` ${a.distance_km}km` : ''}${a.minutes ? ` · ${a.minutes} min` : ''}`
-    case 'create_reminder':
-      return `🔔 ${a.text} → ${a.category}${a.due_date ? ` (by ${a.due_date}${a.due_time ? ` ${a.due_time}` : ''})` : ''}`
-    case 'complete_reminder':
-      return `✓ ${a.reminder_status === 'dismissed' ? 'dropped' : 'cleared'}: ${a.text}`
-    case 'set_energy':
-      return `🔋 Energy: ${a.level}`
-    default:
-      return ''
-  }
 }

@@ -67,7 +67,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
 
   useEffect(() => {
     load()
-    // a set logged via the composer or Telegram shows up live
+    // a set logged via the composer shows up live
     const channel = supabase
       .channel(`session-${session.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'planned_sets' }, load)

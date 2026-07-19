@@ -3,7 +3,7 @@
 # through the DEPLOYED interpret-message function, asserts the results, and
 # deletes the user again (FK cascade removes every row it created).
 #
-# Run it after deploying interpret-message / telegram-webhook:
+# Run it after deploying interpret-message:
 #   powershell -File scripts/smoke-test.ps1
 #
 # Auth: reads the Supabase CLI's management token from Windows Credential

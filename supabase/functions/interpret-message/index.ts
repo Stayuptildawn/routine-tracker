@@ -7,8 +7,8 @@
 // Trust rules: confidence >= 0.9 applied immediately (undoable via ai_actions);
 // 0.6-0.9 returned as suggestions for one-tap confirm chips; below 0.6 dropped.
 //
-// The actual interpret+apply logic lives in ../_shared/interpret.ts, shared
-// with telegram-webhook. This wrapper handles CORS + browser auth (RLS client).
+// The actual interpret+apply logic lives in ../_shared/interpret.ts. This
+// wrapper handles CORS + browser auth (RLS client).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { interpretAndApply } from '../_shared/interpret.ts'
