@@ -233,6 +233,9 @@ export const tr: Strings = {
     applyToBlock: 'Bu bloğa uygula',
     applying: 'Uygulanıyor…',
     nextBlockOnly: 'Yalnızca sonraki blok',
+    applyKeepLogs: 'Her iki durumda da kaydettiklerin değişmez — biten seanslar ve girilen setler olduğu gibi kalır.',
+    noLoggableNote: (names: string) =>
+      `${names}: hiçbir egzersizin set sayısı yok, bu yüzden tabloda seans oluşmaz — tablo kaydedilebilir antrenman günlerini izler; dinlenme günleri planın kendisinde durur.`,
     noFreeform: 'Henüz serbest kayıt yok.',
   },
 

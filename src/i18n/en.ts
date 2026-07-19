@@ -251,6 +251,9 @@ export const en = {
     applyToBlock: 'Apply to this block',
     applying: 'Applying…',
     nextBlockOnly: 'Next block only',
+    applyKeepLogs: 'Nothing you\'ve logged changes either way — finished sessions and logged sets stay exactly as they are.',
+    noLoggableNote: (names: string) =>
+      `${names}: no exercise here has a set count, so it gets no sessions in the grid — the grid tracks loggable training days; rest days live in the plan itself.`,
     noFreeform: 'No freeform lifts logged yet.',
   },
 

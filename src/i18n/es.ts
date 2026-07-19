@@ -236,6 +236,9 @@ export const es: Strings = {
     applyToBlock: 'Aplicar a este bloque',
     applying: 'Aplicando…',
     nextBlockOnly: 'Solo el próximo bloque',
+    applyKeepLogs: 'Nada de lo registrado cambia — las sesiones terminadas y las series anotadas quedan exactamente igual.',
+    noLoggableNote: (names: string) =>
+      `${names}: ningún ejercicio tiene número de series, así que no crea sesiones en la cuadrícula — la cuadrícula sigue días entrenables; los días de descanso viven en el propio plan.`,
     noFreeform: 'Aún no hay levantamientos libres registrados.',
   },
 

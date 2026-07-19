@@ -231,6 +231,9 @@ export const ja: Strings = {
     applyToBlock: 'このブロックに反映',
     applying: '反映中…',
     nextBlockOnly: '次のブロックから',
+    applyKeepLogs: 'どちらを選んでも記録済みの内容は変わりません — 完了したセッションと記録済みのセットはそのまま残ります。',
+    noLoggableNote: (names: string) =>
+      `${names}：セット数のある種目がないため、グリッドにセッションは作られません — グリッドは記録できるトレーニング日を追うもので、休息日はプラン自体に書いておくものです。`,
     noFreeform: 'フリー記録はまだありません。',
   },
 

@@ -187,8 +187,10 @@ export default function Gym({ visible }: { visible: boolean }) {
 
   /** The "apply to this block too?" yes-branch: added exercises get sets
    *  appended to every not-yet-completed session of their split (right count
-   *  for each week's phase); removed exercises lose their unlogged sets.
-   *  Logged history is never touched and the week counter stays put. */
+   *  for each week's phase); removed exercises lose their unlogged sets. A
+   *  brand-new split day gets sessions created for every week first - the
+   *  grid draws its rows from week 1, so a partial set of weeks would hide
+   *  it. Logged history is never touched and the week counter stays put. */
   async function applyToRunningBlock() {
     if (!blockApply || !block || applying) return
     setApplying(true)
@@ -200,7 +202,30 @@ export default function Gym({ visible }: { visible: boolean }) {
         }
       }
       if (blockApply.added.length > 0) {
-        const targets = sessions.filter((s) => !s.completed_at)
+        let targets = sessions.filter((s) => !s.completed_at)
+        // new split days with something loggable get their sessions now; a
+        // rest-day split (no set counts) gets none - a session with zero
+        // sets could never complete and would wedge the up-next pointer
+        const newSplits = [...new Set(blockApply.added.map((a) => a.split_day))].filter(
+          (sd) =>
+            !sessions.some((s) => s.split_day === sd) &&
+            blockApply.added.some((a) => a.split_day === sd && setCount(a.schemes?.['1-2']) > 0),
+        )
+        if (newSplits.length > 0) {
+          const maxDay = Math.max(0, ...sessions.map((s) => s.day_number))
+          const rows: Record<string, unknown>[] = []
+          newSplits.forEach((sd, i) => {
+            for (let w = 1; w <= block.total_weeks; w++) {
+              rows.push({ block_id: block.id, week_number: w, day_number: maxDay + 1 + i, split_day: sd })
+            }
+          })
+          const { data: created, error } = await supabase
+            .from('planned_sessions')
+            .insert(rows)
+            .select('id, block_id, week_number, day_number, split_day, cardio, date, completed_at')
+          if (error) throw error
+          targets = [...targets, ...((created ?? []) as PlannedSession[])]
+        }
         const { data: existing } = targets.length
           ? await supabase.from('planned_sets').select('session_id, sort_order').in('session_id', targets.map((s) => s.id))
           : { data: [] }
@@ -703,25 +728,40 @@ export default function Gym({ visible }: { visible: boolean }) {
         </section>
       )}
 
-      {view === 'strength' && blockApply && block && (
-        <div className="notice vol-suggestion block-apply">
-          <span>
-            {[
-              blockApply.added.length > 0 ? t.gym.addedList(blockApply.added.map((a) => a.exercise).join(', ')) : null,
-              blockApply.removed.length > 0 ? t.gym.removedList(blockApply.removed.map((r) => r.exercise).join(', ')) : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-            {t.gym.applyPrompt(block.name)}
-          </span>
-          <button className="link" onClick={applyToRunningBlock} disabled={applying}>
-            {applying ? t.gym.applying : t.gym.applyToBlock}
-          </button>
-          <button className="link" onClick={() => setBlockApply(null)} disabled={applying}>
-            {t.gym.nextBlockOnly}
-          </button>
-        </div>
-      )}
+      {view === 'strength' && blockApply && block && (() => {
+        // new split days whose exercises carry no set counts (a rest day):
+        // they get no sessions - say so instead of silently doing nothing
+        const restSplits = [...new Set(blockApply.added.map((a) => a.split_day))].filter(
+          (sd) =>
+            !sessions.some((s) => s.split_day === sd) &&
+            !blockApply.added.some((a) => a.split_day === sd && setCount(a.schemes?.['1-2']) > 0),
+        )
+        return (
+          <div className="install-help-backdrop" onClick={() => !applying && setBlockApply(null)}>
+            <div className="install-help" role="dialog" aria-label={t.gym.applyToBlock} onClick={(e) => e.stopPropagation()}>
+              <p className="install-title">
+                {[
+                  blockApply.added.length > 0 ? t.gym.addedList(blockApply.added.map((a) => a.exercise).join(', ')) : null,
+                  blockApply.removed.length > 0 ? t.gym.removedList(blockApply.removed.map((r) => r.exercise).join(', ')) : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                {t.gym.applyPrompt(block.name)}
+              </p>
+              <p className="install-body">{t.gym.applyKeepLogs}</p>
+              {restSplits.length > 0 && <p className="install-body">{t.gym.noLoggableNote(restSplits.join(', '))}</p>}
+              <div className="install-actions">
+                <button className="start-session" onClick={applyToRunningBlock} disabled={applying}>
+                  {applying ? t.gym.applying : t.gym.applyToBlock}
+                </button>
+                <button className="link" onClick={() => setBlockApply(null)} disabled={applying}>
+                  {t.gym.nextBlockOnly}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {view === 'strength' &&
         [...byDate.entries()].map(([date, entries]) => (

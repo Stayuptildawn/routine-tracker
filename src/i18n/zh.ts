@@ -229,6 +229,9 @@ export const zh: Strings = {
     applyToBlock: '应用到本周期',
     applying: '应用中…',
     nextBlockOnly: '仅下一周期',
+    applyKeepLogs: '无论选哪个，已记录的内容都不会变——完成的训练和已记的组数保持原样。',
+    noLoggableNote: (names: string) =>
+      `${names}：没有任何动作设置了组数，所以不会在网格中生成训练日——网格只跟踪可记录的训练日；休息日记录在计划本身里。`,
     noFreeform: '还没有自由记录的训练。',
   },
 

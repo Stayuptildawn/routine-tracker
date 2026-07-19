@@ -43,6 +43,17 @@ deployed alongside).
   hands-free way into the composer.
 
 ### Fixed
+- **Adding a new session mid-block works now.** "Apply to this block" used
+  to silently do nothing for a brand-new session day (it only knew how to
+  add exercises to sessions that already existed) — the one case where you
+  most needed it. A new session now gets its column in the running block for
+  every week, sets included, and nothing you've logged is touched. The
+  prompt itself moved from an easy-to-miss card at the bottom of the page
+  into a proper popup that says so explicitly. One deliberate limit, now
+  stated instead of silent: a rest-day session (no exercise with a set
+  count) gets no rows in the grid — a session with nothing to log could
+  never be completed — so the popup explains that rest days live in the
+  plan itself.
 - Background jobs (reflections, training reviews, nudge-adjacent state) now
   page through all accounts instead of silently stopping at the first ten.
 - Long-pressing AI-written text (the weekly reflection, training patterns,

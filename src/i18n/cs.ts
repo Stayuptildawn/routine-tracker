@@ -235,6 +235,9 @@ export const cs: Strings = {
     applyToBlock: 'Promítnout do tohoto bloku',
     applying: 'Promítám…',
     nextBlockOnly: 'Až od dalšího bloku',
+    applyKeepLogs: 'Ať zvolíš cokoli, nic zapsaného se nemění — dokončené tréninky a zapsané série zůstávají přesně tak, jak jsou.',
+    noLoggableNote: (names: string) =>
+      `${names}: žádný cvik nemá počet sérií, takže v mřížce nevzniknou tréninky — mřížka sleduje zapisovatelné tréninkové dny; dny odpočinku patří do plánu samotného.`,
     noFreeform: 'Zatím žádné volné zápisy.',
   },
 

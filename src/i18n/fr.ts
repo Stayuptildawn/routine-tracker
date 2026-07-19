@@ -235,6 +235,9 @@ export const fr: Strings = {
     applyToBlock: 'Appliquer à ce bloc',
     applying: 'Application…',
     nextBlockOnly: 'Prochain bloc seulement',
+    applyKeepLogs: 'Rien de ce que vous avez enregistré ne change — les séances terminées et les séries notées restent exactement telles quelles.',
+    noLoggableNote: (names: string) =>
+      `${names} : aucun exercice n’a de nombre de séries, donc pas de séances dans la grille — la grille suit les jours d’entraînement enregistrables ; les jours de repos vivent dans le plan lui-même.`,
     noFreeform: 'Aucun exercice libre enregistré pour l’instant.',
   },
 

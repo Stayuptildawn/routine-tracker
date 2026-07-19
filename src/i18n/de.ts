@@ -235,6 +235,9 @@ export const de: Strings = {
     applyToBlock: 'In diesen Block übernehmen',
     applying: 'Wird übernommen…',
     nextBlockOnly: 'Nur nächster Block',
+    applyKeepLogs: 'Nichts Protokolliertes ändert sich — abgeschlossene Einheiten und geloggte Sätze bleiben exakt wie sie sind.',
+    noLoggableNote: (names: string) =>
+      `${names}: keine Übung hat eine Satzzahl, also entstehen keine Einheiten im Raster — das Raster zeigt loggbare Trainingstage; Ruhetage leben im Plan selbst.`,
     noFreeform: 'Noch keine freien Übungen protokolliert.',
   },
 
