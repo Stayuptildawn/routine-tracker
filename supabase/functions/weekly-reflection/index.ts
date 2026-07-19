@@ -41,10 +41,17 @@ Deno.serve(async (req) => {
     // cron sends no body; a manual run can send {"force": true}
     const { force } = await req.json().catch(() => ({ force: false }))
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 10 })
+    // page through ALL users - a fixed perPage would silently drop whoever
+    // lands past the first page
+    const users = []
+    for (let page = 1; ; page++) {
+      const { data: usersPage } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
+      users.push(...(usersPage?.users ?? []))
+      if ((usersPage?.users ?? []).length < 200) break
+    }
     const results: Record<string, string> = {}
 
-    for (const user of usersPage?.users ?? []) {
+    for (const user of users) {
       // each user's day runs in their own timezone (and language), read fresh every tick
       const { data: us } = await supabase.from('user_settings').select('timezone, language').eq('user_id', user.id).maybeSingle()
       const lang = normLang(us?.language)
