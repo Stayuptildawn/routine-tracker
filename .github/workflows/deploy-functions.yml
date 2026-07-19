@@ -29,6 +29,14 @@ jobs:
       - run: npm ci
       # the unit tests cover the shared parsing the functions rely on
       - run: npm test
+      # the functions are Deno code - typecheck them as Deno sees them
+      # (the flags keep deno away from the frontend's package.json)
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck functions
+        working-directory: supabase/functions
+        run: deno check --no-config --node-modules-dir=none */index.ts
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -40,7 +48,6 @@ jobs:
         if: env.SUPABASE_ACCESS_TOKEN != ''
         run: |
           supabase functions deploy interpret-message --project-ref "$PROJECT_REF"
-          supabase functions deploy telegram-webhook --no-verify-jwt --project-ref "$PROJECT_REF"
           supabase functions deploy send-nudges --no-verify-jwt --project-ref "$PROJECT_REF"
           supabase functions deploy weekly-reflection --no-verify-jwt --project-ref "$PROJECT_REF"
           supabase functions deploy ai-canary --no-verify-jwt --project-ref "$PROJECT_REF"
