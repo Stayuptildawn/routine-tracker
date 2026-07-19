@@ -139,12 +139,11 @@ body {
   -webkit-touch-callout: none;
 }
 
-/* text entry, plus the two places that hold copyable prose rather than
-   chrome (an AI insight, the words you told the AI), stay selectable */
+/* only text entry and the user's own words (echoed in the AI log) opt back
+   in - AI-written prose is app output, not selectable content */
 input,
 textarea,
 select,
-.reflection-body,
 .ai-raw {
   -webkit-user-select: text;
   user-select: text;

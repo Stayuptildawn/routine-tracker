@@ -45,6 +45,9 @@ deployed alongside).
 ### Fixed
 - Background jobs (reflections, training reviews, nudge-adjacent state) now
   page through all accounts instead of silently stopping at the first ten.
+- Long-pressing AI-written text (the weekly reflection, training patterns,
+  the coach's note) no longer starts a text selection on iPhone — it's app
+  output, not content to copy. Your own words in the AI log stay selectable.
 
 ## 2026-07-18
 
