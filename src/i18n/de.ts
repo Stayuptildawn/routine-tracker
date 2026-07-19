@@ -236,6 +236,7 @@ export const de: Strings = {
     applying: 'Wird übernommen…',
     nextBlockOnly: 'Nur nächster Block',
     applyKeepLogs: 'Nichts Protokolliertes ändert sich — abgeschlossene Einheiten und geloggte Sätze bleiben exakt wie sie sind.',
+    applyResult: (a: number, r: number, u: number) => `Auf diesen Block angewandt: ${a} Sätze ergänzt · ${r} entfernt · ${u} angepasst — alles Protokollierte blieb.`,
     noLoggableNote: (names: string) =>
       `${names}: keine Übung hat eine Satzzahl, also entstehen keine Einheiten im Raster — das Raster zeigt loggbare Trainingstage; Ruhetage leben im Plan selbst.`,
     noFreeform: 'Noch keine freien Übungen protokolliert.',
@@ -354,6 +355,7 @@ export const de: Strings = {
     zeroPh: '0',
     repsPh: 'Wiederholungen, z. B. 8-10',
     notePh: 'Notiz / Technikhinweis (wird in Einheiten angezeigt)',
+    cardioPh: 'Cardio für diese Einheit — z. B. „Zone 2 · 30 min" (optional)',
     newSessionPh: 'Name der neuen Einheit (z. B. Oberkörper C)',
     addSession: 'Einheit hinzufügen',
     newExercisePh: (split: string) => `Neue Übung für ${split}`,

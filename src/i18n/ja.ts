@@ -232,6 +232,7 @@ export const ja: Strings = {
     applying: '反映中…',
     nextBlockOnly: '次のブロックから',
     applyKeepLogs: 'どちらを選んでも記録済みの内容は変わりません — 完了したセッションと記録済みのセットはそのまま残ります。',
+    applyResult: (a: number, r: number, u: number) => `このブロックに適用：${a} セット追加 · ${r} 削除 · ${u} 更新 — 記録済みの内容はすべてそのままです。`,
     noLoggableNote: (names: string) =>
       `${names}：セット数のある種目がないため、グリッドにセッションは作られません — グリッドは記録できるトレーニング日を追うもので、休息日はプラン自体に書いておくものです。`,
     noFreeform: 'フリー記録はまだありません。',
@@ -350,6 +351,7 @@ export const ja: Strings = {
     zeroPh: '0',
     repsPh: '回数（例：8-10）',
     notePh: 'メモ / フォームのコツ（セッション中に表示）',
+    cardioPh: 'このセッションの有酸素 — 例「ゾーン2 · 30分」（任意）',
     newSessionPh: '新しいセッション名（例：上半身C）',
     addSession: 'セッションを追加',
     newExercisePh: (split: string) => `${split}に追加する種目`,

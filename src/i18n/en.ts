@@ -252,6 +252,7 @@ export const en = {
     applying: 'Applying…',
     nextBlockOnly: 'Next block only',
     applyKeepLogs: 'Nothing you\'ve logged changes either way — finished sessions and logged sets stay exactly as they are.',
+    applyResult: (a: number, r: number, u: number) => `Applied to this block: ${a} sets added · ${r} removed · ${u} retargeted — everything logged stayed.`,
     noLoggableNote: (names: string) =>
       `${names}: no exercise here has a set count, so it gets no sessions in the grid — the grid tracks loggable training days; rest days live in the plan itself.`,
     noFreeform: 'No freeform lifts logged yet.',
@@ -370,6 +371,7 @@ export const en = {
     zeroPh: '0',
     repsPh: 'reps, e.g. 8-10',
     notePh: 'note / form cue (shown in sessions)',
+    cardioPh: 'Cardio for this session — e.g. "Zone 2 · 30 min" (optional)',
     newSessionPh: 'New session name (e.g. Upper C)',
     addSession: 'Add session',
     newExercisePh: (split: string) => `New exercise for ${split}`,

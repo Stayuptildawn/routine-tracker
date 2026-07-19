@@ -230,6 +230,7 @@ export const zh: Strings = {
     applying: '应用中…',
     nextBlockOnly: '仅下一周期',
     applyKeepLogs: '无论选哪个，已记录的内容都不会变——完成的训练和已记的组数保持原样。',
+    applyResult: (a: number, r: number, u: number) => `已应用到本周期：新增 ${a} 组 · 移除 ${r} 组 · 调整 ${u} 组——已记录的内容全部保留。`,
     noLoggableNote: (names: string) =>
       `${names}：没有任何动作设置了组数，所以不会在网格中生成训练日——网格只跟踪可记录的训练日；休息日记录在计划本身里。`,
     noFreeform: '还没有自由记录的训练。',
@@ -338,6 +339,7 @@ export const zh: Strings = {
     zeroPh: '0',
     repsPh: '次数，如 8-10',
     notePh: '备注 / 技术要点（训练课中显示）',
+    cardioPh: '本训练课的有氧安排——如“二区 · 30分钟”（可选）',
     newSessionPh: '新训练课名称（如：上肢 C）',
     addSession: '添加训练课',
     newExercisePh: (split: string) => `为${split}添加新动作`,

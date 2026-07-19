@@ -62,6 +62,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [starting, setStarting] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState<number | null>(null) // which block's start is awaiting a yes
   const [blockApply, setBlockApply] = useState<BlockApplyDiff | null>(null) // saved plan changes awaiting "this block too?"
+  const [applyResult, setApplyResult] = useState<string | null>(null) // what the last apply actually did
   const [applying, setApplying] = useState(false)
 
   // load() consults these so a background refresh never overwrites what the
@@ -155,6 +156,13 @@ export default function Gym({ visible }: { visible: boolean }) {
     if (visible) load()
   }, [visible, load])
 
+  // the apply-result notice clears itself; tapping it dismisses it earlier
+  useEffect(() => {
+    if (!applyResult) return
+    const id = setTimeout(() => setApplyResult(null), 8000)
+    return () => clearTimeout(id)
+  }, [applyResult])
+
   async function beginBlock(blockNumber: number) {
     if (starting || plans.length === 0) return
     const adjustments = await recoveryAdjustments()
@@ -187,22 +195,45 @@ export default function Gym({ visible }: { visible: boolean }) {
 
   /** The "apply to this block too?" yes-branch: added exercises get sets
    *  appended to every not-yet-completed session of their split (right count
-   *  for each week's phase); removed exercises lose their unlogged sets. A
-   *  brand-new split day gets sessions created for every week first - the
-   *  grid draws its rows from week 1, so a partial set of weeks would hide
-   *  it. Logged history is never touched and the week counter stays put. */
+   *  for each week's phase); removed exercises lose their unlogged sets; a
+   *  fully removed split loses its untouched shell sessions; sets x reps
+   *  edits retarget unlogged sets and grow/shrink their count; cardio notes
+   *  reach the remaining sessions. A brand-new split day gets sessions
+   *  created for every week first - the grid draws its rows from week 1, so
+   *  a partial set of weeks would hide it. Logged history is never touched
+   *  and the week counter stays put. Everything is counted for the result
+   *  notice, so applying is never silent again. */
   async function applyToRunningBlock() {
     if (!blockApply || !block || applying) return
     setApplying(true)
     try {
+      let setsAdded = 0
+      let setsRemoved = 0
+      let setsUpdated = 0
       for (const r of blockApply.removed) {
         const ids = sessions.filter((s) => s.split_day === r.split_day).map((s) => s.id)
         if (ids.length > 0) {
-          await supabase.from('planned_sets').delete().eq('exercise', r.exercise).is('logged_at', null).in('session_id', ids)
+          // fetch-then-delete so the count is known on every backend
+          const { data: doomed } = await supabase
+            .from('planned_sets').select('id').eq('exercise', r.exercise).is('logged_at', null).in('session_id', ids)
+          if (doomed?.length) {
+            await supabase.from('planned_sets').delete().in('id', doomed.map((d: { id: string }) => d.id))
+            setsRemoved += doomed.length
+          }
         }
       }
+      // a split removed from the plan entirely: its untouched shell sessions
+      // go too, so the grid row disappears - completed sessions and sessions
+      // holding logged sets stay (they are history)
+      if (blockApply.removedSplits.length > 0) {
+        const withLogs = new Set(loggedSets.map((s) => s.session_id))
+        const shells = sessions
+          .filter((s) => blockApply.removedSplits.includes(s.split_day) && !s.completed_at && !withLogs.has(s.id))
+          .map((s) => s.id)
+        if (shells.length > 0) await supabase.from('planned_sessions').delete().in('id', shells)
+      }
+      let targets = sessions.filter((s) => !s.completed_at)
       if (blockApply.added.length > 0) {
-        let targets = sessions.filter((s) => !s.completed_at)
         // new split days with something loggable get their sessions now; a
         // rest-day split (no set counts) gets none - a session with zero
         // sets could never complete and would wedge the up-next pointer
@@ -216,7 +247,13 @@ export default function Gym({ visible }: { visible: boolean }) {
           const rows: Record<string, unknown>[] = []
           newSplits.forEach((sd, i) => {
             for (let w = 1; w <= block.total_weeks; w++) {
-              rows.push({ block_id: block.id, week_number: w, day_number: maxDay + 1 + i, split_day: sd })
+              rows.push({
+                block_id: block.id,
+                week_number: w,
+                day_number: maxDay + 1 + i,
+                split_day: sd,
+                cardio: blockApply.cardio[sd] ?? null,
+              })
             }
           })
           const { data: created, error } = await supabase
@@ -254,7 +291,73 @@ export default function Gym({ visible }: { visible: boolean }) {
           const { error } = await supabase.from('planned_sets').insert(sets.slice(i, i + 200))
           if (error) throw error
         }
+        setsAdded += sets.length
       }
+
+      // sets x reps edits on kept exercises: unlogged sets of remaining
+      // sessions get the new target, and their count grows or shrinks to
+      // match - logged sets are out of reach by construction
+      if (blockApply.changed.length > 0) {
+        const changedSplits = new Set(blockApply.changed.map((c) => c.split_day))
+        const sessIds = targets.filter((s) => changedSplits.has(s.split_day)).map((s) => s.id)
+        const { data: allSets } = sessIds.length
+          ? await supabase
+              .from('planned_sets')
+              .select('id, session_id, exercise, muscle_group, set_number, sort_order, logged_at, target_scheme')
+              .in('session_id', sessIds)
+          : { data: [] }
+        const maxOrder = new Map<string, number>()
+        for (const row of allSets ?? []) maxOrder.set(row.session_id, Math.max(maxOrder.get(row.session_id) ?? 0, row.sort_order))
+        for (const c of blockApply.changed) {
+          for (const s of targets.filter((x) => x.split_day === c.split_day)) {
+            const scheme = c.schemes?.[phaseKey(s.week_number)] ?? null
+            const want = setCount(scheme)
+            const rows = (allSets ?? []).filter(
+              (ps) => ps.session_id === s.id && (ps.exercise === c.exercise || ps.exercise === c.prevExercise),
+            )
+            if (rows.length === 0) continue
+            const unlogged = rows.filter((r) => !r.logged_at).sort((a, b) => b.set_number - a.set_number)
+            // shrink first (top set numbers, unlogged only), then retarget
+            // the survivors - no point retargeting a set about to go
+            const doomed = rows.length > want ? unlogged.slice(0, rows.length - want) : []
+            if (doomed.length > 0) {
+              await supabase.from('planned_sets').delete().in('id', doomed.map((r) => r.id))
+              setsRemoved += doomed.length
+            }
+            const retarget = unlogged.filter((r) => !doomed.includes(r) && r.target_scheme !== scheme)
+            if (retarget.length > 0) {
+              await supabase.from('planned_sets').update({ target_scheme: scheme }).in('id', retarget.map((r) => r.id))
+              setsUpdated += retarget.length
+            }
+            if (rows.length < want) {
+              let order = maxOrder.get(s.id) ?? 0
+              let num = Math.max(...rows.map((r) => r.set_number))
+              const extra = []
+              for (let i = rows.length; i < want; i++) {
+                extra.push({
+                  session_id: s.id,
+                  sort_order: ++order,
+                  exercise: c.exercise,
+                  muscle_group: rows[0].muscle_group,
+                  set_number: ++num,
+                  target_scheme: scheme,
+                })
+              }
+              maxOrder.set(s.id, order)
+              const { error } = await supabase.from('planned_sets').insert(extra)
+              if (!error) setsAdded += extra.length
+            }
+          }
+        }
+      }
+
+      // cardio notes follow the remaining sessions of their split
+      for (const [sd, c] of Object.entries(blockApply.cardio)) {
+        const ids = sessions.filter((s) => !s.completed_at && s.split_day === sd).map((s) => s.id)
+        if (ids.length > 0) await supabase.from('planned_sessions').update({ cardio: c }).in('id', ids)
+      }
+
+      setApplyResult(t.gym.applyResult(setsAdded, setsRemoved, setsUpdated))
       setBlockApply(null)
       load()
     } finally {
@@ -726,6 +829,12 @@ export default function Gym({ visible }: { visible: boolean }) {
           )}
           {splitCardio && !editingPlan && <p className="gentle plan-cardio">{t.gym.planCardio(splitCardio)}</p>}
         </section>
+      )}
+
+      {view === 'strength' && applyResult && (
+        <button className="notice vol-suggestion apply-result" onClick={() => setApplyResult(null)}>
+          {applyResult}
+        </button>
       )}
 
       {view === 'strength' && blockApply && block && (() => {

@@ -236,6 +236,7 @@ export const fr: Strings = {
     applying: 'Application…',
     nextBlockOnly: 'Prochain bloc seulement',
     applyKeepLogs: 'Rien de ce que vous avez enregistré ne change — les séances terminées et les séries notées restent exactement telles quelles.',
+    applyResult: (a: number, r: number, u: number) => `Appliqué à ce bloc : ${a} séries ajoutées · ${r} retirées · ${u} reciblées — tout ce qui est enregistré est resté.`,
     noLoggableNote: (names: string) =>
       `${names} : aucun exercice n’a de nombre de séries, donc pas de séances dans la grille — la grille suit les jours d’entraînement enregistrables ; les jours de repos vivent dans le plan lui-même.`,
     noFreeform: 'Aucun exercice libre enregistré pour l’instant.',
@@ -354,6 +355,7 @@ export const fr: Strings = {
     zeroPh: '0',
     repsPh: 'répétitions, ex. 8-10',
     notePh: 'note / consigne technique (affichée en séance)',
+    cardioPh: 'Cardio pour cette séance — ex. « Zone 2 · 30 min » (optionnel)',
     newSessionPh: 'Nom de la nouvelle séance (ex. Haut C)',
     addSession: 'Ajouter une séance',
     newExercisePh: (split: string) => `Nouvel exercice pour ${split}`,

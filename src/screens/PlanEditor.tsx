@@ -25,11 +25,16 @@ export function composeScheme(sets: string, reps: string): string {
   return reps.trim()
 }
 
-/** What a Save changed structurally in the running block's plan - Gym uses it
- *  to offer "apply to this block's remaining sessions too?". */
+/** What a Save changed in the running block's plan - Gym uses it to offer
+ *  "apply to this block's remaining sessions too?". */
 export interface BlockApplyDiff {
   added: { exercise: string; muscle_group: string; schemes: Record<string, string>; split_day: string }[]
   removed: { exercise: string; split_day: string }[]
+  // sets x reps edits on kept exercises; prevExercise matters when a rename
+  // happened in the same save (logged sets keep the old name)
+  changed: { exercise: string; prevExercise: string; split_day: string; schemes: Record<string, string> }[]
+  removedSplits: string[] // split days that no longer have any plan row
+  cardio: Record<string, string | null> // per-split cardio, only where it changed
 }
 
 interface DraftRow {
@@ -70,6 +75,12 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
     })),
   )
   const [split, setSplit] = useState<string | null>(initialSplit ?? origin[0]?.split_day ?? null)
+  // one cardio note per split, stored on the split's first plan row
+  const [cardioBySplit, setCardioBySplit] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {}
+    for (const p of origin) if (p.cardio && !m[p.split_day]) m[p.split_day] = p.cardio
+    return m
+  })
   const [newSession, setNewSession] = useState('')
   const [newEx, setNewEx] = useState({ name: '', muscle: 'Other', scheme: '3 x 10-12' })
   const [saving, setSaving] = useState(false)
@@ -144,6 +155,15 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
       const toDelete = rows.filter((r) => r.deleted && r.id).map((r) => r.id!)
       if (toDelete.length > 0) await supabase.from('workout_plans').delete().in('id', toDelete)
 
+      // the split's cardio note lives on its first surviving row, null elsewhere
+      const firstKeyOf = new Map<string, string>()
+      for (const s of splitOrder) {
+        const first = surviving.find((r) => r.split_day === s)
+        if (first) firstKeyOf.set(s, first.key)
+      }
+      const cardioFor = (r: DraftRow) =>
+        firstKeyOf.get(r.split_day) === r.key ? cardioBySplit[r.split_day]?.trim() || null : null
+
       const inserts = surviving
         .filter((r) => !r.id)
         .map((r) => ({
@@ -154,6 +174,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
           muscle_group: r.muscle,
           schemes: r.schemes,
           safety_note: r.note.trim() || null,
+          cardio: cardioFor(r),
         }))
       if (inserts.length > 0) await supabase.from('workout_plans').insert(inserts)
 
@@ -168,6 +189,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         if (JSON.stringify(r.schemes) !== JSON.stringify(o.schemes ?? {})) changes.schemes = r.schemes
         if ((r.note.trim() || null) !== (o.safety_note ?? null)) changes.safety_note = r.note.trim() || null
         if (orderOf.get(r.key) !== o.sort_order) changes.sort_order = orderOf.get(r.key)
+        if (cardioFor(r) !== (o.cardio ?? null)) changes.cardio = cardioFor(r)
         if (Object.keys(changes).length === 0) continue
         await supabase.from('workout_plans').update(changes).eq('id', r.id)
         // a rename or muscle fix reaches the running block's not-yet-logged
@@ -189,8 +211,8 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         }
       }
 
-      // structural changes to the running block's plan? Gym offers to apply
-      // them to the remaining sessions instead of only the next block.
+      // changes to the running block's plan? Gym offers to apply them to the
+      // remaining sessions instead of only the next block.
       let diff: BlockApplyDiff | null = null
       if (activeBlock && planBlock === activeBlock.block) {
         const added = surviving
@@ -199,7 +221,25 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         const removed = rows
           .filter((r) => r.deleted && r.id)
           .map((r) => ({ exercise: origById.get(r.id!)!.exercise, split_day: r.split_day }))
-        if (added.length > 0 || removed.length > 0) diff = { added, removed }
+        const changed = surviving
+          .filter((r) => r.id && origById.has(r.id) && JSON.stringify(r.schemes) !== JSON.stringify(origById.get(r.id)!.schemes ?? {}))
+          .map((r) => ({
+            exercise: r.exercise.trim(),
+            prevExercise: origById.get(r.id!)!.exercise,
+            split_day: r.split_day,
+            schemes: r.schemes,
+          }))
+        const removedSplits = [...new Set(origin.map((p) => p.split_day))].filter(
+          (sd) => !surviving.some((r) => r.split_day === sd),
+        )
+        const cardio: Record<string, string | null> = {}
+        for (const sd of new Set(surviving.map((r) => r.split_day))) {
+          const now = cardioBySplit[sd]?.trim() || null
+          const before = origin.find((p) => p.split_day === sd && p.cardio)?.cardio ?? null
+          if (now !== before) cardio[sd] = now
+        }
+        if (added.length > 0 || removed.length > 0 || changed.length > 0 || removedSplits.length > 0 || Object.keys(cardio).length > 0)
+          diff = { added, removed, changed, removedSplits, cardio }
       }
       onSaved(split, diff)
     } finally {
@@ -303,6 +343,16 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
           </div>
         )
       })}
+
+      {split && (
+        <div className="add-task">
+          <input
+            value={cardioBySplit[split] ?? ''}
+            onChange={(e) => setCardioBySplit({ ...cardioBySplit, [split]: e.target.value })}
+            placeholder={t.planEditor.cardioPh}
+          />
+        </div>
+      )}
 
       <div className="add-task">
         <input

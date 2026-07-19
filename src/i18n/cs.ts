@@ -236,6 +236,7 @@ export const cs: Strings = {
     applying: 'Promítám…',
     nextBlockOnly: 'Až od dalšího bloku',
     applyKeepLogs: 'Ať zvolíš cokoli, nic zapsaného se nemění — dokončené tréninky a zapsané série zůstávají přesně tak, jak jsou.',
+    applyResult: (a: number, r: number, u: number) => `Použito na tento blok: ${a} sérií přidáno · ${r} odebráno · ${u} upraveno — vše zapsané zůstalo.`,
     noLoggableNote: (names: string) =>
       `${names}: žádný cvik nemá počet sérií, takže v mřížce nevzniknou tréninky — mřížka sleduje zapisovatelné tréninkové dny; dny odpočinku patří do plánu samotného.`,
     noFreeform: 'Zatím žádné volné zápisy.',
@@ -354,6 +355,7 @@ export const cs: Strings = {
     zeroPh: '0',
     repsPh: 'opakování, např. 8-10',
     notePh: 'poznámka / technická nápověda (ukazuje se v tréninku)',
+    cardioPh: 'Kardio pro tento trénink — např. „Zóna 2 · 30 min" (volitelné)',
     newSessionPh: 'Název nového tréninku (např. Horní C)',
     addSession: 'Přidat trénink',
     newExercisePh: (split: string) => `Nový cvik pro ${split}`,

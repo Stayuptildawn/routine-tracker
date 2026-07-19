@@ -42,7 +42,22 @@ deployed alongside).
   the setup docs are all removed; the Android share sheet remains the
   hands-free way into the composer.
 
+### Added
+- **The plan editor grew a cardio field.** Every session tab now has an
+  optional "Cardio for this session" input, so your own sessions can carry
+  the same cardio note the starter plan's do — shown on the plan card and,
+  when you apply mid-block, on the block's remaining sessions too.
+- **Applying plan changes to a running block now reports what it did**: a
+  small notice counts the sets it added, removed and retargeted ("everything
+  logged stayed"), so an apply is never silent again.
+
 ### Fixed
+- **Mid-block plan edits now reach the whole block, not just additions.**
+  Sets × reps edits on an existing exercise used to apply only from the next
+  block, silently; they now retarget the remaining sessions' unlogged sets
+  and grow or shrink their count to match. Removing a whole session finally
+  removes its untouched rows from the block grid (sessions you completed or
+  logged into stay, as history).
 - **Adding a new session mid-block works now.** "Apply to this block" used
   to silently do nothing for a brand-new session day (it only knew how to
   add exercises to sessions that already existed) — the one case where you

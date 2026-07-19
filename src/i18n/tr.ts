@@ -234,6 +234,7 @@ export const tr: Strings = {
     applying: 'Uygulanıyor…',
     nextBlockOnly: 'Yalnızca sonraki blok',
     applyKeepLogs: 'Her iki durumda da kaydettiklerin değişmez — biten seanslar ve girilen setler olduğu gibi kalır.',
+    applyResult: (a: number, r: number, u: number) => `Bu bloğa uygulandı: ${a} set eklendi · ${r} çıkarıldı · ${u} güncellendi — kaydedilen her şey yerinde kaldı.`,
     noLoggableNote: (names: string) =>
       `${names}: hiçbir egzersizin set sayısı yok, bu yüzden tabloda seans oluşmaz — tablo kaydedilebilir antrenman günlerini izler; dinlenme günleri planın kendisinde durur.`,
     noFreeform: 'Henüz serbest kayıt yok.',
@@ -352,6 +353,7 @@ export const tr: Strings = {
     zeroPh: '0',
     repsPh: 'tekrar, örn. 8-10',
     notePh: 'not / form ipucu (seanslarda görünür)',
+    cardioPh: 'Bu seansın kardiyosu — örn. "Bölge 2 · 30 dk" (isteğe bağlı)',
     newSessionPh: 'Yeni seansın adı (örn. Üst C)',
     addSession: 'Seans ekle',
     newExercisePh: (split: string) => `${split} için yeni egzersiz`,
