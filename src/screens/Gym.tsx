@@ -40,7 +40,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [plans, setPlans] = useState<WorkoutPlan[]>([])
   const [block, setBlock] = useState<TrainingBlock | null>(null)
   const [sessions, setSessions] = useState<PlannedSession[]>([])
-  const [loggedSets, setLoggedSets] = useState<{ muscle_group: string | null; session_id: string; logged_reps: number | null }[]>([])
+  const [loggedSets, setLoggedSets] = useState<{ muscle_group: string | null; session_id: string; logged_reps: number | null; logged_at: string | null }[]>([])
   const [cardio, setCardio] = useState<CardioLog[]>([])
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
   const [review, setReview] = useState<{ advice: string; week_start: string } | null>(null) // weekly AI coach note
@@ -107,7 +107,7 @@ export default function Gym({ visible }: { visible: boolean }) {
       const [setsRes, checkinRes] = await Promise.all([
         supabase
           .from('planned_sets')
-          .select('muscle_group, session_id, logged_reps')
+          .select('muscle_group, session_id, logged_reps, logged_at')
           .in('session_id', sessRows.map((s) => s.id))
           .not('logged_at', 'is', null),
         supabase
@@ -273,27 +273,30 @@ export default function Gym({ visible }: { visible: boolean }) {
 
   const phase = week === null ? null : PHASES.find((p) => week <= p.maxWeek) ?? null
 
-  // volume picture: hard sets (reps actually logged) per muscle per week
-  const weekBySession = new Map(sessions.map((s) => [s.id, s.week_number]))
+  // volume picture: hard sets (reps actually logged) per muscle per week.
+  // Sets count in the week they were ACTUALLY performed (like the weekly
+  // coach's note), not the plan week their session belongs to - a catch-up
+  // session shows up where the work really happened
   const volume = new Map<string, number[]>()
   if (block) {
+    const blockWeekOf = (date: string) =>
+      Math.floor(
+        (new Date(date + 'T00:00:00').getTime() - new Date(block.start_date + 'T00:00:00').getTime()) /
+          (7 * 86400000),
+      ) + 1
     for (const s of loggedSets) {
-      if (s.logged_reps == null || !s.muscle_group) continue
-      const wk = weekBySession.get(s.session_id)
-      if (!wk) continue
+      if (s.logged_reps == null || !s.muscle_group || !s.logged_at) continue
+      const wk = blockWeekOf(s.logged_at.slice(0, 10))
+      if (wk < 1 || wk > block.total_weeks) continue
       const arr = volume.get(s.muscle_group) ?? Array(block.total_weeks).fill(0)
       arr[wk - 1]++
       volume.set(s.muscle_group, arr)
     }
-    // freeform lifts (composer/Telegram) count too - interpret tags their
+    // freeform lifts (composer) count too - interpret tags their
     // muscle group, and their date places them in a block week
     for (const log of logs) {
       if (!log.muscle_group || !log.sets?.length) continue
-      const wk =
-        Math.floor(
-          (new Date(log.date + 'T00:00:00').getTime() - new Date(block.start_date + 'T00:00:00').getTime()) /
-            (7 * 86400000),
-        ) + 1
+      const wk = blockWeekOf(log.date)
       if (wk < 1 || wk > block.total_weeks) continue
       const arr = volume.get(log.muscle_group) ?? Array(block.total_weeks).fill(0)
       arr[wk - 1] += log.sets.length
