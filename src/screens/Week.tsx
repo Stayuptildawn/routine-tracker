@@ -78,6 +78,17 @@ export default function Week({ visible }: { visible: boolean }) {
   const logIndex = new Map(logs.map((l) => [`${l.task_id}|${l.date}`, l]))
   const logFor = (taskId: string, date: string) => logIndex.get(`${taskId}|${date}`)
 
+  // On narrow phones the grid scrolls sideways and starts at Monday, so from
+  // Thursday on, today - the column people came to tick - opens off-screen.
+  // A stable callback ref, so this runs when a grid mounts and never fights
+  // the user's own scrolling on later renders.
+  const startAtToday = useCallback((wrap: HTMLDivElement | null) => {
+    if (!wrap) return
+    const todayIdx = (new Date().getDay() + 6) % 7 // 0 = Mon … 6 = Sun
+    if (todayIdx < 3) return
+    wrap.scrollLeft = wrap.scrollWidth
+  }, [])
+
   function cycleCell(task: Task, date: string) {
     const key = `${task.id}|${date}`
     const saved = logFor(task.id, date)?.status ?? 'pending'
@@ -325,7 +336,7 @@ export default function Week({ visible }: { visible: boolean }) {
                 />
               </div>
             ) : tasks.length > 0 ? (
-              <div className="week-grid-wrap">
+              <div className="week-grid-wrap" ref={startAtToday}>
                 <table className="week-grid">
                   <thead>
                     <tr>
