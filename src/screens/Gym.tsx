@@ -883,16 +883,20 @@ export default function Gym({ visible }: { visible: boolean }) {
                   <button className="start-session" onClick={startFlexWeek} disabled={flexBusy}>
                     {flexBusy ? t.gym.flex.generating : t.gym.flex.createWeek(flexWeekPreview.sessions.length)}
                   </button>
-                  <button
-                    className="link"
-                    onClick={() => {
-                      setFlexWeekPreview(null)
-                      setFlexWeekDays(null)
-                    }}
-                    disabled={flexBusy}
-                  >
-                    {t.gym.flex.discard}
-                  </button>
+                  {/* same button row the single-session preview uses - a bare
+                      link here sat flush against the button above it */}
+                  <div className="energy-row plan-row">
+                    <button
+                      className="link"
+                      onClick={() => {
+                        setFlexWeekPreview(null)
+                        setFlexWeekDays(null)
+                      }}
+                      disabled={flexBusy}
+                    >
+                      {t.gym.flex.discard}
+                    </button>
+                  </div>
                 </>
               )}
             </>
