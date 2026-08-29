@@ -361,6 +361,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                               <input
                                 type="number"
                                 inputMode="decimal"
+                                aria-label={t.session.kgPh}
                                 placeholder={ph.weight || t.session.kgPh}
                                 value={draft.weight}
                                 onChange={(e) =>
@@ -371,6 +372,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                               <input
                                 type="number"
                                 inputMode="numeric"
+                                aria-label={t.session.repsPh}
                                 placeholder={ph.reps || t.session.repsPh}
                                 value={draft.reps}
                                 onChange={(e) =>
