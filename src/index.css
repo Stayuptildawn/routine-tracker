@@ -198,6 +198,9 @@ select {
   font: inherit;
   /* iOS auto-zooms focused fields under 16px - never let that happen */
   font-size: max(16px, 1em);
+  /* and every field is a tap target: they measured 38-42px across the plan
+     editor, settings and the cardio form */
+  min-height: 2.75rem;
   color: var(--text);
   transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease);
 }
@@ -364,6 +367,18 @@ select option {
   background: var(--accent-soft);
 }
 
+/* a link acting as a standalone action - a button row, a card-level action,
+   a disclosure toggle - is a tap target, not prose. Links that sit inline in
+   a sentence (the CSV row, "clear", "turn off") keep their text size. */
+.energy-row .link,
+.gym-day > .link,
+.training-history > .link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1); /* flex ignores the whitespace node next to an <Icon/> */
+  min-height: 2.75rem;
+}
+
 /* the commit button: one global skin, so a Save outside its old scoped
    containers can never render as a bare unstyled button again */
 .save {
@@ -422,31 +437,11 @@ select option {
   font-weight: 700;
 }
 
-/* settings entry points: full rail button on desktop; on phones a narrow
-   icon-only button at the end of the bar, so Settings is reachable from every
-   tab (it used to live only in the Now header). Kept deliberately out of
-   mis-tap range: it does not flex like the five destinations, it carries no
-   label, and a divider separates it from them. */
+/* settings entry points: rail button on desktop, the Now-header gear on
+   phones. Deliberately NOT in the mobile tab bar - that bar is for the five
+   destinations, and a settings target next to them is mis-tap territory. */
 .settings-rail {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 3rem;
-  min-height: 2.75rem;
-  padding: var(--sp-2) var(--sp-3);
-  color: var(--text-dim);
-  border-radius: 0;
-  border-left: 1px solid var(--border);
-}
-
-.settings-rail:hover {
-  color: var(--text);
-  background: var(--surface-2);
-}
-
-.settings-rail .tab-label {
-  display: none; /* icon only on phones; the aria-label carries the name */
+  display: none;
 }
 
 .now-head {
@@ -546,17 +541,11 @@ select option {
     font-weight: 700;
     color: var(--text-dim);
     padding: var(--sp-2);
-    min-width: 0;
     white-space: nowrap;
-    border-left: none;
     border-radius: var(--r-sm);
   }
 
-  /* the rail keeps its label and its icon at text size */
-  .settings-rail .tab-label {
-    display: inline;
-  }
-
+  /* the icon sits inline with the label, at text size */
   .settings-rail .tab-icon {
     font-size: inherit;
     margin-right: var(--sp-1);
@@ -839,6 +828,7 @@ select option {
   background: var(--accent-strong);
   color: var(--on-accent);
   padding: var(--sp-2) var(--sp-4);
+  min-height: 2.75rem;
   font-weight: 700;
 }
 
@@ -940,6 +930,14 @@ select option {
   flex-wrap: wrap;
 }
 
+/* the CSV row reads as a sentence but every item is a download action */
+.export-row .link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1); /* flex ignores the whitespace node next to an <Icon/> */
+  min-height: 2.75rem;
+}
+
 .ai-stats {
   display: block;
 }
@@ -963,7 +961,17 @@ select option {
   margin-right: var(--sp-1);
 }
 
+/* the app's workhorse control (energy, focus, block, session, gym-days
+   pills): it measured 38px tall everywhere, so give the whole family the
+   same thumb floor rather than patching call sites one at a time */
 .energy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* flex drops the whitespace text node between <Icon/> and its label, so
+     the gap has to be explicit */
+  gap: var(--sp-1);
+  min-height: 2.75rem;
   background: var(--surface-2);
   color: var(--text-dim);
   padding: var(--sp-2) var(--sp-3);
@@ -1160,7 +1168,8 @@ select option {
   background: var(--surface-2);
   color: var(--text-dim);
   min-width: 4.4rem;
-  min-height: 40px;
+  /* the most-tapped pair in the app - rem so it grows with font scaling */
+  min-height: 2.75rem;
 }
 
 .task-buttons .do:hover,
@@ -1320,6 +1329,14 @@ select option {
 
 .player-top .eyebrow {
   margin: 0;
+}
+
+/* exit / close on a full-screen overlay: the one way out, so it gets a real
+   target rather than the bare text size a .link would give it */
+.player-top .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
 }
 
 .player-task {
@@ -1504,6 +1521,7 @@ select option {
 
 .set-row input {
   width: 5rem;
+  min-height: 2.75rem;
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
@@ -1546,15 +1564,17 @@ select option {
   color: var(--good);
 }
 
-.session-skip {
+.session-skip,
+.session-review-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   align-self: flex-start;
-  margin-top: var(--sp-3);
   padding-left: 0;
 }
 
-.session-review-back {
-  align-self: flex-start;
-  padding-left: 0;
+.session-skip {
+  margin-top: var(--sp-3);
 }
 
 .session-date {
@@ -1659,7 +1679,8 @@ select option {
 
 .weeks-cell {
   flex: 1;
-  height: 2rem;
+  /* every cell opens a session - the same tap target the Week grid needed */
+  height: 2.25rem;
   border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--good);
@@ -1691,6 +1712,9 @@ select option {
 }
 
 .run-edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   margin-left: auto;
   padding: var(--sp-1) var(--sp-2);
   font-size: var(--fs-xs);
@@ -2408,7 +2432,7 @@ select option {
   background: var(--surface-2);
   color: var(--text-dim);
   padding: var(--sp-2) var(--sp-3);
-  min-height: 40px;
+  min-height: 2.75rem;
 }
 
 .danger:hover {
@@ -2511,6 +2535,9 @@ select option {
 .day-picker .day {
   flex: 1;
   max-width: 2.7rem;
+  /* seven toggles in a row measured 27px tall - the row is the whole point
+     of the edit panel, so give each one a real target */
+  min-height: 2.75rem;
   padding: var(--sp-1) 0;
   border-radius: var(--r-full);
   background: var(--surface-2);
@@ -2621,10 +2648,12 @@ select option {
   background: var(--accent-strong);
   color: var(--on-accent);
   padding: var(--sp-2) var(--sp-3);
+  min-height: 2.75rem;
   font-weight: 700;
 }
 
 .add-routine {
+  min-height: 2.75rem;
   margin-top: var(--sp-4);
   /* keep the row clear of the tab bar + mobile keyboard */
   margin-bottom: var(--sp-7);
@@ -2740,6 +2769,14 @@ select option {
   color: var(--text-dim);
 }
 
+/* Undo is the whole promise of the AI log - it must be easy to hit */
+.ai-meta .link,
+.anchor-row .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
 .badge {
   padding: 2px var(--sp-3);
   border-radius: var(--r-full);
@@ -2759,6 +2796,9 @@ select option {
 
 /* ---------- reminders ---------- */
 .reminders .back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   padding-left: 0;
   margin-bottom: var(--sp-2);
 }
@@ -2892,6 +2932,11 @@ select option {
 }
 
 .reminder-edit-link {
+  /* it measured 21px tall - the padding does the growing so the tag row
+     keeps its compact look */
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   padding: 2px var(--sp-2);
   font-size: var(--fs-xs);
 }
@@ -2932,6 +2977,9 @@ select option {
 }
 
 .reminders-card .see-all {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   padding-left: 0;
   margin-top: var(--sp-2);
 }
