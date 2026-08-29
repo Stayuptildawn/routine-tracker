@@ -31,6 +31,18 @@ deployed alongside).
   before anything is written, joins the running block (volume picture and
   the weekly coach's note count it), and logs like any other session.
 
+### Changed
+- **Monthly reflections replace the week-by-week history on Reflect.** At
+  the turn of each month, the reflection cron folds the month's weekly
+  reflections and training reviews into one summary paragraph; the "Past
+  weeks" toggle is now "Monthly reflections", holding up to twelve months.
+  Weekly rows are pruned once their month is summarized (the freshest month
+  keeps its weeklies so the current cards never blank), and summaries older
+  than a year go too.
+- **Past flexible sessions fold away.** Finished flexible sessions now sit
+  behind a "Past flexible sessions" toggle (like Reflect's history) and only
+  the five most recent are listed.
+
 ### Fixed
 - **Finished flexible sessions stay reachable.** They have no grid cell, so
   completing one made it vanish entirely — no way back in to review or fix a

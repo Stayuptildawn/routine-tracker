@@ -74,6 +74,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   // the week layer: "I have N gym days this week" -> a laid-out reduced week
   const [flexWeekDays, setFlexWeekDays] = useState<number | null>(null)
   const [flexWeekPreview, setFlexWeekPreview] = useState<FlexWeekPlan | null>(null)
+  const [showPastFlex, setShowPastFlex] = useState(false)
   const [applyResult, setApplyResult] = useState<string | null>(null) // what the last apply actually did
   const [applying, setApplying] = useState(false)
 
@@ -577,8 +578,12 @@ export default function Gym({ visible }: { visible: boolean }) {
   const gridSessions = sessions.filter((s) => !isFlex(s))
   const pendingFlex = sessions.filter((s) => isFlex(s) && !s.completed_at)
   // finished flex sessions have no grid cell, so this list is their only way
-  // back in - reopening lands on the finish screen, where sets stay editable
-  const doneFlex = sessions.filter((s) => isFlex(s) && s.completed_at)
+  // back in - reopening lands on the finish screen, where sets stay editable.
+  // Only the five most recent are kept on screen, folded behind a toggle.
+  const doneFlex = sessions
+    .filter((s) => isFlex(s) && s.completed_at)
+    .sort((a, b) => b.week_number - a.week_number || b.day_number - a.day_number)
+    .slice(0, 5)
 
   // the block is "wrapped" when every session is handled or its weeks have run out
   const doneSessionCount = gridSessions.filter((s) => s.completed_at).length
@@ -710,24 +715,27 @@ export default function Gym({ visible }: { visible: boolean }) {
             </>
           )}
           {doneFlex.length > 0 && (
-            <>
-              <p className="gentle">{t.gym.flex.finished}</p>
-              {doneFlex.map((s) => (
-                <div key={s.id} className="flex-open-row">
-                  <button className="start-session flex-done" onClick={() => setActive(s)}>
-                    <Icon name="check" /> {s.split_day}
-                    <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
-                  </button>
-                  <ConfirmButton
-                    className="danger"
-                    label={<Icon name="x" />}
-                    confirmLabel={t.gym.flex.deleteConfirm}
-                    title={t.gym.flex.deleteTitle(s.split_day)}
-                    onConfirm={() => deleteFlexSession(s)}
-                  />
-                </div>
-              ))}
-            </>
+            <div className="training-history">
+              <button className="link" onClick={() => setShowPastFlex((v) => !v)}>
+                <Icon name={showPastFlex ? 'arrow-up' : 'arrow-down'} /> {t.gym.flex.past(doneFlex.length)}
+              </button>
+              {showPastFlex &&
+                doneFlex.map((s) => (
+                  <div key={s.id} className="flex-open-row">
+                    <button className="start-session flex-done" onClick={() => setActive(s)}>
+                      <Icon name="check" /> {s.split_day}
+                      <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
+                    </button>
+                    <ConfirmButton
+                      className="danger"
+                      label={<Icon name="x" />}
+                      confirmLabel={t.gym.flex.deleteConfirm}
+                      title={t.gym.flex.deleteTitle(s.split_day)}
+                      onConfirm={() => deleteFlexSession(s)}
+                    />
+                  </div>
+                ))}
+            </div>
           )}
           {!flexPreview ? (
             <>

@@ -19,6 +19,7 @@ import { json } from '../_shared/http.ts'
 import { LANGUAGE_NAMES, normLang } from '../_shared/lang.ts'
 import { userNow, addDays, userSpreadMinutes } from '../_shared/localtime.ts'
 import { maybeTrainingReview } from '../_shared/trainingReview.ts'
+import { maybeMonthlyReflection } from '../_shared/monthlyReflection.ts'
 
 // English-only by design: non-English reflections rely on the prompt-level
 // ban (translated equivalents can't be enumerated reliably), and English
@@ -72,6 +73,15 @@ Deno.serve(async (req) => {
         await maybeTrainingReview(supabase, user.id, lang, weekStart, force)
       } catch (err) {
         console.error('training-review error:', user.id, err)
+      }
+
+      // month turn: fold last month's weekly notes into one monthly summary
+      // (self-healing across the first days of the month), then prune what
+      // the summary replaced. Never blocks the daily reflection below.
+      try {
+        await maybeMonthlyReflection(supabase, user.id, lang, date, force)
+      } catch (err) {
+        console.error('monthly-reflection error:', user.id, err)
       }
 
       const prevStart = addDays(weekStart, -7)
