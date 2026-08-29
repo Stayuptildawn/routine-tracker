@@ -263,6 +263,16 @@ export const de: Strings = {
       discard: 'verwerfen',
       open: 'Offene flexible Einheiten',
       sessionName: (focus: string) => `${focus} · flex`,
+      orWeek: '— oder die ganze Woche auslegen —',
+      daysLabel: 'Gym-Tage',
+      dayHeading: (i: number, focus: string) => `Tag ${i} — ${focus}`,
+      weekWhy:
+        'So ausgelegt, dass jeder Muskel möglichst zweimal pro Woche drankommt — bei wenigen Tagen schützen Frequenz und Ganzkörpertage mehr Muskel als jeder Split.',
+      createWeek: (n: number) => `Diese ${n} Einheiten anlegen`,
+      weekNote6: 'Sechs Tage — der geschriebene Plan passt bereits. Nutze das Raster oben.',
+      weekNote0:
+        'Eine Null-Woche kommt vor. Muskel übersteht ein paar ruhige Wochen, und lockeres Cardio hält den Motor — komm mit einem Ganzkörpertag zurück, sobald es geht.',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
 

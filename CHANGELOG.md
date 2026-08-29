@@ -7,6 +7,18 @@ deployed alongside).
 ## 2026-08-29
 
 ### Added
+- **The week layer: "I have N gym days."** Under the flexible-session card
+  you can now declare how many gym days this week actually allows (0–6) and
+  get the whole reduced week laid out at once, following the frequency
+  evidence: 1–2 days → full-body (every muscle touched each visit), 3 days →
+  Upper/Lower/Full (everything still hit twice), 4–5 days → Upper/Lower
+  alternation, 6 → the written plan already fits. Each day is planned from
+  what remains after the previous one, so weekly targets are divided, never
+  double-counted — and a mid-week layout accounts for work already done.
+  Later days lead with different exercises. Zero days gets an honest note
+  instead of sessions. Allocation is now proportional when the budget can't
+  fit everything: every muscle keeps at least a maintenance dose instead of
+  the biggest muscles starving the small ones.
 - **Flexible sessions.** When the week doesn't allow the planned split —
   three gym days instead of six, or a day where only "something upper" fits —
   the Workout tab can now compose a one-off Upper / Lower / Full-body session

@@ -2625,6 +2625,16 @@ select option {
   font-size: var(--fs-sm);
 }
 
+/* a laid-out flex week: one small heading per planned day */
+.flex-week-day {
+  margin-top: var(--sp-4);
+}
+
+.flex-day-head {
+  margin: 0;
+  font-weight: 700;
+}
+
 /* ---------- AI history ---------- */
 .ai-item {
   background: var(--surface);

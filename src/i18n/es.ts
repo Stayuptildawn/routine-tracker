@@ -264,6 +264,16 @@ export const es: Strings = {
       discard: 'descartar',
       open: 'Sesiones flexibles abiertas',
       sessionName: (focus: string) => `${focus} · flex`,
+      orWeek: '— o planear la semana entera —',
+      daysLabel: 'Días de gimnasio',
+      dayHeading: (i: number, focus: string) => `Día ${i} — ${focus}`,
+      weekWhy:
+        'Organizado para que cada músculo se trabaje al menos dos veces por semana cuando es posible: con pocos días, la frecuencia y los días de cuerpo completo protegen más músculo que cualquier división.',
+      createWeek: (n: number) => `Crear estas ${n} sesiones`,
+      weekNote6: 'Seis días: el plan escrito ya encaja. Usa la cuadrícula de arriba.',
+      weekNote0:
+        'Una semana en cero pasa. El músculo aguanta un par de semanas tranquilas y el cardio suave mantiene el motor; vuelve con un día de cuerpo completo cuando puedas.',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
 

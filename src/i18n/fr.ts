@@ -263,6 +263,16 @@ export const fr: Strings = {
       discard: 'abandonner',
       open: 'Séances flexibles ouvertes',
       sessionName: (focus: string) => `${focus} · flex`,
+      orWeek: '— ou organiser toute la semaine —',
+      daysLabel: 'Jours de salle',
+      dayHeading: (i: number, focus: string) => `Jour ${i} — ${focus}`,
+      weekWhy:
+        'Organisé pour que chaque muscle soit travaillé au moins deux fois dans la semaine quand c’est possible — avec peu de jours, la fréquence et les séances corps entier protègent plus de muscle que n’importe quel split.',
+      createWeek: (n: number) => `Créer ces ${n} séances`,
+      weekNote6: 'Six jours — le plan écrit convient déjà. Utilise la grille ci-dessus.',
+      weekNote0:
+        'Une semaine à zéro, ça arrive. Le muscle survit à quelques semaines calmes, et le cardio facile entretient le moteur — reviens avec une séance corps entier dès que possible.',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
 

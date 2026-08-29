@@ -122,12 +122,39 @@ export function composeFlexSession(opts: ComposeOpts): FlexComposition {
     }
   }
 
-  // first pass: the real deficits, biggest first
-  for (const n of scored) {
-    if (budget < PER_MUSCLE_FLOOR) break
-    if (n.deficit < PER_MUSCLE_FLOOR) continue
-    allocate(n.muscle, Math.min(n.deficit, PER_MUSCLE_CAP, budget))
+  // first pass: the real deficits. When they don't all fit the budget, scale
+  // everyone down proportionally instead of letting the big muscles starve
+  // the small ones - when volume must drop, the evidence says cut it across
+  // the board and keep each muscle above a maintenance floor, not zero out
+  // the tail of the priority list.
+  const wants = scored
+    .filter((n) => n.deficit >= PER_MUSCLE_FLOOR)
+    .map((n) => ({ muscle: n.muscle, want: Math.min(n.deficit, PER_MUSCLE_CAP) }))
+  const totalWant = wants.reduce((a, w) => a + w.want, 0)
+  const scale = totalWant > budget ? budget / totalWant : 1
+  const doses = new Map<string, number>()
+  let spent = 0
+  for (const w of wants) {
+    if (budget - spent < PER_MUSCLE_FLOOR) break
+    const dose = Math.min(Math.max(PER_MUSCLE_FLOOR, Math.floor(w.want * scale)), w.want, budget - spent)
+    doses.set(w.muscle, dose)
+    spent += dose
   }
+  // rounding leftovers go back one set at a time, biggest deficits first
+  let gave = true
+  while (spent < budget && gave) {
+    gave = false
+    for (const w of wants) {
+      if (spent >= budget) break
+      const d = doses.get(w.muscle)
+      if (d != null && d < w.want) {
+        doses.set(w.muscle, d + 1)
+        spent++
+        gave = true
+      }
+    }
+  }
+  for (const [muscle, dose] of doses) allocate(muscle, dose)
   // second pass: leftover budget tops up the rest of the focus with a
   // maintenance dose, so "a full upper day" never shrinks to one lagging
   // muscle (and a fully covered week still yields a keep-it-ticking session)
@@ -138,6 +165,80 @@ export function composeFlexSession(opts: ComposeOpts): FlexComposition {
   }
 
   return { picks, needs: scored, maintenance }
+}
+
+/** How a reduced week is laid out. The logic: with 1-2 days, full-body wins -
+ *  every muscle gets touched every visit, and per-muscle frequency (>=2x/week
+ *  when volume allows) beats cramming one big day. 3 days = Upper/Lower/Full
+ *  so everything is still hit twice. 4-5 days alternate Upper/Lower (each
+ *  half 2x), the fifth day sweeping leftovers as full-body. 6 days is the
+ *  written plan itself - no flex layout needed. */
+export const WEEK_PATTERNS: Record<number, FlexFocus[]> = {
+  1: ['full'],
+  2: ['full', 'full'],
+  3: ['upper', 'lower', 'full'],
+  4: ['upper', 'lower', 'upper', 'lower'],
+  5: ['upper', 'lower', 'upper', 'lower', 'full'],
+}
+
+export interface FlexWeekPlan {
+  sessions: { focus: FlexFocus; picks: FlexPick[]; maintenance: boolean }[]
+  /** the week-start needs the layout was planned from */
+  needs: MuscleNeed[]
+}
+
+interface ComposeWeekOpts {
+  plans: WorkoutPlan[]
+  phase: string
+  needs: MuscleNeed[]
+  adjustments?: Map<string, number>
+  /** gym days available this week, 1-5 (0 and 6 need no layout) */
+  days: number
+  length: FlexLength
+}
+
+/** Lay out a whole reduced week: each day is composed by the single-session
+ *  planner, and its sets are fed forward as "done" so the next day plans the
+ *  remainder - the weekly targets are divided, never double-counted. */
+export function composeFlexWeek(opts: ComposeWeekOpts): FlexWeekPlan {
+  const pattern = WEEK_PATTERNS[Math.min(5, Math.max(1, Math.round(opts.days)))]
+  const rolling = opts.needs.map((n) => ({ ...n }))
+  const sessions: FlexWeekPlan['sessions'] = []
+  pattern.forEach((focus, i) => {
+    const r = composeFlexSession({
+      plans: opts.plans,
+      phase: opts.phase,
+      needs: rolling,
+      adjustments: opts.adjustments,
+      focus,
+      length: opts.length,
+      variant: i, // later days lead with different exercises
+    })
+    sessions.push({ focus, picks: r.picks, maintenance: r.maintenance })
+    for (const p of r.picks) {
+      const n = rolling.find((x) => x.muscle === p.muscle_group)
+      if (n) n.done += p.sets
+    }
+  })
+  return { sessions, needs: opts.needs }
+}
+
+/** Write a whole planned week of flex sessions, in order. */
+export async function createFlexWeek(
+  block: TrainingBlock,
+  weekNumber: number,
+  existing: PlannedSession[],
+  week: FlexWeekPlan,
+  names: string[],
+): Promise<PlannedSession[]> {
+  const acc = [...existing]
+  const out: PlannedSession[] = []
+  for (let i = 0; i < week.sessions.length; i++) {
+    const s = await createFlexSession(block, weekNumber, acc, week.sessions[i].picks, names[i])
+    acc.push(s)
+    out.push(s)
+  }
+  return out
 }
 
 function toPick(plan: WorkoutPlan, muscle: string, sets: number, phase: string): FlexPick {

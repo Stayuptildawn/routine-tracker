@@ -260,6 +260,16 @@ export const tr: Strings = {
       discard: 'vazgeç',
       open: 'Açık esnek antrenmanlar',
       sessionName: (focus: string) => `${focus} · esnek`,
+      orWeek: '— ya da bütün haftayı planla —',
+      daysLabel: 'Salon günleri',
+      dayHeading: (i: number, focus: string) => `Gün ${i} — ${focus}`,
+      weekWhy:
+        'Mümkün olduğunca her kas haftada en az iki kez çalışacak şekilde dizildi — gün sayısı azken sıklık ve tüm vücut günleri, her türlü bölünmeden daha çok kası korur.',
+      createWeek: (n: number) => `Bu ${n} antrenmanı oluştur`,
+      weekNote6: 'Altı gün — yazılı plan zaten uyuyor. Yukarıdaki tabloyu kullan.',
+      weekNote0:
+        'Sıfır hafta olur. Kas bir-iki sakin haftayı atlatır, hafif kardiyo motoru sıcak tutar — fırsat bulunca bir tüm vücut günüyle dön.',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · esnek`,
     },
   },
 

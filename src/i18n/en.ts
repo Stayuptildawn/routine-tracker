@@ -279,6 +279,16 @@ export const en = {
       discard: 'discard',
       open: 'Open flexible sessions',
       sessionName: (focus: string) => `${focus} · flex`,
+      orWeek: '— or lay out the whole week —',
+      daysLabel: 'Gym days',
+      dayHeading: (i: number, focus: string) => `Day ${i} — ${focus}`,
+      weekWhy:
+        'Laid out so each muscle is hit at least twice across the week where possible — at low day counts, frequency and full-body days protect more muscle than any split.',
+      createWeek: (n: number) => `Create these ${n} sessions`,
+      weekNote6: 'Six days — the written plan already fits. Use the grid above.',
+      weekNote0:
+        'A zero week happens. Muscle survives a couple of quiet weeks, and easy cardio keeps the engine — come back with one full-body day when you can.',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
 

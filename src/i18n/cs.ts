@@ -262,6 +262,16 @@ export const cs: Strings = {
       discard: 'zahodit',
       open: 'Otevřené flexibilní tréninky',
       sessionName: (focus: string) => `${focus} · flex`,
+      orWeek: '— nebo rozvrhnout celý týden —',
+      daysLabel: 'Dny v posilovně',
+      dayHeading: (i: number, focus: string) => `Den ${i} — ${focus}`,
+      weekWhy:
+        'Rozvrženo tak, aby každý sval pracoval pokud možno aspoň dvakrát týdně — při málu dní chrání frekvence a celotělové dny víc svalů než jakýkoli split.',
+      createWeek: (n: number) => `Vytvořit těchto ${n} tréninků`,
+      weekNote6: 'Šest dní — napsaný plán sedí i tak. Použij mřížku výše.',
+      weekNote0:
+        'Týden úplně bez tréninku se stává. Sval pár klidných týdnů přežije a lehké kardio udrží motor — vrať se s jedním celotělovým dnem, až to půjde.',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
 

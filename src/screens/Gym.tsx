@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan } from '../lib/types'
 import { phaseKey, recoveryAdjustments, setCount, startBlock } from '../lib/blocks'
-import { composeFlexSession, createFlexSession, isFlex } from '../lib/flexSession'
-import type { FlexComposition, FlexFocus, FlexLength, MuscleNeed } from '../lib/flexSession'
+import { composeFlexSession, composeFlexWeek, createFlexSession, createFlexWeek, isFlex } from '../lib/flexSession'
+import type { FlexComposition, FlexFocus, FlexLength, FlexWeekPlan, MuscleNeed } from '../lib/flexSession'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
 import { t } from '../i18n'
@@ -70,6 +70,9 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [flexPreview, setFlexPreview] = useState<FlexComposition | null>(null)
   const [flexVariant, setFlexVariant] = useState(0)
   const [flexBusy, setFlexBusy] = useState(false)
+  // the week layer: "I have N gym days this week" -> a laid-out reduced week
+  const [flexWeekDays, setFlexWeekDays] = useState<number | null>(null)
+  const [flexWeekPreview, setFlexWeekPreview] = useState<FlexWeekPlan | null>(null)
   const [applyResult, setApplyResult] = useState<string | null>(null) // what the last apply actually did
   const [applying, setApplying] = useState(false)
 
@@ -397,6 +400,8 @@ export default function Gym({ visible }: { visible: boolean }) {
     return [...target.entries()].map(([muscle, weeklyTarget]) => ({ muscle, weeklyTarget, done: done.get(muscle) ?? 0 }))
   }
 
+  const focusLabel = (f: FlexFocus) => (f === 'full' ? t.gym.flex.fullBody : t.gym.flex[f])
+
   async function generateFlex(variant = 0) {
     if (!block || flexBusy) return
     setFlexBusy(true)
@@ -405,6 +410,8 @@ export default function Gym({ visible }: { visible: boolean }) {
       const activePlans = plans.filter((p) => p.block === block.block)
       const phase = phaseKey(Math.min(weekFromStart(block.start_date), block.total_weeks))
       setFlexVariant(variant)
+      setFlexWeekPreview(null)
+      setFlexWeekDays(null)
       setFlexPreview(
         composeFlexSession({
           plans: activePlans,
@@ -426,10 +433,53 @@ export default function Gym({ visible }: { visible: boolean }) {
     setFlexBusy(true)
     try {
       const wk = Math.min(weekFromStart(block.start_date), block.total_weeks)
-      const focusLabel = flexFocus === 'full' ? t.gym.flex.fullBody : t.gym.flex[flexFocus]
-      const created = await createFlexSession(block, wk, sessions, flexPreview.picks, t.gym.flex.sessionName(focusLabel))
+      const created = await createFlexSession(block, wk, sessions, flexPreview.picks, t.gym.flex.sessionName(focusLabel(flexFocus)))
       setFlexPreview(null)
       setActive(created)
+      load()
+    } finally {
+      setFlexBusy(false)
+    }
+  }
+
+  async function generateFlexWeek(days: number) {
+    if (!block || flexBusy) return
+    setFlexWeekDays(days)
+    setFlexPreview(null)
+    if (days === 0 || days >= 6) {
+      setFlexWeekPreview(null)
+      return
+    }
+    setFlexBusy(true)
+    try {
+      const adjustments = await recoveryAdjustments()
+      const activePlans = plans.filter((p) => p.block === block.block)
+      const phase = phaseKey(Math.min(weekFromStart(block.start_date), block.total_weeks))
+      setFlexWeekPreview(
+        composeFlexWeek({
+          plans: activePlans,
+          phase,
+          needs: muscleNeeds(activePlans, phase),
+          adjustments,
+          days,
+          length: flexLength,
+        }),
+      )
+    } finally {
+      setFlexBusy(false)
+    }
+  }
+
+  async function startFlexWeek() {
+    if (!block || !flexWeekPreview || flexWeekPreview.sessions.length === 0 || flexBusy) return
+    setFlexBusy(true)
+    try {
+      const wk = Math.min(weekFromStart(block.start_date), block.total_weeks)
+      const n = flexWeekPreview.sessions.length
+      const names = flexWeekPreview.sessions.map((s, i) => t.gym.flex.weekSessionName(focusLabel(s.focus), i + 1, n))
+      await createFlexWeek(block, wk, sessions, flexWeekPreview, names)
+      setFlexWeekPreview(null)
+      setFlexWeekDays(null)
       load()
     } finally {
       setFlexBusy(false)
@@ -705,6 +755,72 @@ export default function Gym({ visible }: { visible: boolean }) {
                   {t.gym.flex.discard}
                 </button>
               </div>
+            </>
+          )}
+          {!flexPreview && (
+            <>
+              <p className="gentle setup-or">{t.gym.flex.orWeek}</p>
+              <div className="energy-row plan-row">
+                <span className="energy-label">{t.gym.flex.daysLabel}</span>
+                {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                  <button
+                    key={d}
+                    className={flexWeekDays === d ? 'energy-btn active' : 'energy-btn'}
+                    aria-pressed={flexWeekDays === d}
+                    onClick={() => generateFlexWeek(d)}
+                    disabled={flexBusy}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+              {flexWeekDays === 0 && <p className="gentle">{t.gym.flex.weekNote0}</p>}
+              {flexWeekDays === 6 && <p className="gentle">{t.gym.flex.weekNote6}</p>}
+              {flexWeekPreview && (
+                <>
+                  {flexWeekPreview.needs.length > 0 && (
+                    <p className="gentle">
+                      {t.gym.flex.weekSoFar(
+                        flexWeekPreview.needs
+                          .map((n) => t.gym.flex.needPart(muscleLabel(n.muscle), n.done, n.weeklyTarget))
+                          .join(' · '),
+                      )}
+                    </p>
+                  )}
+                  <p className="gentle">{t.gym.flex.weekWhy}</p>
+                  {flexWeekPreview.sessions.map((s, i) => (
+                    <div key={i} className="flex-week-day">
+                      <p className="flex-day-head">
+                        {t.gym.flex.dayHeading(i + 1, focusLabel(s.focus))}
+                        <span className="routine-progress">
+                          {' '}
+                          {t.gym.flex.sets(s.picks.reduce((a, p) => a + p.sets, 0))}
+                        </span>
+                      </p>
+                      {s.picks.map((p, j) => (
+                        <div key={j} className="gym-entry">
+                          <span className="gym-exercise">{p.exercise}</span>
+                          <span className="gym-sets">{p.target_scheme}</span>
+                          <span className="gym-notes">{muscleLabel(p.muscle_group)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  <button className="start-session" onClick={startFlexWeek} disabled={flexBusy}>
+                    {flexBusy ? t.gym.flex.generating : t.gym.flex.createWeek(flexWeekPreview.sessions.length)}
+                  </button>
+                  <button
+                    className="link"
+                    onClick={() => {
+                      setFlexWeekPreview(null)
+                      setFlexWeekDays(null)
+                    }}
+                    disabled={flexBusy}
+                  >
+                    {t.gym.flex.discard}
+                  </button>
+                </>
+              )}
             </>
           )}
         </section>

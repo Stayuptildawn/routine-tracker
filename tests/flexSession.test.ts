@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { composeFlexSession, isFlex, FLEX_DAY_BASE } from '../src/lib/flexSession'
+import { composeFlexSession, composeFlexWeek, isFlex, FLEX_DAY_BASE, WEEK_PATTERNS } from '../src/lib/flexSession'
 import type { MuscleNeed } from '../src/lib/flexSession'
 import type { WorkoutPlan } from '../src/lib/types'
 
@@ -142,6 +142,88 @@ describe('composeFlexSession', () => {
     const v0 = composeFlexSession({ plans: PLANS, phase: '1-2', needs: [need('Chest', 5, 2)], focus: 'upper', length: 'full' })
     const v1 = composeFlexSession({ plans: PLANS, phase: '1-2', needs: [need('Chest', 5, 2)], focus: 'upper', length: 'full', variant: 1 })
     expect(v0.picks[0].exercise).not.toBe(v1.picks[0].exercise)
+  })
+})
+
+describe('proportional allocation', () => {
+  it('never starves small muscles when the budget cannot fit everything', () => {
+    const r = composeFlexSession({
+      plans: [
+        ...PLANS,
+        plan('Curl', 'Biceps', '3 x 10-12'),
+        plan('Pushdown', 'Triceps', '3 x 10-12'),
+      ],
+      phase: '1-2',
+      needs: [need('Back', 16, 0), need('Chest', 15, 0), need('Shoulders', 13, 0), need('Biceps', 6, 0), need('Triceps', 6, 0)],
+      focus: 'upper',
+      length: 'full',
+    })
+    const byMuscle = new Map<string, number>()
+    for (const p of r.picks) byMuscle.set(p.muscle_group, (byMuscle.get(p.muscle_group) ?? 0) + p.sets)
+    expect(totalSets(r)).toBeLessThanOrEqual(18)
+    for (const m of ['Back', 'Chest', 'Shoulders', 'Biceps', 'Triceps']) {
+      expect(byMuscle.get(m) ?? 0).toBeGreaterThanOrEqual(2)
+    }
+  })
+})
+
+describe('composeFlexWeek', () => {
+  it('uses the evidence-based patterns', () => {
+    expect(WEEK_PATTERNS[1]).toEqual(['full'])
+    expect(WEEK_PATTERNS[2]).toEqual(['full', 'full'])
+    expect(WEEK_PATTERNS[3]).toEqual(['upper', 'lower', 'full'])
+    expect(WEEK_PATTERNS[4]).toEqual(['upper', 'lower', 'upper', 'lower'])
+    expect(WEEK_PATTERNS[5]).toEqual(['upper', 'lower', 'upper', 'lower', 'full'])
+  })
+
+  it('lays out one session per available day', () => {
+    const r = composeFlexWeek({
+      plans: PLANS,
+      phase: '1-2',
+      needs: [need('Chest', 12, 0), need('Quads', 12, 0)],
+      days: 3,
+      length: 'full',
+    })
+    expect(r.sessions.length).toBe(3)
+    expect(r.sessions.map((s) => s.focus)).toEqual(['upper', 'lower', 'full'])
+  })
+
+  it('feeds each day forward so weekly targets are divided, not double-counted', () => {
+    const r = composeFlexWeek({
+      plans: PLANS,
+      phase: '1-2',
+      needs: [need('Chest', 12, 0)],
+      days: 4,
+      length: 'full',
+    })
+    const chestTotal = r.sessions
+      .flatMap((s) => s.picks)
+      .filter((p) => p.muscle_group === 'Chest')
+      .reduce((a, p) => a + p.sets, 0)
+    // 12 target sets split over the week, never inflated by re-reading the
+    // same deficit each day (a small maintenance tail on covered days is ok)
+    expect(chestTotal).toBeGreaterThanOrEqual(12)
+    expect(chestTotal).toBeLessThanOrEqual(14)
+  })
+
+  it('a mid-week plan accounts for work already done', () => {
+    const fresh = composeFlexWeek({
+      plans: PLANS,
+      phase: '1-2',
+      needs: [need('Chest', 12, 0)],
+      days: 2,
+      length: 'full',
+    })
+    const midweek = composeFlexWeek({
+      plans: PLANS,
+      phase: '1-2',
+      needs: [need('Chest', 12, 8)],
+      days: 2,
+      length: 'full',
+    })
+    const chest = (r: typeof fresh) =>
+      r.sessions.flatMap((s) => s.picks).filter((p) => p.muscle_group === 'Chest').reduce((a, p) => a + p.sets, 0)
+    expect(chest(midweek)).toBeLessThan(chest(fresh))
   })
 })
 

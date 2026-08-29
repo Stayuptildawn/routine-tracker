@@ -258,6 +258,16 @@ export const ja: Strings = {
       discard: 'やめる',
       open: '未完了のフレキシブルセッション',
       sessionName: (focus: string) => `${focus} · flex`,
+      orWeek: '— または1週間まるごと組む —',
+      daysLabel: 'ジムに行ける日数',
+      dayHeading: (i: number, focus: string) => `${i}日目 — ${focus}`,
+      weekWhy:
+        'できるだけ各筋肉を週2回以上刺激する並びです — 日数が少ないときは、頻度と全身の日がどんな分割よりも筋肉を守ります。',
+      createWeek: (n: number) => `この${n}回分を作成`,
+      weekNote6: '6日 — 書いてあるプランがそのまま合います。上のグリッドをどうぞ。',
+      weekNote0:
+        'ゼロの週もあります。筋肉は静かな1〜2週間なら持ちこたえ、軽い有酸素がエンジンを保ちます — 行けるときに全身の1回で戻りましょう。',
+      weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
 
