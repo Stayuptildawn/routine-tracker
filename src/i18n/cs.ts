@@ -48,6 +48,7 @@ export const cs: Strings = {
     createAccount: 'Vytvořit účet',
     sendResetLink: 'Poslat odkaz na obnovu',
     resetSent: 'Mrkni do e-mailu: je tam odkaz na nastavení nového hesla.',
+    confirmSent: 'Účet vytvořen — zkontroluj e-mail s potvrzovacím odkazem a pak se přihlas.',
     forgotPassword: 'Zapomněl jsi heslo?',
     toSignUp: 'Poprvé tady? Vytvoř si účet',
     toSignIn: 'Už máš účet? Přihlas se',

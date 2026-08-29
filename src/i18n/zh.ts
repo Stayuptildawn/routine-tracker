@@ -46,6 +46,7 @@ export const zh: Strings = {
     createAccount: '创建账号',
     sendResetLink: '发送重置链接',
     resetSent: '请查收邮件：里面有设置新密码的链接。',
+    confirmSent: '账号已创建——请查收确认邮件，然后登录。',
     forgotPassword: '忘记密码？',
     toSignUp: '第一次来？创建一个账号',
     toSignIn: '已有账号？直接登录',

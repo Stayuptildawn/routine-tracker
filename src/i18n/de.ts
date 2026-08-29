@@ -47,6 +47,7 @@ export const de: Strings = {
     createAccount: 'Konto erstellen',
     sendResetLink: 'Link zum Zurücksetzen senden',
     resetSent: 'Sieh in deine E-Mails: Dort wartet ein Link zum Setzen eines neuen Passworts.',
+    confirmSent: 'Konto erstellt — prüfe deine E-Mails auf den Bestätigungslink und melde dich dann an.',
     forgotPassword: 'Passwort vergessen?',
     toSignUp: 'Zum ersten Mal hier? Konto erstellen',
     toSignIn: 'Schon ein Konto? Anmelden',

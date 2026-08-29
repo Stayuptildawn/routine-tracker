@@ -47,6 +47,7 @@ export const ar: Strings = {
     createAccount: 'إنشاء حساب',
     sendResetLink: 'إرسال رابط إعادة التعيين',
     resetSent: 'تفقّد بريدك: هناك رابط لتعيين كلمة مرور جديدة.',
+    confirmSent: 'تم إنشاء الحساب — تفقّد بريدك لرابط التأكيد ثم سجّل الدخول.',
     forgotPassword: 'نسيت كلمة المرور؟',
     toSignUp: 'أول مرة؟ أنشئ حسابًا',
     toSignIn: 'لديك حساب؟ سجّل الدخول',

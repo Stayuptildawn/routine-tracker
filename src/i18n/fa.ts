@@ -48,6 +48,7 @@ export const fa: Strings = {
     createAccount: 'ساخت حساب',
     sendResetLink: 'ارسال پیوند بازنشانی',
     resetSent: 'ایمیلت را ببین: پیوندی برای تعیین رمز تازه آن‌جاست.',
+    confirmSent: 'حساب ساخته شد — ایمیلت را برای پیوند تأیید ببین و بعد وارد شو.',
     forgotPassword: 'رمزت را فراموش کرده‌ای؟',
     toSignUp: 'بار اول است؟ حساب بساز',
     toSignIn: 'حساب داری؟ وارد شو',

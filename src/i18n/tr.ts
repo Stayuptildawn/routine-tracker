@@ -47,6 +47,7 @@ export const tr: Strings = {
     createAccount: 'Hesap oluştur',
     sendResetLink: 'Sıfırlama bağlantısı gönder',
     resetSent: 'E-postanı kontrol et: yeni şifre belirlemen için bir bağlantı var.',
+    confirmSent: 'Hesap oluşturuldu — onay bağlantısı için e-postanı kontrol et, sonra giriş yap.',
     forgotPassword: 'Şifreni mi unuttun?',
     toSignUp: 'İlk kez mi geliyorsun? Hesap oluştur',
     toSignIn: 'Hesabın var mı? Giriş yap',

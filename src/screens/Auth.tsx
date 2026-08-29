@@ -27,11 +27,14 @@ export default function Auth() {
       setBusy(false)
       return
     }
-    const { error } =
+    const { data, error } =
       mode === 'signin'
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password })
     if (error) setError(error.message)
+    // signUp with email confirmation on returns neither session nor error -
+    // without this the form just sits there after the user's first action
+    else if (mode === 'signup' && !data.session) setSent(true)
     setBusy(false)
   }
 
@@ -64,6 +67,9 @@ export default function Auth() {
 
       {sent && mode === 'reset' && (
         <div className="notice">{t.auth.resetSent}</div>
+      )}
+      {sent && mode === 'signup' && (
+        <div className="notice">{t.auth.confirmSent}</div>
       )}
       {error && <div className="notice">{error}</div>}
 

@@ -47,6 +47,7 @@ export const fr: Strings = {
     createAccount: 'Créer un compte',
     sendResetLink: 'Envoyer le lien de réinitialisation',
     resetSent: 'Consultez votre e-mail : un lien permet de définir un nouveau mot de passe.',
+    confirmSent: 'Compte créé — consultez votre e-mail pour le lien de confirmation, puis connectez-vous.',
     forgotPassword: 'Mot de passe oublié ?',
     toSignUp: 'Première visite ? Créez un compte',
     toSignIn: 'Déjà un compte ? Connectez-vous',

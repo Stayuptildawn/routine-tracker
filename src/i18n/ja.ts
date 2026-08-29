@@ -47,6 +47,7 @@ export const ja: Strings = {
     createAccount: 'アカウント作成',
     sendResetLink: 'リセットリンクを送信',
     resetSent: 'メールを確認してください。新しいパスワードを設定するリンクが届いています。',
+    confirmSent: 'アカウントを作成しました。確認リンクのメールをチェックしてからサインインしてください。',
     forgotPassword: 'パスワードをお忘れですか？',
     toSignUp: 'はじめての方はアカウント作成へ',
     toSignIn: 'アカウントをお持ちの方はログイン',

@@ -58,6 +58,7 @@ export const en = {
     createAccount: 'Create account',
     sendResetLink: 'Send reset link',
     resetSent: 'Check your email for a link to set a new password.',
+    confirmSent: 'Account created — check your email for a confirmation link, then sign in.',
     forgotPassword: 'Forgot your password?',
     toSignUp: 'First time? Create an account',
     toSignIn: 'Have an account? Sign in',

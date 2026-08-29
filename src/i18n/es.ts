@@ -48,6 +48,7 @@ export const es: Strings = {
     createAccount: 'Crear cuenta',
     sendResetLink: 'Enviar enlace de restablecimiento',
     resetSent: 'Revisa tu correo: hay un enlace para establecer una nueva contraseña.',
+    confirmSent: 'Cuenta creada: revisa tu correo para el enlace de confirmación y luego inicia sesión.',
     forgotPassword: '¿Olvidaste la contraseña?',
     toSignUp: '¿Primera vez? Crea una cuenta',
     toSignIn: '¿Ya tienes cuenta? Inicia sesión',
