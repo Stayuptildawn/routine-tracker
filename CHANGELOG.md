@@ -32,6 +32,12 @@ deployed alongside).
   the weekly coach's note count it), and logs like any other session.
 
 ### Fixed
+- **Finished flexible sessions stay reachable.** They have no grid cell, so
+  completing one made it vanish entirely — no way back in to review or fix a
+  logged set. The card now keeps a "Finished flexible sessions" list; tapping
+  one reopens it on its finish screen, where every set stays editable.
+- **Flexible sessions can be deleted** — open or finished — via a two-tap
+  confirm button next to each one (its logged sets and check-ins go with it).
 - **Deleted routines no longer resurrect.** A flaky moment at app start (a
   token refresh or a dropped connection during the first query) could make a
   populated account look empty, and the first-login seed would re-import the

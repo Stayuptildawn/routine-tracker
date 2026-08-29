@@ -14,6 +14,7 @@ import GymCardio from './GymCardio'
 import PlanEditor, { MUSCLE_GROUPS, composeScheme } from './PlanEditor'
 import type { BlockApplyDiff } from './PlanEditor'
 import Skeleton from '../components/Skeleton'
+import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
 
@@ -470,6 +471,16 @@ export default function Gym({ visible }: { visible: boolean }) {
     }
   }
 
+  async function deleteFlexSession(s: PlannedSession) {
+    // children first: the DB cascades anyway, but the demo's fake client
+    // has no cascades - explicit deletes keep both worlds clean
+    await supabase.from('planned_sets').delete().eq('session_id', s.id)
+    await supabase.from('recovery_checkins').delete().eq('session_id', s.id)
+    await supabase.from('planned_sessions').delete().eq('id', s.id)
+    if (active?.id === s.id) setActive(null)
+    load()
+  }
+
   async function startFlexWeek() {
     if (!block || !flexWeekPreview || flexWeekPreview.sessions.length === 0 || flexBusy) return
     setFlexBusy(true)
@@ -565,6 +576,9 @@ export default function Gym({ visible }: { visible: boolean }) {
   // stay out of the weekly grid and the wrapped/up-next math
   const gridSessions = sessions.filter((s) => !isFlex(s))
   const pendingFlex = sessions.filter((s) => isFlex(s) && !s.completed_at)
+  // finished flex sessions have no grid cell, so this list is their only way
+  // back in - reopening lands on the finish screen, where sets stay editable
+  const doneFlex = sessions.filter((s) => isFlex(s) && s.completed_at)
 
   // the block is "wrapped" when every session is handled or its weeks have run out
   const doneSessionCount = gridSessions.filter((s) => s.completed_at).length
@@ -679,10 +693,39 @@ export default function Gym({ visible }: { visible: boolean }) {
             <>
               <p className="gentle">{t.gym.flex.open}</p>
               {pendingFlex.map((s) => (
-                <button key={s.id} className="start-session" onClick={() => setActive(s)}>
-                  <Icon name="play" /> {s.date ? t.gym.continue : t.gym.start} {s.split_day}
-                  <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
-                </button>
+                <div key={s.id} className="flex-open-row">
+                  <button className="start-session" onClick={() => setActive(s)}>
+                    <Icon name="play" /> {s.date ? t.gym.continue : t.gym.start} {s.split_day}
+                    <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
+                  </button>
+                  <ConfirmButton
+                    className="danger"
+                    label={<Icon name="x" />}
+                    confirmLabel={t.gym.flex.deleteConfirm}
+                    title={t.gym.flex.deleteTitle(s.split_day)}
+                    onConfirm={() => deleteFlexSession(s)}
+                  />
+                </div>
+              ))}
+            </>
+          )}
+          {doneFlex.length > 0 && (
+            <>
+              <p className="gentle">{t.gym.flex.finished}</p>
+              {doneFlex.map((s) => (
+                <div key={s.id} className="flex-open-row">
+                  <button className="start-session flex-done" onClick={() => setActive(s)}>
+                    <Icon name="check" /> {s.split_day}
+                    <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
+                  </button>
+                  <ConfirmButton
+                    className="danger"
+                    label={<Icon name="x" />}
+                    confirmLabel={t.gym.flex.deleteConfirm}
+                    title={t.gym.flex.deleteTitle(s.split_day)}
+                    onConfirm={() => deleteFlexSession(s)}
+                  />
+                </div>
               ))}
             </>
           )}

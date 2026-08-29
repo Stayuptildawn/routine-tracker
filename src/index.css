@@ -2635,6 +2635,30 @@ select option {
   font-weight: 700;
 }
 
+/* flex session list rows: the session button + its two-tap delete */
+.flex-open-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
+.flex-open-row .start-session {
+  flex: 1;
+  width: auto;
+}
+
+.flex-open-row .danger {
+  margin-top: var(--sp-3);
+  border-radius: var(--r-md);
+}
+
+/* a finished flex session: quiet, revisitable */
+.start-session.flex-done {
+  background: var(--good-soft);
+  color: var(--good);
+  font-weight: 600;
+}
+
 /* ---------- AI history ---------- */
 .ai-item {
   background: var(--surface);
