@@ -485,6 +485,11 @@ select option {
 }
 
 .settings-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem; /* thumb floor - it measured 32x32 */
+  min-height: 2.75rem;
   padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r-sm);
   font-size: 1rem;
@@ -820,6 +825,7 @@ select option {
 .composer .voice {
   background: var(--surface-2);
   padding: var(--sp-1) var(--sp-4);
+  min-height: 2.75rem; /* thumb floor - it measured 31px tall */
 }
 
 .composer .voice:hover {
@@ -1068,6 +1074,7 @@ select option {
   background: var(--accent-soft);
   color: var(--text);
   padding: var(--sp-1) var(--sp-3);
+  min-height: 2.75rem; /* thumb floor - it measured 27px tall */
   border-radius: var(--r-full);
   border: 1px solid transparent;
 }
