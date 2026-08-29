@@ -66,10 +66,10 @@ export default function Auth() {
       </form>
 
       {sent && mode === 'reset' && (
-        <div className="notice">{t.auth.resetSent}</div>
+        <div className="notice good">{t.auth.resetSent}</div>
       )}
       {sent && mode === 'signup' && (
-        <div className="notice">{t.auth.confirmSent}</div>
+        <div className="notice good">{t.auth.confirmSent}</div>
       )}
       {error && <div className="notice">{error}</div>}
 

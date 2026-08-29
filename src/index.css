@@ -880,6 +880,13 @@ select option {
   white-space: pre-line; /* query answers can be multi-line */
 }
 
+/* good news ("check your email") must not look like the error box under it */
+.notice.good {
+  background: var(--good-soft);
+  border: 1px solid var(--good);
+  color: var(--text);
+}
+
 /* ---------- suggestion chips ---------- */
 .chips {
   display: flex;
