@@ -75,6 +75,9 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [flexWeekDays, setFlexWeekDays] = useState<number | null>(null)
   const [flexWeekPreview, setFlexWeekPreview] = useState<FlexWeekPlan | null>(null)
   const [showPastFlex, setShowPastFlex] = useState(false)
+  // the composer is a secondary tool: it stays folded so the card reads as
+  // one line until the day actually calls for it
+  const [flexOpen, setFlexOpen] = useState(false)
   const [applyResult, setApplyResult] = useState<string | null>(null) // what the last apply actually did
   const [applying, setApplying] = useState(false)
 
@@ -737,7 +740,27 @@ export default function Gym({ visible }: { visible: boolean }) {
                 ))}
             </div>
           )}
-          {!flexPreview ? (
+          {(() => {
+            const toolsOpen = flexOpen || !!flexPreview || !!flexWeekPreview
+            return (
+              <button
+                className="link"
+                onClick={() => {
+                  if (toolsOpen) {
+                    setFlexOpen(false)
+                    setFlexPreview(null)
+                    setFlexWeekPreview(null)
+                    setFlexWeekDays(null)
+                  } else {
+                    setFlexOpen(true)
+                  }
+                }}
+              >
+                <Icon name={toolsOpen ? 'arrow-up' : 'arrow-down'} /> {toolsOpen ? t.common.close : t.gym.flex.generate}
+              </button>
+            )
+          })()}
+          {!(flexOpen || flexPreview || flexWeekPreview) ? null : !flexPreview ? (
             <>
               <p className="gentle">{t.gym.flex.subtitle}</p>
               <div className="energy-row plan-row">
@@ -808,7 +831,7 @@ export default function Gym({ visible }: { visible: boolean }) {
               </div>
             </>
           )}
-          {!flexPreview && (
+          {(flexOpen || flexWeekPreview) && !flexPreview && (
             <>
               <p className="gentle setup-or">{t.gym.flex.orWeek}</p>
               <div className="energy-row plan-row">
