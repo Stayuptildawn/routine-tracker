@@ -35,6 +35,16 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
 const muscleLabel = (m: string) => t.muscles[m] ?? m
 
+/** Card-corner target, rebuilt from the rows that actually exist: recovery
+ *  tweaks (±1 set at block start) and mid-block plan edits change row counts,
+ *  so the written scheme's set number can lie - the rep range never does. */
+function displayTarget(exSets: PlannedSet[]): string {
+  const scheme = exSets.find((s) => s.target_scheme)?.target_scheme
+  if (!scheme) return ''
+  const m = scheme.match(/^\s*\d+\s*[x×]\s*(.*)$/i)
+  return m ? `${exSets.length} x ${m[1]}`.trim() : scheme
+}
+
 /** "Jul 4, 2026" from a yyyy-mm-dd string. */
 const fmtDate = (iso: string) =>
   new Date(iso + 'T00:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -317,7 +327,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                 <div key={exercise} className={`exercise-card${exDone ? ' done' : ''}${isCurrent ? ' current' : ''}`}>
                   <div className="exercise-head">
                     {muscle && <span className="muscle-badge">{muscleLabel(muscle)}</span>}
-                    <span className="session-target">{exSets[0]?.target_scheme ?? ''}</span>
+                    <span className="session-target">{displayTarget(exSets)}</span>
                   </div>
                   <h2>{exercise}</h2>
                   {plan?.safety_note && !exDone && <p className="session-cue"><Icon name="shield" /> {plan.safety_note}</p>}

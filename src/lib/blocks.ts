@@ -99,6 +99,10 @@ export async function startBlock(
       const base = setCount(scheme)
       const delta = p.muscle_group ? adjustments.get(p.muscle_group) ?? 0 : 0
       const count = base > 0 ? Math.max(2, base + delta) : 0
+      // the stored target says what was actually generated, not what the plan
+      // wrote - a tweaked count with the plan's scheme made session cards show
+      // "3 x 12-15" over 2 rows
+      const stored = scheme && count !== base ? scheme.replace(/^\s*\d+/, String(count)) : scheme
       for (let n = 1; n <= count; n++) {
         sets.push({
           session_id: s.id,
@@ -106,7 +110,7 @@ export async function startBlock(
           exercise: p.exercise,
           muscle_group: p.muscle_group ?? null,
           set_number: n,
-          target_scheme: scheme,
+          target_scheme: stored,
         })
       }
     }
