@@ -173,15 +173,18 @@ export default function App() {
   // no refetch flash); each refreshes itself in the background when shown
   return (
     <div className="app">
-      {isDemo && (
-        <div className="demo-badge" role="status">
-          {t.demo.badge}
-          <button className="link" onClick={exitDemo}>
-            {t.demo.exit}
-          </button>
-        </div>
-      )}
       <main className="content">
+        {/* inside the content column, not a sibling of it: on desktop .app is
+            a flex row, so an in-flow badge there became a third column.
+            <aside> keeps it clear of the .content > div screen animation. */}
+        {isDemo && (
+          <aside className="demo-badge" role="status">
+            {t.demo.badge}
+            <button className="link" onClick={exitDemo}>
+              {t.demo.exit}
+            </button>
+          </aside>
+        )}
         <div hidden={tab !== 'now'}>
           <Now visible={tab === 'now'} onOpenReminders={() => setTab('reminders')} onOpenSettings={() => setSettingsOpen(true)} />
         </div>

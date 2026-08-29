@@ -274,7 +274,7 @@ select option {
   width: fit-content;
   align-items: center;
   gap: var(--sp-2);
-  margin: var(--sp-3) auto 0;
+  margin: 0 auto var(--sp-4);
   padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
   background: var(--accent-soft);
   color: var(--text);
