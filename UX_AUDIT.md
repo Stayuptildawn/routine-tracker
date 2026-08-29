@@ -133,10 +133,19 @@ Spacing scale referenced throughout: the existing `--sp-1..7` tokens and `rem` u
 - **Location:** `src/index.css` `.settings-rail`; the button already exists in the
   tab bar markup (`src/App.tsx`).
 - **Device:** mobile.
-- **Severity:** Major
-- **Fix:** Under 900px, show `.settings-rail` as a compact icon-first tab-bar item
-  (same column layout as `.tab`, `font-size: var(--fs-xs)`, `padding: var(--sp-2)`),
-  and hide the redundant Now-header gear. One consistent location on every tab.
+- **Severity:** Minor — downgraded after reading the code. A comment on
+  `.settings-rail` shows the tab bar was rejected deliberately ("mis-click
+  territory"), and the fallback path (Now → gear) is always two taps, never a dead
+  end. The stale part of that comment is real though: it promises a "floating fab on
+  phones" that does not exist.
+- **Fix:** Show `.settings-rail` on phones as a **narrow, icon-only** button at the end
+  of the bar — `flex: 0 0 auto`, `min-width: 3rem`, `min-height: 2.75rem`, a
+  `border-left` divider, and `.tab-label { display: none }` — so it never flexes like
+  the five destinations and stays out of mis-tap range, honouring the original
+  concern. At 375px the five tabs still get ~65px each. Markup gains only
+  `tab-icon`/`tab-label` spans (existing classes) plus an `aria-label`, since the
+  visible label is hidden on phones; the ≥900px rail is restored to its current look.
+  The Now-header gear stays as the contextual shortcut on that screen.
 
 ### 11. On narrow phones the Week grid opens scrolled away from today
 - **Issue:** The grid is ~427px wide; at 375px it scrolls horizontally starting at

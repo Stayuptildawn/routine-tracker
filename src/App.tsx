@@ -219,8 +219,14 @@ export default function App() {
           </button>
           )
         })}
-        <button className="settings-rail" onClick={() => setSettingsOpen(true)} title={t.common.settings}>
-          <Icon name="settings" /> {t.common.settings}
+        <button
+          className="settings-rail"
+          onClick={() => setSettingsOpen(true)}
+          title={t.common.settings}
+          aria-label={t.common.settings}
+        >
+          <span className="tab-icon"><Icon name="settings" /></span>
+          <span className="tab-label">{t.common.settings}</span>
         </button>
       </nav>
       {settings.mounted && (

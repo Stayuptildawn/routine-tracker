@@ -422,10 +422,31 @@ select option {
   font-weight: 700;
 }
 
-/* settings entry points: rail button on desktop, floating fab on phones -
-   never in the mobile tab bar (mis-click territory) */
+/* settings entry points: full rail button on desktop; on phones a narrow
+   icon-only button at the end of the bar, so Settings is reachable from every
+   tab (it used to live only in the Now header). Kept deliberately out of
+   mis-tap range: it does not flex like the five destinations, it carries no
+   label, and a divider separates it from them. */
 .settings-rail {
-  display: none;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  min-height: 2.75rem;
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--text-dim);
+  border-radius: 0;
+  border-left: 1px solid var(--border);
+}
+
+.settings-rail:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.settings-rail .tab-label {
+  display: none; /* icon only on phones; the aria-label carries the name */
 }
 
 .now-head {
@@ -525,8 +546,20 @@ select option {
     font-weight: 700;
     color: var(--text-dim);
     padding: var(--sp-2);
+    min-width: 0;
     white-space: nowrap;
+    border-left: none;
     border-radius: var(--r-sm);
+  }
+
+  /* the rail keeps its label and its icon at text size */
+  .settings-rail .tab-label {
+    display: inline;
+  }
+
+  .settings-rail .tab-icon {
+    font-size: inherit;
+    margin-right: var(--sp-1);
   }
 
   .settings-rail:hover {
