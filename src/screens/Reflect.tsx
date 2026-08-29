@@ -293,7 +293,15 @@ export default function Reflect({ visible }: { visible: boolean }) {
           </div>
           <div className="energy-row explore-row">
             {FRAMES.map((f) => (
-              <button key={f} className={frame === f ? 'energy-btn active' : 'energy-btn'} onClick={() => setFrame(f)}>
+              // the single letters mean nothing until you've picked one, and
+              // touch has no hover to reveal it - carry the hint on the button
+              <button
+                key={f}
+                className={frame === f ? 'energy-btn active' : 'energy-btn'}
+                title={t.reflect.frames[f]?.hint}
+                aria-label={t.reflect.frames[f]?.hint}
+                onClick={() => setFrame(f)}
+              >
                 {t.reflect.frames[f]?.label}
               </button>
             ))}
