@@ -174,6 +174,64 @@ Spacing scale referenced throughout: the existing `--sp-1..7` tokens and `rem` u
 
 ---
 
+---
+
+## Addendum — second pass: the buttons the first pass missed
+
+The first pass measured a hand-picked sample of controls and fixed three of them
+(#4). That was the wrong method: it caught the buttons I happened to look at and
+missed the ones I didn't. This pass instrumented the page instead — walking every
+`button`, `a`, `input`, `select` and `[role=button]` on each screen and overlay,
+recording size and the vertical gap to its neighbours. The results below are measured,
+not sampled.
+
+### 13. "discard" sits flush against "Create these N sessions"
+- **Issue:** In the flex week preview the discard link had a **0px** gap to the
+  full-width button above it and was 36px tall — visually swallowed by the button, and
+  easy to hit by accident when aiming for it or for the button.
+- **Location:** `src/screens/Gym.tsx`, week-preview actions.
+- **Device:** both. **Severity:** Major.
+- **Fix:** Wrap it in the `energy-row plan-row` button row the *single-session* preview
+  already uses — the two previews now share one pattern. Gap 0 → 16px, target 36 → 44px.
+
+### 14. The whole control system sat under the touch floor
+- **Issue:** The instrumented sweep found the undersizing was systemic, not local:
+  every `.energy-btn` pill (energy, focus, length, gym-days, block, session, phase —
+  the app's workhorse control) was **38px**; Done/Skip, the most-tapped pair in the app,
+  **40px**; every form field in the plan editor, settings and cardio forms **38–42px**;
+  the Week edit panel's seven day toggles **27px**; the Reminders edit link **21px**;
+  Send 39px; standalone action links (Undo, Back to Now, skip this exercise, CSV
+  downloads, the disclosure toggles) **36px**.
+- **Location:** `src/index.css` — shared rules, not call sites.
+- **Device:** both (mobile is where it bites). **Severity:** Major.
+- **Fix:** One floor of `2.75rem`, applied to the *shared* rules so it holds everywhere
+  a control is used: `input, textarea, select`; `.energy-btn`; `.task-buttons .do/.skip`;
+  `.composer .send`; `.add-task button`; `.danger`; `.day-picker .day`;
+  `.set-row input`; `.reminder-edit-link`; `.run-edit`; and standalone links via
+  `.energy-row .link`, `.gym-day > .link`, `.training-history > .link`,
+  `.export-row .link`, `.ai-meta .link`, `.anchor-row .link`, `.player-top .link`,
+  `.reminders .back`, `.session-skip`, `.session-review-back`, `.reminders-card .see-all`.
+  Links that genuinely sit inline inside a sentence keep their text size.
+  **Self-inflicted regression, caught and fixed in the same pass:** switching those
+  rules to `inline-flex` made the browser drop the whitespace text node between an
+  `<Icon/>` and its label, so icons butted against their text. Every such rule now
+  carries an explicit `gap: var(--sp-1)`.
+
+### Deliberately left alone
+- **Grid cells** — Week grid 36×36, block grid 54×36. Seven (or six) columns must fit a
+  375px screen; 44px cells would leave no room for the row labels. Documented in #2.
+- **The demo badge's "Exit"** (38×36) — demo-mode chrome, not product UI, and raising it
+  would inflate the badge on every screen.
+- **Prose links** — "clear", "turn off", the AGPL/GitHub links in Settings' About text.
+  These are words in sentences; giving them 44px boxes would wreck the paragraphs.
+
+### Verification
+After the fixes, the sweep reports **zero** undersized controls on Now, Week, Workout,
+Cardio, AI Log, Reflect, Reminders, the session player, the plan editor and Settings —
+apart from the three exceptions above.
+
+---
+
 ## Top 5 by impact-to-effort
 
 1. **#1 Demo badge overlap** — a few CSS lines; removes a permanent obstruction from the
