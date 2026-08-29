@@ -43,10 +43,10 @@ Spacing scale referenced throughout: the existing `--sp-1..7` tokens and `rem` u
 - **Location:** `src/index.css` `.week-grid` cell rules; `src/screens/Week.tsx`.
 - **Device:** mobile (desktop cells are equally small but mouse-precise).
 - **Severity:** Major
-- **Fix:** Give `.week-grid .cell` `min-width: 2.25rem; height: 2.25rem` and the table
-  `border-spacing: var(--sp-1) var(--sp-1)` (with `border-collapse: separate`); cap
-  `.task-name` with `max-width: 9rem` + ellipsis so the grid still fits. The wrap already
-  scrolls horizontally for anything left over.
+- **Fix:** Grow `.week-grid .cell` to `2.25rem × 2.25rem` (base and ≤600px override) and
+  shrink `.task-name`'s mobile cap from `28vw` to `22vw` so seven thumb-sized cells still
+  fit at 375px without sideways scrolling — the existing "name gives way, never the days"
+  rule, kept. The wrap's `overflow-x: auto` stays as the safety net for tiny phones.
 
 ### 3. Flexible-session composer is always fully expanded
 - **Issue:** On the Workout tab, the flex card permanently shows its subtitle, two pill

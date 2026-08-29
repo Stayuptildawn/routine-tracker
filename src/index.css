@@ -2136,8 +2136,9 @@ select option {
 
 .week-grid .cell {
   text-align: center;
-  width: 2.1rem;
-  height: 1.9rem;
+  /* the cells are the tab's primary tap target - keep them thumb-sized */
+  width: 2.25rem;
+  height: 2.25rem;
   border: 1px solid var(--border);
   color: var(--text-dim);
 }
@@ -2169,7 +2170,8 @@ select option {
   }
 
   .week-grid .task-name {
-    max-width: 28vw;
+    /* the name gives way further so 7 thumb-sized cells still fit at 375px */
+    max-width: 22vw;
     font-size: var(--fs-xs);
   }
 
@@ -2180,8 +2182,9 @@ select option {
   }
 
   .week-grid .cell {
-    width: 1.7rem;
-    height: 1.8rem;
+    /* was 1.7 x 1.8rem (~27px) - too small for the tab's primary tap target */
+    width: 2.25rem;
+    height: 2.25rem;
     font-size: var(--fs-xs);
   }
 }
