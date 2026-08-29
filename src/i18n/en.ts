@@ -355,6 +355,7 @@ export const en = {
       `Week ${week} · ${split} · ${done}/${total} sets`,
     exit: 'exit',
     workoutDate: 'Workout date',
+    placeholderHint: 'The grey numbers are last time’s — tick ✓ to log them as they are, or type your own first.',
     doneEditingBack: '← done editing, back to finish',
     lastTime: (sets: string) => `last time: ${sets}`,
     kgPh: 'kg',

@@ -328,6 +328,7 @@ export const ar: Strings = {
       `الأسبوع ${week} · ${split} · ${done}/${total} مجموعة`,
     exit: 'خروج',
     workoutDate: 'تاريخ التمرين',
+    placeholderHint: 'الأرقام الرمادية هي أرقام المرة السابقة — اضغط ✓ لتسجيلها كما هي، أو اكتب أرقامك أولًا.',
     doneEditingBack: '→ انتهى التعديل، عودة إلى الختام',
     lastTime: (sets: string) => `المرة الماضية: ${sets}`,
     kgPh: 'كغ',

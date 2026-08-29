@@ -339,6 +339,7 @@ export const de: Strings = {
       `Woche ${week} · ${split} · ${done}/${total} Sätze`,
     exit: 'verlassen',
     workoutDate: 'Trainingsdatum',
+    placeholderHint: 'Die grauen Zahlen sind die vom letzten Mal — mit ✓ genau so eintragen, oder vorher eigene Werte tippen.',
     doneEditingBack: '← fertig bearbeitet, zurück zum Abschluss',
     lastTime: (sets: string) => `letztes Mal: ${sets}`,
     kgPh: 'kg',

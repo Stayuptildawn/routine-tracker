@@ -325,6 +325,7 @@ export const zh: Strings = {
       `第 ${week} 周 · ${split} · ${done}/${total} 组`,
     exit: '退出',
     workoutDate: '训练日期',
+    placeholderHint: '灰色数字是上次的记录——点 ✓ 直接照此记录，或先输入你自己的数字。',
     doneEditingBack: '← 修改完了，回到收尾',
     lastTime: (sets: string) => `上次：${sets}`,
     kgPh: '公斤',

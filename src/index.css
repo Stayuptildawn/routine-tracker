@@ -1540,6 +1540,11 @@ select option {
   font-weight: 600;
 }
 
+.session-hint {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
 /* ---------- session day view ---------- */
 .session-list {
   flex: 1;

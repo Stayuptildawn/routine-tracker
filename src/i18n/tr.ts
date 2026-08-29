@@ -336,6 +336,7 @@ export const tr: Strings = {
       `${week}. hafta · ${split} · ${done}/${total} set`,
     exit: 'çık',
     workoutDate: 'Antrenman tarihi',
+    placeholderHint: 'Gri sayılar geçen seferkiler — olduğu gibi kaydetmek için ✓ işaretle, ya da önce kendi sayını yaz.',
     doneEditingBack: '← düzenleme bitti, kapanışa dön',
     lastTime: (sets: string) => `geçen sefer: ${sets}`,
     kgPh: 'kg',

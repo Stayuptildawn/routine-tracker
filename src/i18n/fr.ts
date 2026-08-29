@@ -339,6 +339,7 @@ export const fr: Strings = {
       `Semaine ${week} · ${split} · ${done}/${total} séries`,
     exit: 'quitter',
     workoutDate: 'Date de la séance',
+    placeholderHint: 'Les chiffres gris sont ceux de la dernière fois — cochez ✓ pour les enregistrer tels quels, ou saisissez les vôtres.',
     doneEditingBack: '← fin des retouches, retour au bilan',
     lastTime: (sets: string) => `la dernière fois : ${sets}`,
     kgPh: 'kg',

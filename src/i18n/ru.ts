@@ -337,6 +337,7 @@ export const ru: Strings = {
       `Неделя ${week} · ${split} · ${done}/${total} подходов`,
     exit: 'выйти',
     workoutDate: 'Дата тренировки',
+    placeholderHint: 'Серые числа — с прошлого раза: нажмите ✓, чтобы записать их как есть, или сначала введите свои.',
     doneEditingBack: '← правки готовы, назад к завершению',
     lastTime: (sets: string) => `в прошлый раз: ${sets}`,
     kgPh: 'кг',

@@ -329,6 +329,7 @@ export const fa: Strings = {
       `هفتهٔ ${week} · ${split} · ${done}/${total} ست`,
     exit: 'خروج',
     workoutDate: 'تاریخ تمرین',
+    placeholderHint: 'عددهای خاکستری مال دفعهٔ قبل‌اند — ✓ را بزن تا همان‌ها ثبت شوند، یا اول عدد خودت را بنویس.',
     doneEditingBack: '→ ویرایش تمام شد، برگرد به جمع‌بندی',
     lastTime: (sets: string) => `دفعهٔ قبل: ${sets}`,
     kgPh: 'کیلو',

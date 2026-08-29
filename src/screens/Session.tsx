@@ -309,6 +309,12 @@ export default function Session({ session, plans, onExit, closing }: Props) {
           )}
         </div>
 
+        {/* the grey numbers are last time's, and the tick logs them as-is -
+            obvious once you know, invisible on a first session */}
+        {loaded && handled === 0 && lastTime.size > 0 && (
+          <p className="gentle session-hint">{t.session.placeholderHint}</p>
+        )}
+
         {!loaded ? null : !allDone || reviewing ? (
           <div className="session-list">
             {allDone && reviewing && (

@@ -338,6 +338,7 @@ export const cs: Strings = {
       `Týden ${week} · ${split} · ${done}/${total} sérií`,
     exit: 'odejít',
     workoutDate: 'Datum tréninku',
+    placeholderHint: 'Šedá čísla jsou z minula — ťukni na ✓ a zapíšou se tak, jak jsou, nebo nejdřív napiš svoje.',
     doneEditingBack: '← úpravy hotové, zpátky k závěru',
     lastTime: (sets: string) => `minule: ${sets}`,
     kgPh: 'kg',

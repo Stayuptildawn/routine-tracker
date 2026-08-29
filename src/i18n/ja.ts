@@ -334,6 +334,7 @@ export const ja: Strings = {
       `第${week}週 · ${split} · ${done}/${total}セット`,
     exit: '退出',
     workoutDate: 'トレーニング日',
+    placeholderHint: 'グレーの数字は前回のものです。✓ でそのまま記録、または先に自分の数値を入力してください。',
     doneEditingBack: '← 編集おわり、仕上げに戻る',
     lastTime: (sets: string) => `前回：${sets}`,
     kgPh: 'kg',
