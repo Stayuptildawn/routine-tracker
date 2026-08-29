@@ -123,7 +123,7 @@ export const es: Strings = {
 
   week: {
     title: 'Esta semana',
-    subtitle: 'Un registro, no un boletín de notas. Los huecos son neutrales.',
+    subtitle: 'Un registro, no un boletín de notas. Los huecos son neutrales. Toca cualquier día pasado para alternar hecho / saltado / vacío.',
     dayNames: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
     dayNamesShort: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'],
     paused: ' en pausa',

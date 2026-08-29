@@ -121,7 +121,7 @@ export const cs: Strings = {
 
   week: {
     title: 'Tento týden',
-    subtitle: 'Záznam, ne vysvědčení. Prázdná políčka jsou neutrální.',
+    subtitle: 'Záznam, ne vysvědčení. Prázdná políčka jsou neutrální. Ťukni na kterýkoli minulý den: hotovo / přeskočeno / prázdné.',
     dayNames: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
     dayNamesShort: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
     paused: ' pozastaveno',

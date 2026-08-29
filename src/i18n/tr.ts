@@ -120,7 +120,7 @@ export const tr: Strings = {
 
   week: {
     title: 'Bu hafta',
-    subtitle: 'Bir kayıt defteri, karne değil. Boş kutular tarafsızdır.',
+    subtitle: 'Bir kayıt defteri, karne değil. Boş kutular tarafsızdır. Geçmiş bir güne dokunarak yapıldı / atlandı / boş arasında geçiş yap.',
     dayNames: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'],
     dayNamesShort: ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'],
     paused: ' duraklatıldı',

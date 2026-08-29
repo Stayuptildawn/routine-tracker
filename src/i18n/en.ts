@@ -138,7 +138,7 @@ export const en = {
 
   week: {
     title: 'This week',
-    subtitle: 'A record, not a scorecard. Blanks are neutral.',
+    subtitle: 'A record, not a scorecard. Blanks are neutral. Tap any past day to cycle done / skipped / blank.',
     dayNames: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     dayNamesShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
     paused: ' paused',

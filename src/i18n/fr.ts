@@ -122,7 +122,7 @@ export const fr: Strings = {
 
   week: {
     title: 'Cette semaine',
-    subtitle: 'Un simple relevé, pas un bulletin de notes. Les cases vides sont neutres.',
+    subtitle: 'Un simple relevé, pas un bulletin de notes. Les cases vides sont neutres. Touchez un jour passé pour alterner fait / passé / vide.',
     dayNames: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
     dayNamesShort: ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'],
     paused: ' en pause',

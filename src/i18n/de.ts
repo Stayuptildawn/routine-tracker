@@ -122,7 +122,7 @@ export const de: Strings = {
 
   week: {
     title: 'Diese Woche',
-    subtitle: 'Eine Übersicht, kein Zeugnis. Leere Felder sind neutral.',
+    subtitle: 'Eine Übersicht, kein Zeugnis. Leere Felder sind neutral. Tippe auf einen vergangenen Tag: erledigt / übersprungen / leer.',
     dayNames: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
     dayNamesShort: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
     paused: ' pausiert',
