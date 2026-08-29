@@ -32,10 +32,18 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'reflect', label: t.app.tabReflect, icon: 'leaf' },
 ]
 
+// the seed must run at most once per user per app load - auth emits several
+// session events in a row (SIGNED_IN, TOKEN_REFRESHED) and two concurrent
+// runs on a fresh account would both see zero routines and seed twice
+const seedRuns = new Map<string, Promise<void>>()
+
 /** Import the spreadsheet routines on first login. */
 async function seedIfEmpty() {
-  const { count } = await supabase.from('routines').select('id', { count: 'exact', head: true })
-  if (count && count > 0) return
+  const { count, error } = await supabase.from('routines').select('id', { count: 'exact', head: true })
+  // a failed count (flaky network, token mid-refresh on PWA resume) must never
+  // pass as "empty account" - re-seeding a populated one resurrects routines
+  // the user deleted long ago
+  if (error || count == null || count > 0) return
   for (const [i, seed] of SEED_ROUTINES.entries()) {
     const { data: routine, error } = await supabase
       .from('routines')
@@ -129,7 +137,10 @@ export default function App() {
     setSeeding(true)
     // block first render until seeding finishes, or a fresh account
     // briefly sees "Nothing scheduled" instead of its routines
-    seedIfEmpty().finally(() => {
+    const uid = session.user.id
+    const run = seedRuns.get(uid) ?? seedIfEmpty()
+    seedRuns.set(uid, run)
+    run.finally(() => {
       if (!cancelled) setSeeding(false)
     })
     flushMessageQueue()
