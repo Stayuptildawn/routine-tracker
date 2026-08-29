@@ -241,6 +241,30 @@ export const es: Strings = {
     noLoggableNote: (names: string) =>
       `${names}: ningún ejercicio tiene número de series, así que no crea sesiones en la cuadrícula — la cuadrícula sigue días entrenables; los días de descanso viven en el propio plan.`,
     noFreeform: 'Aún no hay levantamientos libres registrados.',
+    flex: {
+      title: 'Sesión flexible',
+      sub: ' cuando el plan no encaja con el día',
+      subtitle:
+        'Menos días de gimnasio de lo previsto está bien: el volumen semanal importa más que la división exacta. Esto arma un día de torso, pierna o cuerpo completo con lo que aún le falta a tu semana: tu plan pone las metas, tus registros y check-ins llenan los huecos.',
+      upper: 'Torso',
+      lower: 'Pierna',
+      fullBody: 'Cuerpo completo',
+      short: 'Corta · ~45 min',
+      long: 'Completa · ~75 min',
+      generate: 'Sugerir una sesión',
+      generating: 'Calculando…',
+      weekSoFar: (parts: string) => `Series esta semana vs. meta: ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote:
+        'Las metas de la semana ya están cubiertas: esta es una dosis ligera de mantenimiento, no trabajo extra de crecimiento.',
+      nothingFits: 'Ningún ejercicio del plan encaja con este enfoque; añade uno al plan primero.',
+      sets: (n: number) => `${n} series`,
+      startIt: '▶ Empezar esta sesión',
+      anotherMix: 'probar otra mezcla',
+      discard: 'descartar',
+      open: 'Sesiones flexibles abiertas',
+      sessionName: (focus: string) => `${focus} · flex`,
+    },
   },
 
   cardio: {

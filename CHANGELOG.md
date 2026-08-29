@@ -4,6 +4,34 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-08-29
+
+### Added
+- **Flexible sessions.** When the week doesn't allow the planned split —
+  three gym days instead of six, or a day where only "something upper" fits —
+  the Workout tab can now compose a one-off Upper / Lower / Full-body session
+  from what the week still needs. Your own plan sets the per-muscle weekly
+  targets, the last seven days of logged sets (planned and freeform) say
+  what's already done, and the recovery check-ins nudge the totals. Doses
+  follow the evidence: per-muscle sets are capped per session, big doses
+  split across two movements, and a fully covered week gets a light
+  maintenance dose instead of junk volume. The composed session previews
+  before anything is written, joins the running block (volume picture and
+  the weekly coach's note count it), and logs like any other session.
+
+### Fixed
+- **Deleted routines no longer resurrect.** A flaky moment at app start (a
+  token refresh or a dropped connection during the first query) could make a
+  populated account look empty, and the first-login seed would re-import the
+  starter routines — which looked like old routines duplicating themselves in
+  the Week tab. The seed now runs only when the account is verifiably empty,
+  and at most once per user per app load.
+- **Session cards say the set count you actually have.** The card corner
+  used to show the plan's written scheme (e.g. "3 x 12-15") even when
+  recovery tweaks or mid-block plan edits had changed the real number of
+  rows. The corner now counts the rows in front of you, and newly generated
+  blocks store the adjusted scheme in the first place.
+
 ## 2026-07-19
 
 ### Added

@@ -238,6 +238,29 @@ export const tr: Strings = {
     noLoggableNote: (names: string) =>
       `${names}: hiçbir egzersizin set sayısı yok, bu yüzden tabloda seans oluşmaz — tablo kaydedilebilir antrenman günlerini izler; dinlenme günleri planın kendisinde durur.`,
     noFreeform: 'Henüz serbest kayıt yok.',
+    flex: {
+      title: 'Esnek antrenman',
+      sub: ' plan güne uymadığında',
+      subtitle:
+        'Plandan az gün salona gitmek sorun değil — haftalık hacim, bölünmenin kendisinden daha önemli. Burada haftanın hâlâ eksik olanından bir üst vücut, alt vücut veya tüm vücut günü kurulur: hedefleri planın belirler, kayıtların ve check-in’lerin boşlukları doldurur.',
+      upper: 'Üst vücut',
+      lower: 'Alt vücut',
+      fullBody: 'Tüm vücut',
+      short: 'Kısa · ~45 dk',
+      long: 'Tam · ~75 dk',
+      generate: 'Antrenman öner',
+      generating: 'Hesaplanıyor…',
+      weekSoFar: (parts: string) => `Bu haftaki setler / hedef: ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote: 'Haftanın hedefleri zaten karşılandı — bu, ekstra gelişim çalışması değil, hafif bir koruma dozu.',
+      nothingFits: 'Planda bu odağa uyan egzersiz yok — önce plana bir tane ekle.',
+      sets: (n: number) => `${n} set`,
+      startIt: '▶ Bu antrenmanı başlat',
+      anotherMix: 'başka bir karışım dene',
+      discard: 'vazgeç',
+      open: 'Açık esnek antrenmanlar',
+      sessionName: (focus: string) => `${focus} · esnek`,
+    },
   },
 
   cardio: {

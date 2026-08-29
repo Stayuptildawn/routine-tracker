@@ -240,6 +240,29 @@ export const cs: Strings = {
     noLoggableNote: (names: string) =>
       `${names}: žádný cvik nemá počet sérií, takže v mřížce nevzniknou tréninky — mřížka sleduje zapisovatelné tréninkové dny; dny odpočinku patří do plánu samotného.`,
     noFreeform: 'Zatím žádné volné zápisy.',
+    flex: {
+      title: 'Flexibilní trénink',
+      sub: ' když plán nesedí na dnešek',
+      subtitle:
+        'Méně dní v posilovně, než bylo v plánu, nevadí — týdenní objem je důležitější než přesný split. Tady se poskládá den na horní polovinu, dolní polovinu nebo celé tělo z toho, co tvému týdnu ještě chybí: plán určuje cíle, záznamy a check-iny doplní mezery.',
+      upper: 'Horní část',
+      lower: 'Dolní část',
+      fullBody: 'Celé tělo',
+      short: 'Krátký · ~45 min',
+      long: 'Plný · ~75 min',
+      generate: 'Navrhnout trénink',
+      generating: 'Počítám…',
+      weekSoFar: (parts: string) => `Série tento týden vs. cíl: ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote: 'Cíle týdne jsou už splněné — tohle je lehká udržovací dávka, ne práce navíc pro růst.',
+      nothingFits: 'Žádný cvik v plánu neodpovídá tomuto zaměření — nejdřív nějaký do plánu přidej.',
+      sets: (n: number) => `${n} sérií`,
+      startIt: '▶ Začít tento trénink',
+      anotherMix: 'zkusit jinou kombinaci',
+      discard: 'zahodit',
+      open: 'Otevřené flexibilní tréninky',
+      sessionName: (focus: string) => `${focus} · flex`,
+    },
   },
 
   cardio: {

@@ -240,6 +240,30 @@ export const de: Strings = {
     noLoggableNote: (names: string) =>
       `${names}: keine Übung hat eine Satzzahl, also entstehen keine Einheiten im Raster — das Raster zeigt loggbare Trainingstage; Ruhetage leben im Plan selbst.`,
     noFreeform: 'Noch keine freien Übungen protokolliert.',
+    flex: {
+      title: 'Flexible Einheit',
+      sub: ' wenn der Plan nicht zum Tag passt',
+      subtitle:
+        'Weniger Gym-Tage als geplant sind okay — das Wochenvolumen zählt mehr als der exakte Split. Hier entsteht ein Oberkörper-, Unterkörper- oder Ganzkörpertag aus dem, was deiner Woche noch fehlt: dein Plan setzt die Ziele, deine Logs und Check-ins füllen die Lücken.',
+      upper: 'Oberkörper',
+      lower: 'Unterkörper',
+      fullBody: 'Ganzkörper',
+      short: 'Kurz · ~45 Min',
+      long: 'Voll · ~75 Min',
+      generate: 'Einheit vorschlagen',
+      generating: 'Wird berechnet…',
+      weekSoFar: (parts: string) => `Sätze diese Woche vs. Ziel: ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote:
+        'Die Wochenziele sind schon erfüllt — das ist eine leichte Erhaltungsdosis, keine zusätzliche Aufbauarbeit.',
+      nothingFits: 'Keine geplante Übung passt zu diesem Fokus — füge zuerst eine zum Plan hinzu.',
+      sets: (n: number) => `${n} Sätze`,
+      startIt: '▶ Diese Einheit starten',
+      anotherMix: 'andere Mischung probieren',
+      discard: 'verwerfen',
+      open: 'Offene flexible Einheiten',
+      sessionName: (focus: string) => `${focus} · flex`,
+    },
   },
 
   cardio: {

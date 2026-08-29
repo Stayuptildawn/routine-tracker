@@ -256,6 +256,30 @@ export const en = {
     noLoggableNote: (names: string) =>
       `${names}: no exercise here has a set count, so it gets no sessions in the grid — the grid tracks loggable training days; rest days live in the plan itself.`,
     noFreeform: 'No freeform lifts logged yet.',
+    flex: {
+      title: 'Flexible session',
+      sub: ' when the plan doesn’t fit the day',
+      subtitle:
+        'Fewer gym days than planned is fine — weekly volume matters more than the exact split. This builds an upper, lower or full-body day from what your week still needs: your plan sets the targets, your logs and check-ins fill the gaps.',
+      upper: 'Upper',
+      lower: 'Lower',
+      fullBody: 'Full body',
+      short: 'Short · ~45 min',
+      long: 'Full · ~75 min',
+      generate: 'Suggest a session',
+      generating: 'Working it out…',
+      weekSoFar: (parts: string) => `Sets this week vs. target: ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote:
+        'Your week’s targets are already covered — this is a light “keep it ticking” dose, not extra growth work.',
+      nothingFits: 'No planned exercise matches this focus — add one to the plan first.',
+      sets: (n: number) => `${n} sets`,
+      startIt: '▶ Start this session',
+      anotherMix: 'try another mix',
+      discard: 'discard',
+      open: 'Open flexible sessions',
+      sessionName: (focus: string) => `${focus} · flex`,
+    },
   },
 
   cardio: {

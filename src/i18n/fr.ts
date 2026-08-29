@@ -240,6 +240,30 @@ export const fr: Strings = {
     noLoggableNote: (names: string) =>
       `${names} : aucun exercice n’a de nombre de séries, donc pas de séances dans la grille — la grille suit les jours d’entraînement enregistrables ; les jours de repos vivent dans le plan lui-même.`,
     noFreeform: 'Aucun exercice libre enregistré pour l’instant.',
+    flex: {
+      title: 'Séance flexible',
+      sub: ' quand le plan ne colle pas à la journée',
+      subtitle:
+        'Moins de jours de salle que prévu, ce n’est pas grave — le volume hebdomadaire compte plus que la répartition exacte. Ceci compose une séance haut du corps, bas du corps ou corps entier à partir de ce qui manque encore à ta semaine : ton plan fixe les cibles, tes journaux et check-ins comblent les écarts.',
+      upper: 'Haut',
+      lower: 'Bas',
+      fullBody: 'Corps entier',
+      short: 'Courte · ~45 min',
+      long: 'Complète · ~75 min',
+      generate: 'Proposer une séance',
+      generating: 'Calcul en cours…',
+      weekSoFar: (parts: string) => `Séries cette semaine vs cible : ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote:
+        'Les cibles de la semaine sont déjà couvertes — ceci est une dose légère d’entretien, pas du travail de croissance en plus.',
+      nothingFits: 'Aucun exercice du plan ne correspond à ce focus — ajoute-en un au plan d’abord.',
+      sets: (n: number) => `${n} séries`,
+      startIt: '▶ Démarrer cette séance',
+      anotherMix: 'essayer un autre mélange',
+      discard: 'abandonner',
+      open: 'Séances flexibles ouvertes',
+      sessionName: (focus: string) => `${focus} · flex`,
+    },
   },
 
   cardio: {

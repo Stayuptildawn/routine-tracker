@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { CardioLog, PlannedSession, TrainingBlock, WorkoutLog, WorkoutPlan } from '../lib/types'
 import { phaseKey, recoveryAdjustments, setCount, startBlock } from '../lib/blocks'
+import { composeFlexSession, createFlexSession, isFlex } from '../lib/flexSession'
+import type { FlexComposition, FlexFocus, FlexLength, MuscleNeed } from '../lib/flexSession'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
 import { t } from '../i18n'
@@ -62,6 +64,12 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [starting, setStarting] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState<number | null>(null) // which block's start is awaiting a yes
   const [blockApply, setBlockApply] = useState<BlockApplyDiff | null>(null) // saved plan changes awaiting "this block too?"
+  // flexible session composer (life cut the week short)
+  const [flexFocus, setFlexFocus] = useState<FlexFocus>('upper')
+  const [flexLength, setFlexLength] = useState<FlexLength>('full')
+  const [flexPreview, setFlexPreview] = useState<FlexComposition | null>(null)
+  const [flexVariant, setFlexVariant] = useState(0)
+  const [flexBusy, setFlexBusy] = useState(false)
   const [applyResult, setApplyResult] = useState<string | null>(null) // what the last apply actually did
   const [applying, setApplying] = useState(false)
 
@@ -365,6 +373,69 @@ export default function Gym({ visible }: { visible: boolean }) {
     }
   }
 
+  /** Per-muscle weekly picture for the flex composer: what the active block's
+   *  plan intends per week at the current phase, vs. hard sets actually logged
+   *  in the trailing 7 days (planned sessions and freeform lifts both count). */
+  function muscleNeeds(activePlans: WorkoutPlan[], phase: string): MuscleNeed[] {
+    const target = new Map<string, number>()
+    for (const p of activePlans) {
+      if (!p.muscle_group || p.muscle_group === 'Other') continue
+      target.set(p.muscle_group, (target.get(p.muscle_group) ?? 0) + setCount(p.schemes?.[phase]))
+    }
+    const since = Date.now() - 7 * 86400000
+    const done = new Map<string, number>()
+    for (const s of loggedSets) {
+      if (s.logged_reps == null || !s.muscle_group || !s.logged_at) continue
+      if (new Date(s.logged_at).getTime() < since) continue
+      done.set(s.muscle_group, (done.get(s.muscle_group) ?? 0) + 1)
+    }
+    for (const log of logs) {
+      if (!log.muscle_group || !log.sets?.length) continue
+      if (new Date(log.date + 'T12:00:00').getTime() < since) continue
+      done.set(log.muscle_group, (done.get(log.muscle_group) ?? 0) + log.sets.length)
+    }
+    return [...target.entries()].map(([muscle, weeklyTarget]) => ({ muscle, weeklyTarget, done: done.get(muscle) ?? 0 }))
+  }
+
+  async function generateFlex(variant = 0) {
+    if (!block || flexBusy) return
+    setFlexBusy(true)
+    try {
+      const adjustments = await recoveryAdjustments()
+      const activePlans = plans.filter((p) => p.block === block.block)
+      const phase = phaseKey(Math.min(weekFromStart(block.start_date), block.total_weeks))
+      setFlexVariant(variant)
+      setFlexPreview(
+        composeFlexSession({
+          plans: activePlans,
+          phase,
+          needs: muscleNeeds(activePlans, phase),
+          adjustments,
+          focus: flexFocus,
+          length: flexLength,
+          variant,
+        }),
+      )
+    } finally {
+      setFlexBusy(false)
+    }
+  }
+
+  async function startFlex() {
+    if (!block || !flexPreview || flexPreview.picks.length === 0 || flexBusy) return
+    setFlexBusy(true)
+    try {
+      const wk = Math.min(weekFromStart(block.start_date), block.total_weeks)
+      const focusLabel = flexFocus === 'full' ? t.gym.flex.fullBody : t.gym.flex[flexFocus]
+      const created = await createFlexSession(block, wk, sessions, flexPreview.picks, t.gym.flex.sessionName(focusLabel))
+      setFlexPreview(null)
+      setActive(created)
+      load()
+    } finally {
+      setFlexBusy(false)
+    }
+  }
+
   async function useTemplate() {
     if (settingUp) return
     setSettingUp(true)
@@ -440,12 +511,17 @@ export default function Gym({ visible }: { visible: boolean }) {
     byDate.set(log.date, list)
   }
 
+  // flex sessions ride along in the block (their sets count everywhere) but
+  // stay out of the weekly grid and the wrapped/up-next math
+  const gridSessions = sessions.filter((s) => !isFlex(s))
+  const pendingFlex = sessions.filter((s) => isFlex(s) && !s.completed_at)
+
   // the block is "wrapped" when every session is handled or its weeks have run out
-  const doneSessionCount = sessions.filter((s) => s.completed_at).length
+  const doneSessionCount = gridSessions.filter((s) => s.completed_at).length
   const blockDone =
     !!block &&
-    sessions.length > 0 &&
-    (doneSessionCount === sessions.length || weekFromStart(block.start_date) > block.total_weeks)
+    gridSessions.length > 0 &&
+    (doneSessionCount === gridSessions.length || weekFromStart(block.start_date) > block.total_weeks)
   const nextBlockNumber = block && plans.some((p) => p.block === block.block + 1) ? block.block + 1 : block?.block ?? 1
 
   useEffect(() => {
@@ -489,9 +565,9 @@ export default function Gym({ visible }: { visible: boolean }) {
 
       {view === 'strength' && block && sessions.length > 0 && (() => {
         const blockWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
-        const upNext = sessions.find((s) => !s.completed_at)
+        const upNext = gridSessions.find((s) => !s.completed_at)
         const weeks = Array.from({ length: block.total_weeks }, (_, i) => i + 1)
-        const dayRows = sessions.filter((s) => s.week_number === 1)
+        const dayRows = gridSessions.filter((s) => s.week_number === 1)
         return (
           <section className="gym-day block-card">
             <h2>
@@ -543,6 +619,97 @@ export default function Gym({ visible }: { visible: boolean }) {
         )
       })()}
 
+      {view === 'strength' && block && sessions.length > 0 && !blockDone && (
+        <section className="gym-day flex-card">
+          <h2>
+            {t.gym.flex.title}
+            <span className="routine-progress">{t.gym.flex.sub}</span>
+          </h2>
+          {pendingFlex.length > 0 && (
+            <>
+              <p className="gentle">{t.gym.flex.open}</p>
+              {pendingFlex.map((s) => (
+                <button key={s.id} className="start-session" onClick={() => setActive(s)}>
+                  <Icon name="play" /> {s.date ? t.gym.continue : t.gym.start} {s.split_day}
+                  <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
+                </button>
+              ))}
+            </>
+          )}
+          {!flexPreview ? (
+            <>
+              <p className="gentle">{t.gym.flex.subtitle}</p>
+              <div className="energy-row plan-row">
+                {(['upper', 'lower', 'full'] as FlexFocus[]).map((f) => (
+                  <button
+                    key={f}
+                    className={flexFocus === f ? 'energy-btn active' : 'energy-btn'}
+                    aria-pressed={flexFocus === f}
+                    onClick={() => setFlexFocus(f)}
+                  >
+                    {f === 'full' ? t.gym.flex.fullBody : t.gym.flex[f]}
+                  </button>
+                ))}
+              </div>
+              <div className="energy-row plan-row">
+                {(['short', 'full'] as FlexLength[]).map((l) => (
+                  <button
+                    key={l}
+                    className={flexLength === l ? 'energy-btn active' : 'energy-btn'}
+                    aria-pressed={flexLength === l}
+                    onClick={() => setFlexLength(l)}
+                  >
+                    {l === 'short' ? t.gym.flex.short : t.gym.flex.long}
+                  </button>
+                ))}
+              </div>
+              <button className="start-session" onClick={() => generateFlex(0)} disabled={flexBusy}>
+                {flexBusy ? t.gym.flex.generating : t.gym.flex.generate}
+              </button>
+            </>
+          ) : (
+            <>
+              {flexPreview.needs.length > 0 && (
+                <p className="gentle">
+                  {t.gym.flex.weekSoFar(
+                    flexPreview.needs
+                      .map((n) => t.gym.flex.needPart(muscleLabel(n.muscle), n.done, n.weeklyTarget))
+                      .join(' · '),
+                  )}
+                </p>
+              )}
+              {flexPreview.maintenance && flexPreview.picks.length > 0 && (
+                <p className="gentle">{t.gym.flex.maintenanceNote}</p>
+              )}
+              {flexPreview.picks.length === 0 ? (
+                <p className="gentle">{t.gym.flex.nothingFits}</p>
+              ) : (
+                flexPreview.picks.map((p, i) => (
+                  <div key={i} className="gym-entry">
+                    <span className="gym-exercise">{p.exercise}</span>
+                    <span className="gym-sets">{p.target_scheme}</span>
+                    <span className="gym-notes">{muscleLabel(p.muscle_group)}</span>
+                  </div>
+                ))
+              )}
+              {flexPreview.picks.length > 0 && (
+                <button className="start-session" onClick={startFlex} disabled={flexBusy}>
+                  {flexBusy ? t.gym.flex.generating : t.gym.flex.startIt}
+                </button>
+              )}
+              <div className="energy-row plan-row">
+                <button className="link" onClick={() => generateFlex(flexVariant + 1)} disabled={flexBusy}>
+                  {t.gym.flex.anotherMix}
+                </button>
+                <button className="link" onClick={() => setFlexPreview(null)} disabled={flexBusy}>
+                  {t.gym.flex.discard}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       {view === 'strength' && block && blockDone && (
         <section className="gym-day wrapup-card">
           <h2>
@@ -550,8 +717,8 @@ export default function Gym({ visible }: { visible: boolean }) {
             <span className="routine-progress"> <Icon name="check" /></span>
           </h2>
           <p className="gentle">
-            {t.gym.wrapSummary(doneSessionCount, sessions.length, loggedSets.filter((s) => s.logged_reps != null).length)}
-            {doneSessionCount < sessions.length && t.gym.openSessionsStay}
+            {t.gym.wrapSummary(doneSessionCount, gridSessions.length, loggedSets.filter((s) => s.logged_reps != null).length)}
+            {doneSessionCount < gridSessions.length && t.gym.openSessionsStay}
           </p>
           <p className="gentle">
             {nextTweaks
@@ -587,7 +754,7 @@ export default function Gym({ visible }: { visible: boolean }) {
       {view === 'strength' && loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
         confirmBlock === planBlock ? (
           <div className="start-block-confirm">
-            {block && !sessions.every((s) => s.completed_at) && (
+            {block && !gridSessions.every((s) => s.completed_at) && (
               <p className="gentle">
                 {t.gym.currentBlockUnfinished(block.name)}
               </p>

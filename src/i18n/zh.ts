@@ -234,6 +234,29 @@ export const zh: Strings = {
     noLoggableNote: (names: string) =>
       `${names}：没有任何动作设置了组数，所以不会在网格中生成训练日——网格只跟踪可记录的训练日；休息日记录在计划本身里。`,
     noFreeform: '还没有自由记录的训练。',
+    flex: {
+      title: '灵活训练',
+      sub: ' 计划赶不上变化时',
+      subtitle:
+        '去健身房的天数比计划少也没关系——每周总量比具体分化更重要。这里会根据你这周还缺什么，组合出一次上肢、下肢或全身训练：计划定目标，记录和自查补缺口。',
+      upper: '上肢',
+      lower: '下肢',
+      fullBody: '全身',
+      short: '短 · 约45分钟',
+      long: '完整 · 约75分钟',
+      generate: '推荐一次训练',
+      generating: '正在计算…',
+      weekSoFar: (parts: string) => `本周组数 vs 目标：${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote: '本周目标已完成——这是一份轻量的“保持状态”训练，不是额外的增长训练。',
+      nothingFits: '计划里没有符合这个侧重的动作——请先在计划中添加。',
+      sets: (n: number) => `${n} 组`,
+      startIt: '▶ 开始这次训练',
+      anotherMix: '换一种组合',
+      discard: '放弃',
+      open: '未完成的灵活训练',
+      sessionName: (focus: string) => `${focus} · 灵活`,
+    },
   },
 
   cardio: {

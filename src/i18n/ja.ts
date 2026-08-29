@@ -236,6 +236,29 @@ export const ja: Strings = {
     noLoggableNote: (names: string) =>
       `${names}：セット数のある種目がないため、グリッドにセッションは作られません — グリッドは記録できるトレーニング日を追うもので、休息日はプラン自体に書いておくものです。`,
     noFreeform: 'フリー記録はまだありません。',
+    flex: {
+      title: 'フレキシブルセッション',
+      sub: ' 予定どおりにいかない日に',
+      subtitle:
+        'ジムに行ける日が予定より少なくても大丈夫 — 大事なのは分割の形より週の総量です。今週まだ足りない分から、上半身・下半身・全身の1回分を組み立てます。目標はプランが決め、記録とチェックインが不足を埋めます。',
+      upper: '上半身',
+      lower: '下半身',
+      fullBody: '全身',
+      short: 'ショート · 約45分',
+      long: 'フル · 約75分',
+      generate: 'セッションを提案',
+      generating: '計算中…',
+      weekSoFar: (parts: string) => `今週のセット数と目標: ${parts}`,
+      needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
+      maintenanceNote: '今週の目標はすでに達成済み — これは軽い維持メニューで、追加の成長トレーニングではありません。',
+      nothingFits: 'この部位に合う種目がプランにありません — まずプランに追加してください。',
+      sets: (n: number) => `${n}セット`,
+      startIt: '▶ このセッションを開始',
+      anotherMix: '別の組み合わせを試す',
+      discard: 'やめる',
+      open: '未完了のフレキシブルセッション',
+      sessionName: (focus: string) => `${focus} · flex`,
+    },
   },
 
   cardio: {
