@@ -267,17 +267,14 @@ select option {
   min-width: 0;
 }
 
-/* demo mode: honest little pill, always visible, with the way out.
-   Floats above the bottom tabbar on phones, top-center on desktop. */
+/* demo mode: honest little pill with the way out. In the page flow, not
+   floating - a fixed badge sat on top of tappable rows the whole session. */
 .demo-badge {
-  position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 64px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 40;
   display: flex;
+  width: fit-content;
   align-items: center;
   gap: var(--sp-2);
+  margin: var(--sp-3) auto 0;
   padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
   background: var(--accent-soft);
   color: var(--text);
@@ -286,13 +283,6 @@ select option {
   border: 1px solid var(--surface-3);
   border-radius: 999px;
   box-shadow: 0 2px 12px rgb(0 0 0 / 0.18);
-}
-
-@media (min-width: 900px) {
-  .demo-badge {
-    top: var(--sp-3);
-    bottom: auto;
-  }
 }
 
 .demo-link {
