@@ -37,10 +37,16 @@ export interface CardioTarget {
   note: string
 }
 
-/** This week's cardio target from a baseline and a 1-based program week. */
-export function cardioTargetForWeek(baseKm: number, programWeek: number): CardioTarget {
+/** This week's cardio target from a baseline and a 1-based program week.
+ *  `injuryCap` (see cardioVolumeCap) holds the volume at or below that
+ *  multiple of the base while an injury heals - no build or peak weeks. */
+export function cardioTargetForWeek(baseKm: number, programWeek: number, injuryCap: number | null = null): CardioTarget {
   const idx = ((Math.max(1, programWeek) - 1) % 6)
   const w = CYCLE[idx]
+  if (injuryCap !== null && w.factor > injuryCap) {
+    const km = Math.round(baseKm * injuryCap * 10) / 10
+    return { week: idx + 1, phase: w.phase, km, sessions: Math.min(w.sessions, 2), note: t.injuries.cardioTargetHeld }
+  }
   const km = Math.round(baseKm * w.factor * 10) / 10
   const note = t.cardioPlan.notes[w.phase] ?? ''
   return { week: idx + 1, phase: w.phase, km, sessions: w.sessions, note }

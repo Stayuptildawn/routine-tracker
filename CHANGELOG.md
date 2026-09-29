@@ -4,6 +4,21 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-09-29 (later)
+
+### Added
+- **Injuries now shape flexible sessions.** The composer leaves out what an
+  active injury would swap or drop and picks a safe movement for that muscle
+  instead, the preview says what it worked around, and a new flex session
+  opens with its injury cues already in place.
+- **Injuries now shape cardio.** Per injury, the Cardio card says which kinds
+  to skip for now and which to keep easy (a knee rules out running, a
+  shoulder or neck rules out swimming), quick log starts on a kind that
+  suits you, and the weekly target holds at an easy level while you heal.
+  Logging a flagged kind still works and just names the injury it loads.
+  Planned sessions' cardio notes move to kinds that suit every active
+  injury, and the coach's note follows the same rules.
+
 ## 2026-09-29
 
 ### Added

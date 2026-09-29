@@ -233,3 +233,40 @@ describe('isFlex', () => {
     expect(isFlex({ day_number: 6 })).toBe(false)
   })
 })
+
+describe('injuries', () => {
+  it('leaves out what a moderate knee injury would swap or drop', () => {
+    const r = composeFlexSession({
+      plans: PLANS,
+      phase: '1-2',
+      needs: [need('Quads', 10, 0), need('Hamstrings', 10, 0)],
+      focus: 'lower',
+      length: 'full',
+      injuries: [{ body_part: 'knee', severity: 'moderate' }],
+    })
+    // Leg Press loads the knee hard -> out; Leg Curl only "some" -> lighter
+    // later, so it can still be picked
+    expect(r.picks.map((p) => p.exercise)).not.toContain('Leg Press')
+    expect(r.picks.map((p) => p.exercise)).toContain('Leg Curl')
+  })
+
+  it('picks the safe movement for a muscle when one exists', () => {
+    const plans = [plan('Seated DB OHP', 'Shoulders'), plan('Lateral Raise', 'Shoulders', '3 x 12-15', 'B')]
+    const r = composeFlexSession({
+      plans,
+      phase: '1-2',
+      needs: [need('Shoulders', 8, 0)],
+      focus: 'upper',
+      length: 'full',
+      injuries: [{ body_part: 'neck', severity: 'moderate' }], // OHP loads the neck
+    })
+    expect(r.picks.map((p) => p.exercise)).toEqual(['Lateral Raise'])
+  })
+
+  it('a mild injury changes nothing at composition time', () => {
+    const base = { plans: PLANS, phase: '1-2', needs: [need('Quads', 10, 0)], focus: 'lower' as const, length: 'full' as const }
+    expect(composeFlexSession({ ...base, injuries: [{ body_part: 'knee', severity: 'mild' }] }).picks).toEqual(
+      composeFlexSession(base).picks,
+    )
+  })
+})

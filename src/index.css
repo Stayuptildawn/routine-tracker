@@ -3382,3 +3382,13 @@ select option {
 .coach-injury {
   margin-bottom: var(--sp-2);
 }
+
+/* injury advice inside the cardio plan block */
+.cardio-injury {
+  margin-top: var(--sp-2);
+}
+
+.cardio-injury .gentle {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-sm);
+}

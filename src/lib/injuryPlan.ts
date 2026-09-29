@@ -90,10 +90,76 @@ const FALLBACKS: Record<string, string[]> = {
   Calves: ['Seated Calf Raise'],
 }
 
-// cardio that pounds the joint; the session's cardio note gets a low-impact
-// swap for the lower-body injuries
-const IMPACT_CARDIO = /run|jog|sprint|jump|hiit|stairs|skipping/i
-const CARDIO_PARTS: BodyPart[] = ['hip', 'knee', 'ankle', 'lower_back']
+// ---- cardio ----
+// What each kind of cardio does to each injured part, by severity:
+// 'ok' = carry on, 'easy' = easy effort only, 'avoid' = leave it for now.
+// Running is the impact problem for the legs and back; swimming is the
+// overhead/rotation problem for shoulders and neck; cycling is the grip and
+// hip-flexion problem.
+export const CARDIO_KINDS = ['run', 'walk', 'cycle', 'swim'] as const
+export type CardioKind = (typeof CARDIO_KINDS)[number]
+export type CardioStatus = 'ok' | 'easy' | 'avoid'
+
+// per part: [mild, moderate, severe] for run / walk / cycle / swim
+type Row = [CardioStatus, CardioStatus, CardioStatus]
+const CARDIO_RULES: Record<BodyPart, Record<CardioKind, Row>> = {
+  ankle: { run: ['easy', 'avoid', 'avoid'], walk: ['ok', 'easy', 'avoid'], cycle: ['ok', 'easy', 'easy'], swim: ['ok', 'ok', 'easy'] },
+  knee: { run: ['easy', 'avoid', 'avoid'], walk: ['ok', 'easy', 'avoid'], cycle: ['ok', 'easy', 'avoid'], swim: ['ok', 'ok', 'easy'] },
+  hip: { run: ['easy', 'avoid', 'avoid'], walk: ['ok', 'easy', 'avoid'], cycle: ['ok', 'easy', 'avoid'], swim: ['ok', 'ok', 'easy'] },
+  lower_back: { run: ['easy', 'easy', 'avoid'], walk: ['ok', 'ok', 'easy'], cycle: ['ok', 'easy', 'avoid'], swim: ['ok', 'easy', 'avoid'] },
+  shoulder: { run: ['ok', 'ok', 'easy'], walk: ['ok', 'ok', 'ok'], cycle: ['ok', 'ok', 'easy'], swim: ['easy', 'avoid', 'avoid'] },
+  neck: { run: ['ok', 'ok', 'easy'], walk: ['ok', 'ok', 'ok'], cycle: ['ok', 'easy', 'easy'], swim: ['easy', 'avoid', 'avoid'] },
+  elbow: { run: ['ok', 'ok', 'ok'], walk: ['ok', 'ok', 'ok'], cycle: ['ok', 'easy', 'easy'], swim: ['ok', 'easy', 'avoid'] },
+  wrist: { run: ['ok', 'ok', 'ok'], walk: ['ok', 'ok', 'ok'], cycle: ['ok', 'easy', 'avoid'], swim: ['ok', 'easy', 'avoid'] },
+}
+const SEVERITY_IDX: Record<Severity, number> = { mild: 0, moderate: 1, severe: 2 }
+const RANK: Record<CardioStatus, number> = { ok: 0, easy: 1, avoid: 2 }
+
+export function cardioStatus(part: BodyPart, severity: Severity, kind: CardioKind): CardioStatus {
+  return CARDIO_RULES[part][kind][SEVERITY_IDX[severity]]
+}
+
+/** The strictest status per kind across all active injuries. */
+export function combinedCardio(injuries: { body_part: BodyPart; severity: Severity }[]): Record<CardioKind, CardioStatus> {
+  const out = { run: 'ok', walk: 'ok', cycle: 'ok', swim: 'ok' } as Record<CardioKind, CardioStatus>
+  for (const i of injuries)
+    for (const k of CARDIO_KINDS) {
+      const s = cardioStatus(i.body_part, i.severity, k)
+      if (RANK[s] > RANK[out[k]]) out[k] = s
+    }
+  return out
+}
+
+/** Weekly cardio volume cap while injured, as a multiple of the easy base:
+ *  no build/peak weeks while anything is flagged, less for worse injuries.
+ *  null = no cardio restriction at all. */
+export function cardioVolumeCap(injuries: { body_part: BodyPart; severity: Severity }[]): number | null {
+  let cap: number | null = null
+  for (const i of injuries) {
+    const touches = CARDIO_KINDS.some((k) => cardioStatus(i.body_part, i.severity, k) !== 'ok')
+    if (!touches) continue
+    const c = i.severity === 'mild' ? 1 : i.severity === 'moderate' ? 0.8 : 0.5
+    cap = cap === null ? c : Math.min(cap, c)
+  }
+  return cap
+}
+
+/** Which kind a free-text cardio note describes ("Zone 2 Run (5km)" -> run). */
+export function cardioKindOf(text: string): CardioKind | null {
+  const s = text.toLowerCase()
+  if (/run|jog|sprint|jump|hiit|stairs|skipping/.test(s)) return 'run'
+  if (/swim|pool/.test(s)) return 'swim'
+  if (/bike|cycl|spin/.test(s)) return 'cycle'
+  if (/walk|hike|incline treadmill/.test(s)) return 'walk'
+  return null
+}
+
+/** The kinds still fine for every active injury, best first. */
+export function safeCardioKinds(injuries: { body_part: BodyPart; severity: Severity }[]): CardioKind[] {
+  const all = combinedCardio(injuries)
+  const order: CardioKind[] = ['cycle', 'swim', 'walk', 'run']
+  return [...order.filter((k) => all[k] === 'ok'), ...order.filter((k) => all[k] === 'easy')]
+}
 
 export type Treatment = 'cue' | 'lighter' | 'swap' | 'drop'
 
@@ -142,7 +208,8 @@ export interface InjuryNotes {
   cue: string
   lighter: string
   swapped: (from: string) => string
-  lowImpactCardio: string
+  /** the replacement cardio note, given the kinds still fine */
+  cardioSwap: (kinds: CardioKind[]) => string
 }
 
 export interface PlanOpts {
@@ -153,6 +220,8 @@ export interface PlanOpts {
   plans: WorkoutPlan[]
   /** other active injuries - a swap never lands on something they flag high */
   others?: BodyPart[]
+  /** the same, with severities - cardio alternatives must suit all of them */
+  otherInjuries?: { body_part: BodyPart; severity: Severity }[]
   /** ids this injury already handled (sets and sessions) - re-planning skips them */
   handled?: Set<string>
   notes: InjuryNotes
@@ -238,12 +307,17 @@ export function planInjury(opts: PlanOpts): { changes: InjuryChange[]; preview: 
     }
   }
 
-  if (severity !== 'mild' && CARDIO_PARTS.includes(part) && (part !== 'lower_back' || severity === 'severe')) {
-    for (const s of sessions) {
-      if (handled.has(s.id) || !s.cardio || !IMPACT_CARDIO.test(s.cardio)) continue
-      changes.push({ kind: 'cardio', session_id: s.id, before: s.cardio, after: notes.lowImpactCardio })
-      note({ treatment: 'cardio', exercise: s.cardio }, s.id)
-    }
+  // a session's cardio note moves to a kind that suits every active injury
+  const everyone = [{ body_part: part, severity }, ...(opts.otherInjuries ?? [])]
+  const alternatives = safeCardioKinds(everyone)
+  for (const s of sessions) {
+    if (handled.has(s.id) || !s.cardio) continue
+    const kind = cardioKindOf(s.cardio)
+    if (!kind || cardioStatus(part, severity, kind) !== 'avoid') continue
+    const instead = alternatives.filter((k) => k !== kind)
+    const after = notes.cardioSwap(instead)
+    changes.push({ kind: 'cardio', session_id: s.id, before: s.cardio, after })
+    note({ treatment: 'cardio', exercise: s.cardio, replacement: after }, s.id)
   }
 
   const order: Record<PreviewLine['treatment'], number> = { drop: 0, swap: 1, lighter: 2, cue: 3, cardio: 4 }

@@ -11,6 +11,21 @@
 import { supabase } from './supabase'
 import { setCount } from './blocks'
 import type { PlannedSession, TrainingBlock, WorkoutPlan } from './types'
+import { exerciseRisk, treatment } from './injuryPlan'
+import type { BodyPart, Severity } from './injuryPlan'
+
+type ActiveInjury = { body_part: BodyPart; severity: Severity }
+
+/** An exercise an active injury would swap out or drop never gets picked -
+ *  the composer chooses another movement for that muscle, or leaves the
+ *  muscle out when nothing safe exists. Milder treatments (a cue, one set
+ *  fewer) are applied to the created session like any other. */
+function injurySafe(p: WorkoutPlan, injuries: ActiveInjury[]): boolean {
+  return injuries.every((i) => {
+    const what = treatment(exerciseRisk(p.exercise, p.muscle_group, i.body_part), i.severity)
+    return what !== 'swap' && what !== 'drop'
+  })
+}
 
 export const UPPER_MUSCLES = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps']
 export const LOWER_MUSCLES = ['Quads', 'Hamstrings', 'Glutes', 'Calves']
@@ -67,6 +82,8 @@ interface ComposeOpts {
   length: FlexLength
   /** "try another mix" - rotates which of a muscle's exercises lead */
   variant?: number
+  /** active injury reports - see injurySafe */
+  injuries?: ActiveInjury[]
 }
 
 const repsPart = (scheme: string | null | undefined): string => {
@@ -86,6 +103,7 @@ export function composeFlexSession(opts: ComposeOpts): FlexComposition {
   for (const p of plans) {
     if (!p.muscle_group || !focusMuscles.includes(p.muscle_group)) continue
     if (setCount(p.schemes?.[phase]) === 0) continue // rest-day rows etc.
+    if (!injurySafe(p, opts.injuries ?? [])) continue
     const list = pool.get(p.muscle_group) ?? []
     if (!list.some((x) => x.exercise === p.exercise)) list.push(p)
     pool.set(p.muscle_group, list)
@@ -195,6 +213,7 @@ interface ComposeWeekOpts {
   /** gym days available this week, 1-5 (0 and 6 need no layout) */
   days: number
   length: FlexLength
+  injuries?: ActiveInjury[]
 }
 
 /** Lay out a whole reduced week: each day is composed by the single-session
@@ -213,6 +232,7 @@ export function composeFlexWeek(opts: ComposeWeekOpts): FlexWeekPlan {
       focus,
       length: opts.length,
       variant: i, // later days lead with different exercises
+      injuries: opts.injuries,
     })
     sessions.push({ focus, picks: r.picks, maintenance: r.maintenance })
     for (const p of r.picks) {

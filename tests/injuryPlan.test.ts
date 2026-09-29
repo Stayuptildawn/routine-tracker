@@ -1,7 +1,7 @@
 // The injury planner: which exercises load which joint, what each severity
 // does to them, where swaps come from, and that re-planning is a no-op.
 import { describe, expect, it } from 'vitest'
-import { exerciseRisk, handledIds, planInjury, treatment } from '../src/lib/injuryPlan'
+import { cardioKindOf, cardioVolumeCap, combinedCardio, exerciseRisk, handledIds, planInjury, safeCardioKinds, treatment } from '../src/lib/injuryPlan'
 import type { UpcomingSet, UpcomingSession } from '../src/lib/injuryPlan'
 import type { WorkoutPlan } from '../src/lib/types'
 
@@ -9,7 +9,7 @@ const notes = {
   cue: 'cue',
   lighter: 'lighter',
   swapped: (from: string) => `swapped for ${from}`,
-  lowImpactCardio: 'low-impact',
+  cardioSwap: (kinds: string[]) => (kinds.length ? `${kinds.join('/')} instead` : 'rest'),
 }
 
 let n = 0
@@ -135,14 +135,14 @@ describe('planInjury', () => {
     expect(changes).toHaveLength(0)
   })
 
-  it('swaps running for low-impact cardio on a moderate lower-body injury', () => {
+  it('swaps running for kinds that suit a moderate ankle, fully-fine ones first', () => {
     const sessions: UpcomingSession[] = [
       { id: 'a', cardio: 'Zone 2 Run (5km) Post-Workout' },
       { id: 'b', cardio: 'Bike 20 min' },
       { id: 'c', cardio: null },
     ]
     const { changes } = planInjury({ part: 'ankle', severity: 'moderate', sets: [], sessions, plans: [], notes })
-    expect(changes).toEqual([{ kind: 'cardio', session_id: 'a', before: 'Zone 2 Run (5km) Post-Workout', after: 'low-impact' }])
+    expect(changes).toEqual([{ kind: 'cardio', session_id: 'a', before: 'Zone 2 Run (5km) Post-Workout', after: 'swim/cycle/walk instead' }])
     // mild leaves cardio alone
     expect(planInjury({ part: 'ankle', severity: 'mild', sets: [], sessions, plans: [], notes }).changes).toHaveLength(0)
   })
@@ -181,5 +181,58 @@ describe('planInjury', () => {
       notes,
     })
     expect(again.changes).toHaveLength(0)
+  })
+})
+
+describe('cardio rules', () => {
+  it('reads the kind from a free-text cardio note', () => {
+    expect(cardioKindOf('Zone 2 Run (5km) Post-Workout')).toBe('run')
+    expect(cardioKindOf('Easy swim 20 min')).toBe('swim')
+    expect(cardioKindOf('Spin bike intervals')).toBe('cycle')
+    expect(cardioKindOf('Stretching')).toBeNull()
+  })
+
+  it('a knee rules out running, a shoulder rules out swimming', () => {
+    expect(combinedCardio([{ body_part: 'knee', severity: 'moderate' }])).toMatchObject({ run: 'avoid', swim: 'ok' })
+    expect(combinedCardio([{ body_part: 'shoulder', severity: 'moderate' }])).toMatchObject({ run: 'ok', swim: 'avoid' })
+  })
+
+  it('takes the strictest status across injuries and offers what suits all of them', () => {
+    const both = [
+      { body_part: 'knee' as const, severity: 'moderate' as const },
+      { body_part: 'shoulder' as const, severity: 'moderate' as const },
+    ]
+    expect(combinedCardio(both)).toEqual({ run: 'avoid', walk: 'easy', cycle: 'easy', swim: 'avoid' })
+    expect(safeCardioKinds(both)).toEqual(['cycle', 'walk'])
+  })
+
+  it('never swaps a session’s run to swimming when a shoulder is also hurt', () => {
+    const sessions: UpcomingSession[] = [{ id: 'a', cardio: 'Zone 2 Run (5km)' }]
+    const { changes } = planInjury({
+      part: 'knee',
+      severity: 'moderate',
+      sets: [],
+      sessions,
+      plans: [],
+      otherInjuries: [{ body_part: 'shoulder', severity: 'moderate' }],
+      notes,
+    })
+    expect(changes).toEqual([{ kind: 'cardio', session_id: 'a', before: 'Zone 2 Run (5km)', after: 'cycle/walk instead' }])
+  })
+
+  it('swaps a swim for a shoulder injury, and leaves runs alone', () => {
+    const sessions: UpcomingSession[] = [
+      { id: 'a', cardio: 'Easy swim 20 min' },
+      { id: 'b', cardio: 'Zone 2 Run (5km)' },
+    ]
+    const { changes } = planInjury({ part: 'shoulder', severity: 'moderate', sets: [], sessions, plans: [], notes })
+    expect(changes.map((c) => c.kind === 'cardio' && c.session_id)).toEqual(['a'])
+  })
+
+  it('caps weekly volume while injured - tighter for worse injuries, none for unrelated ones', () => {
+    expect(cardioVolumeCap([])).toBeNull()
+    expect(cardioVolumeCap([{ body_part: 'elbow', severity: 'mild' }])).toBeNull() // nothing flagged
+    expect(cardioVolumeCap([{ body_part: 'knee', severity: 'mild' }])).toBe(1)
+    expect(cardioVolumeCap([{ body_part: 'knee', severity: 'mild' }, { body_part: 'ankle', severity: 'severe' }])).toBe(0.5)
   })
 })

@@ -8,7 +8,7 @@ import { localDate } from './types'
 import type { TrainingBlock, WorkoutPlan } from './types'
 import { t } from '../i18n'
 import { handledIds, planInjury } from './injuryPlan'
-import type { BodyPart, InjuryChange, PreviewLine, Severity, UpcomingSet, UpcomingSession } from './injuryPlan'
+import type { BodyPart, CardioKind, InjuryChange, PreviewLine, Severity, UpcomingSet, UpcomingSession } from './injuryPlan'
 
 export interface Injury {
   id: string
@@ -25,7 +25,10 @@ const notesFor = (part: BodyPart) => ({
   cue: t.injuries.cueNote(t.injuries.parts[part]),
   lighter: t.injuries.lighterNote(t.injuries.parts[part]),
   swapped: (from: string) => t.injuries.swappedNote(t.injuries.parts[part], from),
-  lowImpactCardio: t.injuries.lowImpactCardio,
+  cardioSwap: (kinds: CardioKind[]) =>
+    kinds.length
+      ? t.injuries.cardioSwap(kinds.map((k) => t.cardio.kinds[k]).join(' / '))
+      : t.injuries.cardioRest,
 })
 
 export async function activeInjuries(): Promise<Injury[]> {
@@ -65,6 +68,7 @@ export async function previewInjury(
     sessions,
     plans: plans.filter((p) => p.block === block.block),
     others: others.map((o) => o.body_part),
+    otherInjuries: others,
     notes: notesFor(part),
   })
 }
@@ -208,15 +212,26 @@ export async function healInjury(passed: Pick<Injury, 'id' | 'changes'>): Promis
 /** Sessions created after an injury was reported (a new block, a flex day,
  *  plan edits pushed to the block) get the same treatment it was approved
  *  with. Re-running is a no-op: each injury skips rows it already handled.
- *  Returns whether anything changed. */
-export async function reconcileInjuries(
-  injuries: Injury[],
-  block: TrainingBlock | null,
-  plans: WorkoutPlan[],
-): Promise<boolean> {
-  if (!block || injuries.length === 0) return false
+ *
+ *  Called from several places (every Workout-tab load, right after a flex
+ *  session is created), so runs are queued one after another and each one
+ *  reads the injuries' change logs fresh - two overlapping runs working from
+ *  stale copies would apply the same change twice. Resolves to whether
+ *  anything changed. */
+let queue: Promise<unknown> = Promise.resolve()
+export function reconcileInjuries(block: TrainingBlock | null, plans: WorkoutPlan[]): Promise<boolean> {
+  const run = queue.then(() => reconcileNow(block, plans))
+  queue = run.catch(() => undefined)
+  return run
+}
+
+async function reconcileNow(block: TrainingBlock | null, plans: WorkoutPlan[]): Promise<boolean> {
+  if (!block) return false
+  const injuries = await activeInjuries()
+  if (injuries.length === 0) return false
   let changed = false
   for (const injury of injuries) {
+    const others = injuries.filter((o) => o.id !== injury.id)
     const { sets, sessions } = await upcoming(block.id)
     const { changes } = planInjury({
       part: injury.body_part,
@@ -224,7 +239,8 @@ export async function reconcileInjuries(
       sets,
       sessions,
       plans: plans.filter((p) => p.block === block.block),
-      others: injuries.filter((o) => o.id !== injury.id).map((o) => o.body_part),
+      others: others.map((o) => o.body_part),
+      otherInjuries: others,
       handled: handledIds(injury.changes),
       notes: notesFor(injury.body_part),
     })

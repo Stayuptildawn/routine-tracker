@@ -30,6 +30,10 @@ const PHASES: { key: string; name: string; maxWeek: number }[] = [
 
 const muscleLabel = (m: string) => t.muscles[m] ?? m
 
+/** "Knee (moderate), Shoulder (mild)" for the injury lines on this tab. */
+const injuryList = (injuries: Injury[]) =>
+  injuries.map((i) => `${t.injuries.parts[i.body_part]} (${t.injuries.severities[i.severity].toLowerCase()})`).join(', ')
+
 /** Monday of the week containing `date`, minus (week-1) weeks. */
 function programStartForWeek(week: number): string {
   const d = new Date()
@@ -52,7 +56,6 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
   const [review, setReview] = useState<{ advice: string; week_start: string } | null>(null) // weekly AI coach note
   const [injuries, setInjuries] = useState<Injury[]>([]) // active (not healed) injury reports
-  const reconciling = useRef(false) // one reconcile at a time - overlapping loads must not double-apply
   const [nextTweaks, setNextTweaks] = useState<string | null>(null) // wrap-up preview
   const [active, setActive] = useState<PlannedSession | null>(null)
   // the session screen keeps rendering its last value while the exit plays
@@ -123,14 +126,7 @@ export default function Gym({ visible }: { visible: boolean }) {
     setBlock(blockRow)
     // sessions created since an injury was reported (new block, flex day,
     // plan edits) get the treatment the user already approved for it
-    if (injuryRows.length > 0 && !reconciling.current) {
-      reconciling.current = true
-      try {
-        await reconcileInjuries(injuryRows, blockRow, planRows)
-      } finally {
-        reconciling.current = false
-      }
-    }
+    if (injuryRows.length > 0) await reconcileInjuries(blockRow, planRows)
     if (blockRow) {
       const { data: sess } = await supabase
         .from('planned_sessions')
@@ -445,6 +441,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           focus: flexFocus,
           length: flexLength,
           variant,
+          injuries,
         }),
       )
     } finally {
@@ -458,6 +455,8 @@ export default function Gym({ visible }: { visible: boolean }) {
     try {
       const wk = Math.min(weekFromStart(block.start_date), block.total_weeks)
       const created = await createFlexSession(block, wk, sessions, flexPreview.picks, t.gym.flex.sessionName(focusLabel(flexFocus)))
+      // injury cues and lighter sets land before the session opens
+      if (injuries.length > 0) await reconcileInjuries(block, plans)
       setFlexPreview(null)
       setActive(created)
       load()
@@ -487,6 +486,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           adjustments,
           days,
           length: flexLength,
+          injuries,
         }),
       )
     } finally {
@@ -512,6 +512,7 @@ export default function Gym({ visible }: { visible: boolean }) {
       const n = flexWeekPreview.sessions.length
       const names = flexWeekPreview.sessions.map((s, i) => t.gym.flex.weekSessionName(focusLabel(s.focus), i + 1, n))
       await createFlexWeek(block, wk, sessions, flexWeekPreview, names)
+      if (injuries.length > 0) await reconcileInjuries(block, plans)
       setFlexWeekPreview(null)
       setFlexWeekDays(null)
       load()
@@ -824,6 +825,11 @@ export default function Gym({ visible }: { visible: boolean }) {
               {flexPreview.maintenance && flexPreview.picks.length > 0 && (
                 <p className="gentle">{t.gym.flex.maintenanceNote}</p>
               )}
+              {injuries.length > 0 && (
+                <p className="gentle">
+                  <Icon name="shield" /> {t.injuries.flexAround(injuryList(injuries))}
+                </p>
+              )}
               {flexPreview.picks.length === 0 ? (
                 <p className="gentle">{t.gym.flex.nothingFits}</p>
               ) : (
@@ -881,6 +887,11 @@ export default function Gym({ visible }: { visible: boolean }) {
                     </p>
                   )}
                   <p className="gentle">{t.gym.flex.weekWhy}</p>
+                  {injuries.length > 0 && (
+                    <p className="gentle">
+                      <Icon name="shield" /> {t.injuries.flexAround(injuryList(injuries))}
+                    </p>
+                  )}
                   {flexWeekPreview.sessions.map((s, i) => (
                     <div key={i} className="flex-week-day">
                       <p className="flex-day-head">
@@ -1001,6 +1012,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           cardioBase={cardioBase}
           onSaveBase={saveCardioBase}
           reload={load}
+          injuries={injuries}
         />
       )}
 
@@ -1029,11 +1041,7 @@ export default function Gym({ visible }: { visible: boolean }) {
           {injuries.length > 0 && (
             <p className="training-body coach-injury">
               <Icon name="shield" />{' '}
-              {t.injuries.coachWorkingAround(
-                injuries
-                  .map((i) => `${t.injuries.parts[i.body_part]} (${t.injuries.severities[i.severity].toLowerCase()})`)
-                  .join(', '),
-              )}
+              {t.injuries.coachWorkingAround(injuryList(injuries))}
             </p>
           )}
           {review && <p className="training-body">{review.advice}</p>}

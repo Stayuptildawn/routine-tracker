@@ -181,10 +181,19 @@ not add a new one.
   that area drop a set and go lighter. On a moderate one they get swapped for
   a joint-friendlier movement from your own plan, or taken out if nothing
   safe exists for that muscle. On a severe one, anything that touches the
-  area at all is swapped or taken out. For knee, hip and ankle injuries (and a
-  severe lower back), the runs turn into low-impact cardio. Every adjusted exercise carries a short
-  cue in the session, and new sessions you start while injured get the same
-  treatment. When it's better, one tap on **Healed** puts back exactly what
+  area at all is swapped or taken out. Every adjusted exercise carries a
+  short cue in the session, and new sessions you start while injured get the
+  same treatment. That includes flexible sessions: the composer simply
+  doesn't pick what the injury rules out, so a lower-body day with a sore
+  knee is built from hip thrusts and leg curls instead of leg press.
+- Injuries reach the **cardio** side too. Each one says which kinds are fine,
+  which to keep easy and which to skip for now: a knee rules out running, a
+  shoulder or neck rules out swimming, and with both it's cycling or walking.
+  The Cardio card shows that per injury, starts the quick log on a kind that
+  suits you, and holds the weekly target at an easy level while you heal (no
+  build weeks). You can still log a run if you want to, it's your call, and
+  it just reminds you which injury it loads. The cardio note on your planned
+  sessions moves to something that suits every injury you have at once. When it's better, one tap on **Healed** puts back exactly what
   the injury changed, and sets you already logged are never touched. It's not
   medical advice, and the card says so: sharp, worsening or lasting pain goes
   to a physio or a doctor.

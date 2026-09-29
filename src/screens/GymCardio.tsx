@@ -9,6 +9,9 @@ import { t, locale } from '../i18n'
 import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
+import { cardioStatus, cardioVolumeCap, combinedCardio, safeCardioKinds, CARDIO_KINDS as INJURY_KINDS } from '../lib/injuryPlan'
+import type { CardioKind } from '../lib/injuryPlan'
+import type { Injury } from '../lib/injuries'
 
 // labels stay plain text because they also render inside <option> elements,
 // which can't hold SVG; the entry list gets its icon from kindIcon below
@@ -44,13 +47,29 @@ interface Props {
   cardioBase: number | null // null = still loading
   onSaveBase: (v: number) => void
   reload: () => void
+  /** active injury reports - they shape the target, the advice and the default kind */
+  injuries?: Injury[]
 }
 
 /** The Workout tab's Cardio view: weekly plan rail, quick log, per-day bars,
  *  the entry list with inline edit + check-in. Owns all cardio-only UI state;
  *  the data itself (entries, base km, program week) lives in Gym's load. */
-export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveBase, reload }: Props) {
+export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveBase, reload, injuries = [] }: Props) {
   const [run, setRun] = useState({ kind: 'run', km: '', min: '', hr: '' })
+  const [flagged, setFlagged] = useState<string | null>(null) // "logged, but this kind is flagged" note
+  const cardioRules = combinedCardio(injuries)
+  const injuryKey = injuries.map((i) => i.id).join()
+
+  // quick-log starts on a kind the injuries allow, unless one is being typed
+  useEffect(() => {
+    if (injuries.length === 0) return
+    setRun((r) => {
+      if (r.km || r.min || cardioRules[r.kind as CardioKind] !== 'avoid') return r
+      const best = safeCardioKinds(injuries)[0]
+      return best ? { ...r, kind: best } : r
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injuryKey])
   const [loggingRun, setLoggingRun] = useState(false)
   const [baseDraft, setBaseDraft] = useState(cardioBase != null ? String(cardioBase) : '')
   const [editingBase, setEditingBase] = useState(false)
@@ -93,6 +112,11 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
       }
       const result = await runOp({ table: 'cardio_logs', op: 'insert', values: entry as unknown as Record<string, unknown> })
       setRun({ ...run, km: '', min: '', hr: '' })
+      // logged either way - it's their call - but name the injury it loads
+      const loads = injuries.find(
+        (i) => (INJURY_KINDS as readonly string[]).includes(run.kind) && cardioStatus(i.body_part, i.severity, run.kind as CardioKind) !== 'ok',
+      )
+      setFlagged(loads ? t.injuries.cardioLoggedFlagged(kindLabel(run.kind), t.injuries.parts[loads.body_part]) : null)
       if (result === 'saved') reload()
       else setCardio((prev) => [entry, ...prev]) // optimistic while offline
       // offer the check-in right away - each pill saves on tap, closing skips
@@ -176,7 +200,16 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
   const paces = runs.filter((c) => Number(c.distance_km) >= 2).map((c) => Number(c.minutes) / Number(c.distance_km))
   const bestPace = paces.length ? Math.min(...paces) : null
   const kindIcon = (k: string): IconName => KIND_ICONS[k] ?? 'run'
-  const target = cardioTargetForWeek(cardioBase ?? DEFAULT_BASE_KM, week ?? 1)
+  const target = cardioTargetForWeek(cardioBase ?? DEFAULT_BASE_KM, week ?? 1, cardioVolumeCap(injuries))
+  // per injury: which kinds to skip for now and which to keep easy
+  const injuryAdvice = injuries
+    .map((i) => {
+      const of = (st: 'easy' | 'avoid') =>
+        INJURY_KINDS.filter((k) => cardioStatus(i.body_part, i.severity, k) === st).map((k) => kindLabel(k)).join(', ')
+      const parts = [of('avoid') && t.injuries.cardioSkip(of('avoid')), of('easy') && t.injuries.cardioEasy(of('easy'))].filter(Boolean)
+      return parts.length ? `${t.injuries.parts[i.body_part]} (${t.injuries.severities[i.severity].toLowerCase()}): ${parts.join(' · ')}` : null
+    })
+    .filter((line): line is string => line !== null)
   const pct = Math.min(100, Math.round((weekKm / target.km) * 100))
 
   return (
@@ -205,6 +238,15 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
         <p className="gentle cardio-plan-note">
           {t.cardio.soFar(Math.round(weekKm * 10) / 10, target.km, target.note)}
         </p>
+        {injuryAdvice.length > 0 && (
+          <div className="cardio-injury">
+            {injuryAdvice.map((line) => (
+              <p key={line} className="gentle">
+                <Icon name="shield" /> {line}
+              </p>
+            ))}
+          </div>
+        )}
         <div className="cardio-plan-base">
           <span className="gentle-inline">{t.cardio.easyWeekBase}</span>
           {editingBase ? (
@@ -273,6 +315,15 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
           {loggingRun ? '…' : t.cardio.log}
         </button>
       </div>
+
+      {flagged && (
+        <div className="notice vol-suggestion">
+          <Icon name="shield" /> {flagged}
+          <button className="link" onClick={() => setFlagged(null)} aria-label={t.common.dismiss}>
+            <Icon name="x" />
+          </button>
+        </div>
+      )}
 
       {weeks.some((w) => w.total > 0) && (
         <>

@@ -31,7 +31,7 @@ function previewText(line: PreviewLine): string {
           ? t.injuries.lineLighter(line.exercise)
           : line.treatment === 'cue'
             ? t.injuries.lineCue(line.exercise)
-            : t.injuries.lineCardio(line.exercise)
+            : t.injuries.lineSwap(line.exercise, line.replacement ?? '')
   return base + t.injuries.sessions(line.sessions)
 }
 

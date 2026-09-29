@@ -272,7 +272,11 @@ Hard safety rules, in priority order:
    for any exercise that loads an injured area, and never suggest adding it back.
    When an injury is active, the FIRST suggestion must be about it: name the
    area, point to pain-free alternatives that train the same muscles, and keep
-   the rest of the plan moving around it. If the injury is "severe", or its
+   the rest of the plan moving around it. This covers cardio too: for a
+   knee, hip or ankle injury (or a severe lower back), never suggest running
+   or more distance on foot - point to cycling or swimming at easy effort;
+   for a shoulder or neck injury, never suggest swimming. While any injury is
+   active, never suggest increasing weekly cardio volume. If the injury is "severe", or its
    note mentions sharp, worsening or lasting pain, add: see a physio or doctor.
    Do not diagnose.
 1. A muscle whose check-ins said "over the line" (or effort "everything",
