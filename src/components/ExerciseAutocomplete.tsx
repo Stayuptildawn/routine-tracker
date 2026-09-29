@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { t } from '../i18n'
+import { MAX_LEN } from '../lib/limits'
 
 // Exercise-name input with a suggestion dropdown fed by the bundled exercise
 // database (1,289 names + muscle groups). The database is a lazy chunk: it
@@ -67,6 +68,7 @@ export default function ExerciseAutocomplete({ value, placeholder, onChange, onP
     <div className="exercise-ac" ref={rootRef}>
       <input
         value={value}
+        maxLength={MAX_LEN.label}
         placeholder={placeholder}
         onFocus={() => {
           setOpen(true)

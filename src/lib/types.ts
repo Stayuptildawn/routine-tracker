@@ -73,7 +73,8 @@ export interface CardioLog {
 }
 
 export interface AppliedAction {
-  type: 'check_task' | 'log_workout' | 'log_cardio' | 'create_reminder' | 'complete_reminder' | 'set_energy'
+  // 'answer' rides along in the AI log only: a reply to a question, nothing to undo
+  type: 'check_task' | 'log_workout' | 'log_cardio' | 'create_reminder' | 'complete_reminder' | 'set_energy' | 'answer'
   task_id?: string
   label?: string
   status?: LogStatus
@@ -159,13 +160,14 @@ export interface PlannedSet {
   logged_weight: number | null
   logged_reps: number | null
   logged_at: string | null
+  injury_note?: string | null // cue left by an injury report (lib/injuries.ts)
 }
 
 export interface AiAction {
   id: string
   raw_text: string
   actions: AppliedAction[]
-  status: 'applied' | 'confirmed' | 'undone'
+  status: 'applied' | 'confirmed' | 'undone' | 'answered' // answered = only asked something
   created_at: string
 }
 

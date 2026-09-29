@@ -98,10 +98,15 @@ not add a new one.
   and marks the shower as skipped, and *"skip the run today"* does the opposite
   of a check without you hunting for a button.
 - It knows the difference between telling it something and asking it something.
-  *"low energy today"* switches the whole day to minimum mode, while *"when did
-  I last refill?"*, *"what did I bench last time?"* or *"what's still
-  pending?"* just reads your data back to you and writes nothing. Voice input
-  works too, so you can say it instead of typing.
+  *"low energy today"* switches the whole day to minimum mode, while a question
+  just reads your data back to you and changes nothing. Voice input works too,
+  so you can say it instead of typing.
+- You can ask it pretty much anything about your own record. *"how many runs
+  did I do this month?"*, *"how consistent have I been with meds?"*, *"what's
+  my best bench?"*, *"how has my energy been?"* The answer pops up right there
+  on the Now screen, and it's also kept in the AI log, marked as answered, so
+  you can find it again later. It only ever answers from your own data. If
+  the answer isn't in there, it tells you so instead of guessing a number.
 - Reminders understand the clock, in both directions. *"remind me to call the
   bank tomorrow at 5pm"* (or *"...in 10 mins"*) becomes a categorized reminder
   with a due time, and a push nudge fires within ~5 minutes of that hour.
@@ -117,7 +122,8 @@ not add a new one.
   instantly with one-tap undo, the maybes come back as "Did you mean...?" chips
   you tap to confirm, and anything it's genuinely unsure about does nothing at
   all. Every batch of actions is logged and reversible, and the log keeps a
-  running accuracy score. Nothing happens silently. And to be straight about
+  running accuracy score (questions don't count toward it, since they change
+  nothing). Nothing happens silently. And to be straight about
   it: the model is not always right — my own log hovers around 70% kept. The
   design bet is different: every miss is visible in the log and one tap from
   undone, which beats a model you have to babysit.
@@ -168,12 +174,29 @@ not add a new one.
   Off-plan lifts count too: *"hammer curls 14kg 3x12"* typed in the composer
   gets tagged with its muscle group and shows up in the weekly chart instead
   of disappearing.
+- **Injury reports.** If something hurts, you tell the Workout tab where
+  (neck, shoulder, elbow, wrist, lower back, hip, knee or ankle) and how bad
+  it is, and the app shows you exactly what would change in your upcoming
+  sessions before anything happens. On a mild injury the exercises that load
+  that area drop a set and go lighter. On a moderate one they get swapped for
+  a joint-friendlier movement from your own plan, or taken out if nothing
+  safe exists for that muscle. On a severe one, anything that touches the
+  area at all is swapped or taken out. For knee, hip and ankle injuries (and a
+  severe lower back), the runs turn into low-impact cardio. Every adjusted exercise carries a short
+  cue in the session, and new sessions you start while injured get the same
+  treatment. When it's better, one tap on **Healed** puts back exactly what
+  the injury changed, and sets you already logged are never touched. It's not
+  medical advice, and the card says so: sharp, worsening or lasting pain goes
+  to a physio or a doctor.
 - Once a week, an AI **coach's note**: it reads last week's sets, reps,
   weights, per-muscle volume, recovery check-ins and cardio feel against the
   12-week trend, and suggests 3–5 small, safety-first tweaks (one increment
   at a time, less for anything that felt "over the line", cardio capped at
-  +10% a week). Advisory only — it never edits your plan. The long-view
-  sibling, a **Training patterns** card, lands on the Reflect tab.
+  +10% a week). Active injuries come first: it never pushes progression on
+  anything that loads an injured area, and it refreshes right away when you
+  report or heal one instead of waiting for the next week. Advisory only — it
+  never edits your plan. The long-view sibling, a **Training patterns** card,
+  lands on the Reflect tab.
 - The plan is fully yours to edit: exercises, sessions, form cues, and sets ×
   reps per phase as plain fields (no format to memorize). Exercise names
   autocomplete from a 1,289-exercise database as you type, and picking one
@@ -269,8 +292,9 @@ That said, since people ask, here's where the free-tier ceilings actually
 are, in the order they'd break:
 
 1. **Gemini (unbilled): the real limit.** Roughly 15 requests/minute and
-   ~1,000–1,500/day on the free tier. Every message, question and "what's
-   next?" is one request (a 2-model fallback chain stretches this a bit). At
+   ~1,000–1,500/day on the free tier. Every message is one request, and a
+   free-form question about your data is two (one to understand it, one to
+   answer it). A 2-model fallback chain stretches this a bit. At
    20–30 messages per user per day, that's **~30–50 active users** before
    midday rate-limit errors — and one user never gets close.
 2. **Supabase Realtime: 200 concurrent connections.** An open app holds one
@@ -307,6 +331,15 @@ and the app never renders raw HTML, so there is very little for injection
 attacks to grab. The AI only ever touches your own data, so even a strange
 message can't reach past your account.
 
+The same goes for questions. When you ask something about your data, the
+server builds a short summary of your own rows, and that summary is the only
+thing the AI sees. It runs as you, every query behind it is filtered to your
+account on top of the database rules, and the AI has no way to go looking for
+anything else. There's a test that puts another user's data in the database
+and checks that none of it ends up in what the AI gets. One thing to be clear
+about though: to answer, that summary is sent to Gemini, which is Google's.
+That's the same as every message you type already, but you should know it.
+
 Now the honest limits. This is a personal project I host myself, and no
 security company has audited it. The per-user isolation is solid at the
 database level, but some background jobs run with higher access and rely on
@@ -335,7 +368,12 @@ npm i -g supabase
 supabase login
 supabase secrets set GEMINI_API_KEY=<your-gemini-api-key>   # aistudio.google.com/apikey
 supabase functions deploy interpret-message --project-ref <ref>
+supabase functions deploy refresh-coach --project-ref <ref>
 ```
+
+`refresh-coach` is what rewrites the coach's note right after you report or
+heal an injury. Without it, injuries still adjust your sessions, and the note
+catches up on its next weekly pass.
 
 Mind that you should keep the Gemini project unbilled to stay on the free
 tier. The functions share code from `supabase/functions/_shared/`, which the
@@ -416,6 +454,15 @@ logged sets fill the session's planned sets instead of the freeform log, so
 the composer and the session player write the same rows. The day's tasks and open reminders are injected straight into the
 prompt as candidates, which at personal scale works better than embeddings
 and costs basically nothing.
+
+Questions go one step further. The simple ones (*"when did I last…"*,
+*"what's pending?"*) are answered straight from the database. For anything
+else, the parser only restates the question, and a second call
+(`supabase/functions/_shared/askData.ts`) answers it from a compact summary of
+your last 90 days: routines and how often each task got done, energy,
+reminders, lifts, cardio, the current block, active injuries and the latest
+coach's note. The model is told to use only that summary and to say so
+plainly when the answer isn't in it.
 
 One lesson from running this on the small models is baked in: anything
 time-shaped is never left to the model's arithmetic. *"in 10 mins"*, *"at

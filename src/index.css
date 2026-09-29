@@ -132,6 +132,24 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation; /* no double-tap zoom on buttons */
+  /* user text (task labels, notes, routine names) can be one endless word.
+     `anywhere` (not break-word) also lowers the min-content width, so flex
+     rows shrink the text instead of shoving their buttons off-screen */
+  overflow-wrap: anywhere;
+}
+
+/* ...but UI chrome (button captions, day headers) is short, known text:
+   under `anywhere` a squeezed row or table would split "Mon" into M/o/n.
+   break-word still breaks a word that truly can't fit. Buttons that carry
+   user text opt back in */
+button,
+th {
+  overflow-wrap: break-word;
+}
+
+.chip,
+.upnext {
+  overflow-wrap: anywhere;
   /* UI chrome is not prose: long-pressing a label or card must not start
      text selection. Text entry opts back in below */
   -webkit-user-select: none;
@@ -1141,6 +1159,8 @@ select option {
 }
 
 .task-label {
+  flex: 1;
+  min-width: 0; /* a long label wraps; Done/Skip never leave the row */
   font-size: var(--fs-base);
   transition: color var(--speed) var(--ease);
 }
@@ -1266,6 +1286,110 @@ select option {
   font-family: var(--font-display);
   font-size: var(--fs-md);
   line-height: 1.55;
+}
+
+/* ---------- answer sheet: a question asked in the composer ----------
+   bottom sheet on phones (thumb reach), a centered card on wider screens */
+.answer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  transition: opacity var(--speed-panel) var(--ease-panel);
+}
+
+.answer-sheet {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 80dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  box-shadow: var(--shadow);
+  padding: var(--sp-5) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
+  transition: transform var(--speed-panel) var(--ease-panel);
+  /* the answer is content the user may want to copy */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@starting-style {
+  .answer-backdrop {
+    opacity: 0;
+  }
+  .answer-sheet {
+    transform: translateY(24px);
+  }
+}
+
+.answer-backdrop[data-closing] {
+  opacity: 0;
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
+}
+
+.answer-backdrop[data-closing] .answer-sheet {
+  transform: translateY(24px);
+  transition-duration: var(--speed-exit);
+}
+
+.answer-question {
+  margin: 0 0 var(--sp-3);
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+.answer-text {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.answer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.answer-foot .gentle {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.answer-foot .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.answer-foot .save {
+  min-height: 2.75rem;
+  min-width: 6rem;
+}
+
+@media (min-width: 640px) {
+  .answer-backdrop {
+    align-items: center;
+    padding: var(--sp-4);
+  }
+  .answer-sheet {
+    border-radius: var(--r-md);
+    padding-bottom: var(--sp-4);
+  }
+}
+
+/* answers in the AI log read as prose, not an action line */
+.ai-answer {
+  white-space: pre-line;
+  line-height: 1.5;
 }
 
 /* ---------- routine player: one thing at a time ---------- */
@@ -3155,4 +3279,106 @@ select option {
   50% {
     opacity: 0.45;
   }
+}
+
+/* ---------- injuries (Workout tab) ---------- */
+.injury-card {
+  display: block;
+}
+
+.injury-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.injury-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.injury-info .gentle {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.injury-note {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.injury-row .energy-btn {
+  flex-shrink: 0;
+}
+
+.injury-open {
+  margin-top: var(--sp-3);
+}
+
+.injury-form {
+  margin-top: var(--sp-3);
+}
+
+.injury-form .energy-label {
+  margin: var(--sp-3) 0 0;
+}
+
+.injury-pills {
+  margin-top: var(--sp-2);
+}
+
+.injury-note-input {
+  width: 100%;
+  margin-top: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.injury-preview {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+}
+
+.injury-preview ul {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.injury-preview .gentle {
+  margin: 0;
+}
+
+.injury-line + .injury-line {
+  margin-top: var(--sp-1);
+}
+
+.injury-message {
+  margin: var(--sp-2) 0 0;
+}
+
+.injury-disclaimer {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-xs);
+}
+
+/* an injury's cue in the session outranks the plan's own safety note */
+.session-cue.injury-cue {
+  border-left-color: var(--good);
+  color: var(--text);
+}
+
+.coach-injury {
+  margin-bottom: var(--sp-2);
 }

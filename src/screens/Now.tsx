@@ -6,12 +6,13 @@ import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, und
 import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
-import { usePresence } from '../lib/overlay'
+import { usePresence, useOverlay } from '../lib/overlay'
 import { t, locale } from '../i18n'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
 import InstallButton from './InstallButton'
 import Icon from '../components/Icon'
+import { MAX_LEN } from '../lib/limits'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
   low: ['core'],
@@ -34,7 +35,72 @@ function fmtEta(diff: number): string {
   return diff > 0 ? t.now.etaIn(dur) : diff < 0 ? t.now.etaAgo(dur) : t.now.etaNow
 }
 
-export default function Now({ visible, onOpenReminders, onOpenSettings }: { visible: boolean; onOpenReminders: () => void; onOpenSettings: () => void }) {
+interface AnswerState {
+  question: string
+  lines: string[]
+}
+
+/** The reply to a question typed in the composer. A dialog, not the inline
+ *  notice: answers can run a few sentences and deserve the focus. The same
+ *  reply is already in the AI log (the server logs it) - the footer says so. */
+function AnswerSheet({
+  answer,
+  onClose,
+  onOpenLog,
+  closing,
+}: {
+  answer: AnswerState
+  onClose: () => void
+  onOpenLog: () => void
+  closing?: boolean
+}) {
+  const trapRef = useOverlay<HTMLDivElement>(onClose)
+  return (
+    <div className="answer-backdrop" data-closing={closing || undefined} onClick={onClose}>
+      <div
+        ref={trapRef}
+        className="answer-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="answer-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="eyebrow" id="answer-title">
+          <Icon name="message" /> {t.now.answerTitle}
+        </p>
+        <p className="answer-question">“{answer.question}”</p>
+        {answer.lines.map((line, i) => (
+          <p key={i} className="answer-text">
+            {line}
+          </p>
+        ))}
+        <div className="answer-foot">
+          <span className="gentle">
+            {t.now.answerSaved} ·{' '}
+            <button className="link" onClick={onOpenLog}>
+              {t.now.openLog}
+            </button>
+          </span>
+          <button className="save" onClick={onClose}>
+            {t.common.close}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Now({
+  visible,
+  onOpenReminders,
+  onOpenSettings,
+  onOpenLog,
+}: {
+  visible: boolean
+  onOpenReminders: () => void
+  onOpenSettings: () => void
+  onOpenLog: () => void
+}) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<Map<string, TaskLog>>(new Map())
   const [reminders, setReminders] = useState<Reminder[]>([])
@@ -50,6 +116,11 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
   const toast = usePresence(undo !== null)
   const lastUndo = useRef(undo)
   if (undo) lastUndo.current = undo
+  const [answer, setAnswer] = useState<AnswerState | null>(null)
+  // the sheet keeps its last answer on screen while the exit transition plays
+  const answerPresence = usePresence(answer !== null)
+  const lastAnswer = useRef(answer)
+  if (answer) lastAnswer.current = answer
   const [playing, setPlaying] = useState<{ routineId: string; focusTaskId?: string | null } | null>(null)
   // the player keeps rendering its last routine while the exit plays
   const player = usePresence(playing !== null)
@@ -149,7 +220,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
         setMessage('')
         setSuggestions(result.suggestions)
         if (result.answers && result.answers.length > 0) {
-          setNotice(result.answers.join('\n'))
+          setAnswer({ question: text, lines: result.answers })
         }
         if (result.applied.length > 0 && result.ai_action_id) {
           setUndo({ aiActionId: result.ai_action_id, response: result })
@@ -265,6 +336,7 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
       <div className="composer">
         <textarea
           value={message}
+          maxLength={MAX_LEN.message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -524,6 +596,18 @@ export default function Now({ visible, onOpenReminders, onOpenSettings }: { visi
             </div>
           )
         })()}
+
+      {answerPresence.mounted && (answer ?? lastAnswer.current) && (
+        <AnswerSheet
+          answer={(answer ?? lastAnswer.current)!}
+          onClose={() => setAnswer(null)}
+          onOpenLog={() => {
+            setAnswer(null)
+            onOpenLog()
+          }}
+          closing={answerPresence.closing}
+        />
+      )}
     </div>
   )
 }

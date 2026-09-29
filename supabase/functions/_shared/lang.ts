@@ -39,6 +39,7 @@ interface ServerStrings {
   lastDone: (label: string, when: string) => string
   noRecord: (label: string) => string
   nothingLoggedFor: (exercise: string) => string
+  cantAnswer: string // the free-form question answerer failed
   lastWorkout: (exercise: string, when: string, sets: string) => string
   today: string
   yesterday: string
@@ -56,6 +57,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: last done ${when}.`,
     noRecord: (label) => `${label}: no record of it yet.`,
     nothingLoggedFor: (exercise) => `${exercise}: nothing logged yet.`,
+    cantAnswer: 'Couldn’t answer that right now — try again in a moment.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'today',
     yesterday: 'yesterday',
@@ -71,6 +73,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label} : fait pour la dernière fois ${when}.`,
     noRecord: (label) => `${label} : aucune trace pour l’instant.`,
     nothingLoggedFor: (exercise) => `${exercise} : rien d’enregistré pour l’instant.`,
+    cantAnswer: 'Impossible de répondre pour l’instant — réessayez dans un moment.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? ` : ${sets}` : ''}.`,
     today: 'aujourd’hui',
     yesterday: 'hier',
@@ -86,6 +89,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: hecho por última vez ${when}.`,
     noRecord: (label) => `${label}: sin registro todavía.`,
     nothingLoggedFor: (exercise) => `${exercise}: nada registrado todavía.`,
+    cantAnswer: 'Ahora mismo no puedo responder a eso — inténtalo de nuevo en un momento.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'hoy',
     yesterday: 'ayer',
@@ -101,6 +105,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: zuletzt erledigt ${when}.`,
     noRecord: (label) => `${label}: bisher kein Eintrag.`,
     nothingLoggedFor: (exercise) => `${exercise}: bisher nichts protokolliert.`,
+    cantAnswer: 'Das kann ich gerade nicht beantworten — versuch es gleich noch einmal.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'heute',
     yesterday: 'gestern',
@@ -116,6 +121,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}：上次完成是${when}。`,
     noRecord: (label) => `${label}：还没有记录。`,
     nothingLoggedFor: (exercise) => `${exercise}：还没有记录。`,
+    cantAnswer: '暂时无法回答这个问题——请稍后再试。',
     lastWorkout: (exercise, when, sets) => `${exercise}，${when}${sets ? `：${sets}` : ''}。`,
     today: '今天',
     yesterday: '昨天',
@@ -131,6 +137,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: آخر إنجاز ${when}.`,
     noRecord: (label) => `${label}: لا سجلّ له بعد.`,
     nothingLoggedFor: (exercise) => `${exercise}: لا شيء مسجّل بعد.`,
+    cantAnswer: 'تعذّرت الإجابة الآن — حاول مرة أخرى بعد قليل.',
     lastWorkout: (exercise, when, sets) => `${exercise}، ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'اليوم',
     yesterday: 'أمس',
@@ -146,6 +153,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: آخرین بار ${when} انجام شد.`,
     noRecord: (label) => `${label}: هنوز رکوردی ندارد.`,
     nothingLoggedFor: (exercise) => `${exercise}: هنوز چیزی ثبت نشده.`,
+    cantAnswer: 'الان نمی\u200cتوانم به این جواب بدهم — کمی بعد دوباره امتحان کن.',
     lastWorkout: (exercise, when, sets) => `${exercise}، ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'امروز',
     yesterday: 'دیروز',
@@ -161,6 +169,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: en son ${when} yapıldı.`,
     noRecord: (label) => `${label}: henüz kaydı yok.`,
     nothingLoggedFor: (exercise) => `${exercise}: henüz bir kayıt yok.`,
+    cantAnswer: 'Şu an buna yanıt veremiyorum — birazdan tekrar dene.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'bugün',
     yesterday: 'dün',
@@ -176,6 +185,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: последний раз — ${when}.`,
     noRecord: (label) => `${label}: записей пока нет.`,
     nothingLoggedFor: (exercise) => `${exercise}: пока ничего не записано.`,
+    cantAnswer: 'Сейчас не получается ответить — попробуй чуть позже.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'сегодня',
     yesterday: 'вчера',
@@ -191,6 +201,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}: naposledy ${when}.`,
     noRecord: (label) => `${label}: zatím žádný záznam.`,
     nothingLoggedFor: (exercise) => `${exercise}: zatím nic nezapsáno.`,
+    cantAnswer: 'Na tohle teď nedokážu odpovědět — zkus to za chvíli znovu.',
     lastWorkout: (exercise, when, sets) => `${exercise}, ${when}${sets ? `: ${sets}` : ''}.`,
     today: 'dnes',
     yesterday: 'včera',
@@ -206,6 +217,7 @@ export const SERVER_STRINGS: Record<Lang, ServerStrings> = {
     lastDone: (label, when) => `${label}：最後に行ったのは${when}です。`,
     noRecord: (label) => `${label}：まだ記録がありません。`,
     nothingLoggedFor: (exercise) => `${exercise}：まだ記録がありません。`,
+    cantAnswer: '今は答えられませんでした。少ししてからもう一度試してください。',
     lastWorkout: (exercise, when, sets) => `${exercise}、${when}${sets ? `：${sets}` : ''}。`,
     today: '今日',
     yesterday: '昨日',

@@ -17,6 +17,10 @@ import Skeleton from '../components/Skeleton'
 import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
+import { MAX_LEN } from '../lib/limits'
+import InjuryCard from './InjuryCard'
+import { reconcileInjuries } from '../lib/injuries'
+import type { Injury } from '../lib/injuries'
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
   { key: '1-2', name: t.gym.phases['1-2'], maxWeek: 2 },
@@ -47,6 +51,8 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [cardio, setCardio] = useState<CardioLog[]>([])
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
   const [review, setReview] = useState<{ advice: string; week_start: string } | null>(null) // weekly AI coach note
+  const [injuries, setInjuries] = useState<Injury[]>([]) // active (not healed) injury reports
+  const reconciling = useRef(false) // one reconcile at a time - overlapping loads must not double-apply
   const [nextTweaks, setNextTweaks] = useState<string | null>(null) // wrap-up preview
   const [active, setActive] = useState<PlannedSession | null>(null)
   // the session screen keeps rendering its last value while the exit plays
@@ -95,7 +101,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   editingRef.current = editingPlan
 
   const load = useCallback(async () => {
-    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes] = await Promise.all([
+    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes, injuriesRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
       supabase.from('user_settings').select('program_start, cardio_target_km').maybeSingle(),
@@ -103,7 +109,10 @@ export default function Gym({ visible }: { visible: boolean }) {
       supabase.from('training_blocks').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
       supabase.from('training_reviews').select('advice, week_start').order('week_start', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('injuries').select('*').is('healed_on', null).order('created_at'),
     ])
+    const injuryRows = (injuriesRes.data as Injury[]) ?? []
+    setInjuries(injuryRows)
     setReview((reviewRes.data as { advice: string; week_start: string } | null) ?? null)
     setCardio((cardioAllRes.data as CardioLog[]) ?? [])
     const logRows = (logsRes.data as WorkoutLog[]) ?? []
@@ -112,6 +121,16 @@ export default function Gym({ visible }: { visible: boolean }) {
     setPlans(planRows)
     const blockRow = blockRes.data as TrainingBlock | null
     setBlock(blockRow)
+    // sessions created since an injury was reported (new block, flex day,
+    // plan edits) get the treatment the user already approved for it
+    if (injuryRows.length > 0 && !reconciling.current) {
+      reconciling.current = true
+      try {
+        await reconcileInjuries(injuryRows, blockRow, planRows)
+      } finally {
+        reconciling.current = false
+      }
+    }
     if (blockRow) {
       const { data: sess } = await supabase
         .from('planned_sessions')
@@ -1001,14 +1020,28 @@ export default function Gym({ visible }: { visible: boolean }) {
         </div>
       ))}
 
-      {view === 'strength' && review && (
+      {view === 'strength' && (review || injuries.length > 0) && (
         <section className="gym-day training-card">
           <h2>
             {t.gym.coachTitle}
-            <span className="routine-progress">{t.gym.coachSub}</span>
+            {review && <span className="routine-progress">{t.gym.coachSub}</span>}
           </h2>
-          <p className="training-body">{review.advice}</p>
+          {injuries.length > 0 && (
+            <p className="training-body coach-injury">
+              <Icon name="shield" />{' '}
+              {t.injuries.coachWorkingAround(
+                injuries
+                  .map((i) => `${t.injuries.parts[i.body_part]} (${t.injuries.severities[i.severity].toLowerCase()})`)
+                  .join(', '),
+              )}
+            </p>
+          )}
+          {review && <p className="training-body">{review.advice}</p>}
         </section>
+      )}
+
+      {view === 'strength' && loaded && (
+        <InjuryCard injuries={injuries} block={block} plans={plans} onChanged={load} />
       )}
 
       {view === 'strength' && block && volume.size > 0 && (
@@ -1065,6 +1098,7 @@ export default function Gym({ visible }: { visible: boolean }) {
             <input
               placeholder={t.gym.firstSessionPh}
               value={scratch.session}
+              maxLength={MAX_LEN.name}
               onChange={(e) => setScratch({ ...scratch, session: e.target.value })}
             />
           </div>
@@ -1094,6 +1128,7 @@ export default function Gym({ visible }: { visible: boolean }) {
             <input
               placeholder={t.gym.repsPh}
               value={scratch.reps}
+              maxLength={MAX_LEN.reps}
               onChange={(e) => setScratch({ ...scratch, reps: e.target.value })}
             />
           </div>

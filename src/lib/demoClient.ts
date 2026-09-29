@@ -436,7 +436,9 @@ class DemoQuery {
       const targets = this.matching(rows)
       for (const r of targets) Object.assign(r, this.values)
       saveDb()
-      return { data: null, error: null, count: null }
+      // like .update().select(): the rows it touched (callers use it to
+      // tell "updated" from "matched nothing")
+      return { data: JSON.parse(JSON.stringify(targets)), error: null, count: null }
     }
 
     if (this.op === 'delete') {
@@ -661,18 +663,30 @@ function demoInterpret(text: string): {
     }
   }
 
+  // a question gets the "answers from your own data" explainer; anything
+  // else it couldn't place gets the general one. Both land in the AI log the
+  // way real answers do, so the popup's "saved in the log" is true here too
+  const isQuestion = /[?？؟]\s*$/.test(text.trim())
+  const answers = applied.length > 0 ? [] : [isQuestion ? t.demo.askUnavailable : t.demo.aiUnavailable]
   let aiActionId: string | null = null
-  if (applied.length > 0) {
-    const batch: Row = { id: crypto.randomUUID(), user_id: DEMO_USER.id, raw_text: text, actions: applied, status: 'applied', created_at: nowIso }
+  if (applied.length > 0 || answers.length > 0) {
+    const batch: Row = {
+      id: crypto.randomUUID(),
+      user_id: DEMO_USER.id,
+      raw_text: text,
+      actions: [...applied, ...answers.map((a) => ({ type: 'answer', text: a }))],
+      status: applied.length > 0 ? 'applied' : 'answered',
+      created_at: nowIso,
+    }
     rowsFor('ai_actions').push(batch)
-    aiActionId = batch.id as string
+    if (applied.length > 0) aiActionId = batch.id as string
     saveDb()
   }
   return {
     ai_action_id: aiActionId,
     applied,
     suggestions: [],
-    answers: applied.length === 0 ? [t.demo.aiUnavailable] : [],
+    answers,
   }
 }
 

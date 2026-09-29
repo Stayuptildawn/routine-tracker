@@ -209,5 +209,7 @@ export function describeAction(a: AppliedAction): { icon: IconName; text: string
       }
     case 'set_energy':
       return { icon: 'battery-medium', text: t.actions.energy(a.level ?? '') }
+    case 'answer':
+      return { icon: 'message', text: a.text ?? '' }
   }
 }

@@ -66,7 +66,7 @@ export async function maybeTrainingReview(
     return i >= 0 && i < WEEKS ? i : -1
   }
 
-  const [sessionsRes, setsRes, cardioRes, checkinRes, lastSetsRes, liftsRes, blockRes, settingsRes] =
+  const [sessionsRes, setsRes, cardioRes, checkinRes, lastSetsRes, liftsRes, blockRes, settingsRes, injuriesRes] =
     await Promise.all([
       supabase.from('planned_sessions').select('completed_at').eq('user_id', userId)
         .gte('completed_at', windowStart + 'T00:00:00').lt('completed_at', weekStart + 'T00:00:00')
@@ -87,6 +87,7 @@ export async function maybeTrainingReview(
       supabase.from('training_blocks').select('block, start_date, total_weeks').eq('user_id', userId)
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('user_settings').select('cardio_target_km').eq('user_id', userId).maybeSingle(),
+      supabase.from('injuries').select('body_part, severity, note, started_on').eq('user_id', userId).is('healed_on', null),
     ])
   // the written plan itself, so advice can speak to it (fetched after
   // blockRes since the snapshot should be the active block's plan; with no
@@ -212,6 +213,11 @@ export async function maybeTrainingReview(
     return `${day}:\n${rows.map((r) => r.line).join('\n')}${cardio ? `\n  cardio: ${cardio}` : ''}`
   })
 
+  const injuries = (injuriesRes.data ?? []) as { body_part: string; severity: string; note: string | null; started_on: string }[]
+  const injuryLines = injuries.map(
+    (i) => `- ${i.body_part.replace('_', ' ')}: ${i.severity}, since ${i.started_on}${i.note ? ` ("${i.note}")` : ''}`,
+  )
+
   const prompt = `You are a careful strength & conditioning assistant reviewing a recreational
 lifter's week. You value joint health and long-term consistency over fast progress.
 You never diagnose injuries and never give medical advice.
@@ -240,6 +246,10 @@ Cardio:
 ${cardioLines.join('\n') || '- none logged'}
 Cardio total: ${lastCardioKm} km${targetKm ? ` (their easy-week base is ${targetKm} km)` : ''}
 
+ACTIVE INJURIES (reported by the user; the app has already lightened, swapped or
+removed the exercises that load these areas in upcoming sessions):
+${injuryLines.join('\n') || '- none'}
+
 Reply with JSON: two string fields, both written in ${LANGUAGE_NAMES[lang]}.
 
 "pattern": 2-3 sentences naming the clearest trend ACROSS the weeks (not one
@@ -258,6 +268,13 @@ what was logged against what the plan prescribes (e.g. sets done vs the
 written scheme, planned exercises that went untouched, weight relative to the
 scheme's rep range) rather than treating the logs as free-floating numbers.
 Hard safety rules, in priority order:
+0. ACTIVE INJURIES come first. Never suggest progression (weight, reps or sets)
+   for any exercise that loads an injured area, and never suggest adding it back.
+   When an injury is active, the FIRST suggestion must be about it: name the
+   area, point to pain-free alternatives that train the same muscles, and keep
+   the rest of the plan moving around it. If the injury is "severe", or its
+   note mentions sharp, worsening or lasting pain, add: see a physio or doctor.
+   Do not diagnose.
 1. A muscle whose check-ins said "over the line" (or effort "everything",
    recovery "still worn") gets LESS, never more: one set fewer, longer rest,
    or lighter weight. This overrules every progression rule.

@@ -158,6 +158,7 @@ const PATHS = {
     </>
   ),
   shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+  message: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
   pencil: (
     <>
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />

@@ -9,6 +9,7 @@
 import { addDays, userNow } from './localtime.ts'
 import { askGeminiJson } from './gemini.ts'
 import { muscleForExercise } from './exerciseDb.ts'
+import { answerQuestion, buildDigest } from './askData.ts'
 import { LANGUAGE_NAMES, normLang, SERVER_STRINGS } from './lang.ts'
 import type { Lang } from './lang.ts'
 import {
@@ -41,7 +42,7 @@ const responseSchema = {
         properties: {
           type: {
             type: 'STRING',
-            enum: ['check_task', 'log_workout', 'log_cardio', 'create_reminder', 'complete_reminder', 'set_energy', 'query_last_done', 'query_last_workout', 'query_reminders'],
+            enum: ['check_task', 'log_workout', 'log_cardio', 'create_reminder', 'complete_reminder', 'set_energy', 'query_last_done', 'query_last_workout', 'query_reminders', 'ask_question'],
           },
           task_id: { type: 'STRING' },
           status: { type: 'STRING', enum: ['done', 'partial', 'skipped'] },
@@ -71,6 +72,7 @@ const responseSchema = {
           amount: { type: 'STRING', enum: ['could_take_more', 'right', 'stretch', 'over_the_line'] },
           level: { type: 'STRING', enum: ['low', 'medium', 'high'] },
           notes: { type: 'STRING' },
+          question: { type: 'STRING' },
         },
         required: ['type', 'confidence'],
       },
@@ -203,10 +205,18 @@ Rules:
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
   Match against the all-tasks list; nothing is written, an answer comes back.
-- query_reminders: QUESTIONS about what's pending or due ("what's on my list?",
-  "anything due today?"). Nothing is written, an answer comes back.
+- query_reminders: QUESTIONS about open REMINDERS / to-dos only ("what's on my list?",
+  "anything due today?", "what reminders do I have?"). Nothing is written, an answer
+  comes back. Questions about routines, tasks, habits or progress are NOT this type -
+  they are ask_question.
 - query_last_workout: questions about lifting history ("what did I bench last time?") ->
   put the exercise name in exercise.
+- ask_question: ANY other question about the user's own data, habits or progress that the
+  query_* types above don't cover ("how many runs this month?", "how consistent am I with
+  meds?", "what's my best bench?", "how's my energy been?", "which routines do I have?",
+  "what's in my morning routine?"). Put the question, restated so it
+  stands on its own, in question. Never answer it yourself - nothing is written, an answer
+  comes back. At most one ask_question per distinct question.
 - If nothing actionable, return an empty actions array. Never invent task_ids.
 
 User message: "${text}"`
@@ -276,7 +286,19 @@ User message: "${text}"`
   // the lite models sometimes emit the same action several times in one
   // reply - identical copies are dropped, and a runaway list is capped
   const seenActions = new Set<string>()
-  for (const action of (parsed.actions ?? []).slice(0, 10)) {
+  const questions: string[] = []
+  // the lite models sometimes glue junk onto an id ("<uuid>à®³à¯Ù", or the
+  // uuid twice). Pull the first uuid back out - still only ever used when it
+  // exactly matches a known task/reminder, so nothing can be invented
+  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  const salvageId = (raw: unknown) => {
+    const m = typeof raw === 'string' ? raw.match(UUID) : null
+    return m ? m[0].toLowerCase() : raw
+  }
+  for (const rawAction of (parsed.actions ?? []).slice(0, 10)) {
+    const action = { ...rawAction }
+    if (action.task_id !== undefined) action.task_id = salvageId(action.task_id)
+    if (action.reminder_id !== undefined) action.reminder_id = salvageId(action.reminder_id)
     const actKey = JSON.stringify(action)
     if (seenActions.has(actKey)) continue
     seenActions.add(actKey)
@@ -521,6 +543,9 @@ User message: "${text}"`
         .limit(1)
         .maybeSingle()
       answers.push(last ? S.lastDone(task.label, daysAgo(last.date, date, lang)) : S.noRecord(task.label))
+    } else if (action.type === 'ask_question') {
+      const q = String(action.question ?? '').trim() || text
+      if (questions.length < 2 && !questions.includes(q)) questions.push(q)
     } else if (action.type === 'query_last_workout') {
       if (!action.exercise) continue
       const { data: last } = await supabase
@@ -540,14 +565,30 @@ User message: "${text}"`
     }
   }
 
+  // free-form questions: one digest of this user's data, one answer each
+  if (questions.length > 0) {
+    const digest = await buildDigest(supabase, userId, date)
+    for (const q of questions) answers.push((await answerQuestion(q, digest, lang)) ?? S.cantAnswer)
+  }
+
+  // everything lands in the AI log: answers ride along as their own entries.
+  // A message that only asked something is 'answered' - nothing to undo, and
+  // it stays out of the kept/undone accuracy numbers
+  const answerEntries = answers.map((a) => ({ type: 'answer', text: a }))
   let aiActionId: string | null = null
-  if (applied.length > 0) {
+  if (applied.length > 0 || answerEntries.length > 0) {
     const { data: row } = await supabase
       .from('ai_actions')
-      .insert({ user_id: userId, raw_text: text, actions: applied })
+      .insert({
+        user_id: userId,
+        raw_text: text,
+        actions: [...applied, ...answerEntries],
+        status: applied.length > 0 ? 'applied' : 'answered',
+      })
       .select('id')
       .single()
-    aiActionId = row?.id ?? null
+    // the undo toast only exists for messages that changed something
+    if (applied.length > 0) aiActionId = row?.id ?? null
   }
 
   return { ai_action_id: aiActionId, applied, suggestions, answers, raw_actions: parsed.actions ?? [] }

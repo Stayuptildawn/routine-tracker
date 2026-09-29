@@ -4,6 +4,40 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-09-29
+
+### Added
+- **Ask about your own data from the Now box.** "How many runs this month?",
+  "how consistent am I with meds?", "what's my best bench?" — the answer
+  opens in a popup and is kept in the AI log (marked *Answered*, no undo,
+  outside the accuracy numbers). The answer is built only from your own
+  rows: every query behind it is filtered to your account and runs as you,
+  so nobody else's data can reach it.
+- **Injury reports on the Workout tab.** Pick the body part and how bad it
+  is; the app previews exactly how your upcoming sessions change —
+  exercises that load the area get lighter, swapped for a joint-friendlier
+  movement from your plan, or taken out, and running becomes low-impact
+  cardio for lower-body injuries — and applies it when you say so. Adjusted
+  exercises carry a cue in the session. New sessions (a new block, a flex
+  day) follow the same treatment while the injury is active. **Healed**
+  puts back exactly what the injury changed. The coach's note works around
+  active injuries, and refreshes when you report or heal one.
+
+### Fixed
+- **Long text no longer pushes buttons off-screen.** A task label with a long
+  unbroken run of characters stretched its row until Done/Skip on the Now
+  screen were cut off. Long text now wraps everywhere in the app (task labels,
+  routine names, reminders, notes, exercises), and the controls beside it stay
+  put.
+- **Check-offs no longer vanish when the AI garbles a task id.** The small
+  model sometimes returned the right task with junk characters glued on, and
+  the message quietly did nothing (*"did the dishes yesterday"* failed about
+  half the time). The real id is now recovered — still only when it exactly
+  matches one of your tasks or reminders.
+- **Text fields have sensible length caps**: routine and session names 60
+  characters, task labels and exercises 120, reps 20, notes and reminders 300,
+  the Now composer 2000.
+
 ## 2026-08-29
 
 ### Added

@@ -6,6 +6,7 @@ import { setReminderStatus } from '../lib/actions'
 import { t, locale } from '../i18n'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
+import { MAX_LEN } from '../lib/limits'
 
 interface Category {
   id: string | null // routine id; null = "Other"
@@ -48,7 +49,7 @@ function clearedWhen(iso: string): string {
   })
 }
 
-const MAX_TEXT = 300 // long enough for any reminder, short enough to stay a reminder
+const MAX_TEXT = MAX_LEN.note
 
 interface Draft {
   text: string

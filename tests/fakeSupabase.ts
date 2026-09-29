@@ -77,6 +77,15 @@ class FakeQuery {
     this.filters.push((r) => r[col] >= val)
     return this
   }
+  lt(col: string, val: any) {
+    this.filters.push((r) => r[col] < val)
+    return this
+  }
+  not(col: string, operator: string, val: unknown) {
+    if (operator === 'is' && val === null) this.filters.push((r) => r[col] != null)
+    else this.filters.push((r) => r[col] !== val)
+    return this
+  }
   ilike(col: string, pattern: string) {
     const needle = pattern.replace(/%/g, '').toLowerCase()
     this.filters.push((r) => String(r[col] ?? '').toLowerCase().includes(needle))

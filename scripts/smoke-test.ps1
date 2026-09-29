@@ -112,6 +112,28 @@ insert into reminders (user_id, raw_text, final_category, status) values ('$uid'
   $r5 = Send-Msg 'I did the dishes yesterday'
   $a5 = @(@($r5.applied) | Where-Object { $_.type -eq 'check_task' })
   Assert 'yesterday task' ($a5.Count -eq 1 -and $a5[0].log_date -eq $now.AddDays(-1).ToString('yyyy-MM-dd')) ($r5.applied | ConvertTo-Json -Compress)
+
+  # 6. a free-form question, answered from this user's own data (the ride in 4)
+  $r6 = Send-Msg 'how many km did I cycle today?'
+  $ans6 = (@($r6.answers) -join ' ')
+  Assert 'question answered from own data' ($ans6 -match '12' -and -not $r6.ai_action_id) $ans6
+  $logged = Invoke-Sql "select status from ai_actions where user_id = '$uid' and raw_text = 'how many km did I cycle today?'"
+  Assert 'question kept in AI log as answered' (@($logged).Count -eq 1 -and @($logged)[0].status -eq 'answered') ($logged | ConvertTo-Json -Compress)
+
+  # 7. isolation: this user owns one routine, Cleaning. The real accounts'
+  #    seeded routines (Morning Routine etc.) must never surface
+  $r7 = Send-Msg 'which routines do I have?'
+  $ans7 = (@($r7.answers) -join ' ')
+  Assert 'answer stays inside own account' ($ans7 -match 'Cleaning|Dishes' -and $ans7 -notmatch 'Morning|Bedtime|Leave House') $ans7
+
+  # 8. injuries: RLS round trip, and refresh-coach refuses anonymous calls
+  $inj = Invoke-RestMethod -Method Post -Uri "$base/rest/v1/injuries" -Headers ($hdrs + @{ Prefer = 'return=representation' }) -ContentType 'application/json' -Body (@{ body_part = 'knee'; severity = 'mild' } | ConvertTo-Json)
+  $mine = Invoke-RestMethod -Uri "$base/rest/v1/injuries?select=id,user_id" -Headers $hdrs
+  Assert 'injury saved and scoped to its owner' (@($inj).Count -eq 1 -and @($mine).Count -eq 1 -and @($mine)[0].user_id -eq $uid) ($mine | ConvertTo-Json -Compress)
+  $anonCode = try { Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$base/functions/v1/refresh-coach" -Headers @{ apikey = $anon; Authorization = "Bearer $anon" } -ContentType 'application/json' -Body '{}' | Out-Null; 200 } catch { $_.Exception.Response.StatusCode.value__ }
+  Assert 'refresh-coach rejects anonymous' ($anonCode -eq 401) "HTTP $anonCode"
+  $rc = Invoke-RestMethod -Method Post -Uri "$base/functions/v1/refresh-coach" -Headers $hdrs -ContentType 'application/json' -Body '{}'
+  Assert 'refresh-coach runs for the user' ($null -ne $rc.refreshed -and -not $rc.error) ($rc | ConvertTo-Json -Compress)
 } finally {
   Invoke-RestMethod -Method Delete -Uri "$base/auth/v1/admin/users/$uid" -Headers @{ apikey = $service; Authorization = "Bearer $service" } | Out-Null
   Write-Output 'throwaway user deleted (cascade cleans its rows)'

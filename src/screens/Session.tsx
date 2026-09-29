@@ -336,6 +336,11 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                     <span className="session-target">{displayTarget(exSets)}</span>
                   </div>
                   <h2>{exercise}</h2>
+                  {(() => {
+                    // an injury report's cue outranks the plan's own safety note
+                    const injuryNote = exSets.find((s) => s.injury_note && !s.logged_at)?.injury_note
+                    return injuryNote ? <p className="session-cue injury-cue"><Icon name="shield" /> {injuryNote}</p> : null
+                  })()}
                   {plan?.safety_note && !exDone && <p className="session-cue"><Icon name="shield" /> {plan.safety_note}</p>}
                   {prev && prev.length > 0 && !exDone && (
                     <p className="session-last">

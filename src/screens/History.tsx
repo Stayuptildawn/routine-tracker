@@ -51,7 +51,7 @@ export default function History({ visible }: { visible: boolean }) {
             {item.actions.map((a, i) => {
               const d = describeAction(a)
               return (
-                <div key={i}>
+                <div key={i} className={a.type === 'answer' ? 'ai-answer' : undefined}>
                   <Icon name={d.icon} /> {d.text}
                 </div>
               )
@@ -68,7 +68,8 @@ export default function History({ visible }: { visible: boolean }) {
                 minute: '2-digit',
               })}
             </span>
-            {item.status !== 'undone' && (
+            {/* an answer-only entry changed nothing, so there is nothing to undo */}
+            {item.status !== 'undone' && item.status !== 'answered' && (
               <ConfirmButton
                 className="link"
                 label={t.common.undo}

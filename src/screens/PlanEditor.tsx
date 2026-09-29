@@ -4,6 +4,7 @@ import type { PlannedSession, TrainingBlock, WorkoutPlan } from '../lib/types'
 import { t } from '../i18n'
 import Icon from '../components/Icon'
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
+import { MAX_LEN } from '../lib/limits'
 
 export const MUSCLE_GROUPS = ['Chest', 'Shoulders', 'Triceps', 'Back', 'Biceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Other']
 export const PHASE_KEYS = ['1-2', '3-4', '5-6']
@@ -327,6 +328,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
                     <input
                       placeholder={t.planEditor.repsPh}
                       value={parsed.reps}
+                      maxLength={MAX_LEN.reps}
                       onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(parsed.sets, e.target.value) } })}
                     />
                   </div>
@@ -336,6 +338,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
             <div className="edit-task-row">
               <input
                 value={r.note}
+                maxLength={MAX_LEN.note}
                 placeholder={t.planEditor.notePh}
                 onChange={(e) => patch(r.key, { note: e.target.value })}
               />
@@ -348,6 +351,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
         <div className="add-task">
           <input
             value={cardioBySplit[split] ?? ''}
+            maxLength={MAX_LEN.label}
             onChange={(e) => setCardioBySplit({ ...cardioBySplit, [split]: e.target.value })}
             placeholder={t.planEditor.cardioPh}
           />
@@ -357,6 +361,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
       <div className="add-task">
         <input
           value={newSession}
+          maxLength={MAX_LEN.name}
           onChange={(e) => setNewSession(e.target.value)}
           placeholder={t.planEditor.newSessionPh}
         />

@@ -9,6 +9,7 @@ import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 import type { ReactNode } from 'react'
+import { MAX_LEN } from '../lib/limits'
 
 const DAY_NAMES = t.week.dayNames
 const TIERS: Tier[] = ['core', 'standard', 'bonus']
@@ -216,6 +217,7 @@ export default function Week({ visible }: { visible: boolean }) {
                 <div className="rename-row">
                   <input
                     value={nameDraft}
+                    maxLength={MAX_LEN.name}
                     onChange={(e) => setNameDraft(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') renameRoutine(routine.id)
@@ -280,6 +282,7 @@ export default function Week({ visible }: { visible: boolean }) {
                     <div className="edit-task-row">
                       <input
                         defaultValue={task.label}
+                        maxLength={MAX_LEN.label}
                         onBlur={(e) => {
                           const label = e.target.value.trim()
                           if (label && label !== task.label) updateTask(task.id, { label })
@@ -321,6 +324,7 @@ export default function Week({ visible }: { visible: boolean }) {
                 <div className="add-task">
                   <input
                     value={newTaskFor === routine.id ? newLabel : ''}
+                    maxLength={MAX_LEN.label}
                     onFocus={() => setNewTaskFor(routine.id)}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addTask(routine.id)}
@@ -399,6 +403,7 @@ export default function Week({ visible }: { visible: boolean }) {
         <div className="add-task add-routine">
           <input
             value={newRoutine}
+            maxLength={MAX_LEN.name}
             onChange={(e) => setNewRoutine(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addRoutine()}
             onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}

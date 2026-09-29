@@ -8,13 +8,19 @@ import { FakeDb } from './fakeSupabase'
 
 const gemini = vi.hoisted(() => ({
   reply: null as { actions: Record<string, unknown>[] } | null,
+  // per-call replies, consumed first - the question answerer is a second call
+  queue: [] as unknown[],
+  prompts: [] as string[],
   error: '',
 }))
 
 vi.mock('../supabase/functions/_shared/gemini.ts', () => ({
   GEMINI_MODELS: ['fake-model'],
   askGemini: vi.fn(async () => ({ text: null, model: null, error: 'not used' })),
-  askGeminiJson: vi.fn(async () => ({ data: gemini.reply, error: gemini.error })),
+  askGeminiJson: vi.fn(async (prompt: string) => {
+    gemini.prompts.push(prompt)
+    return { data: gemini.queue.length ? gemini.queue.shift() : gemini.reply, error: gemini.error }
+  }),
 }))
 
 import { interpretAndApply } from '../supabase/functions/_shared/interpret'
@@ -59,6 +65,8 @@ function run(db: FakeDb, text: string) {
 
 beforeEach(() => {
   gemini.reply = null
+  gemini.queue = []
+  gemini.prompts = []
   gemini.error = ''
 })
 
@@ -111,6 +119,22 @@ describe('model-output hygiene', () => {
     const res = await run(db, 'took my meds')
     expect(res.applied).toHaveLength(1)
     expect(db.rows('task_logs')).toHaveLength(1)
+  })
+
+  it('salvages a real id the model glued junk onto, and never an unknown one', async () => {
+    const db = makeDb()
+    const id = '0b6e9a52-3c1d-4f7e-9a2b-5d8c7e6f1a23'
+    db.rows('routines')[0].tasks.push({ id, label: 'Water plants', tier: 'core', scheduled_days: [1, 2, 3, 4, 5, 6, 7] })
+    gemini.reply = {
+      actions: [
+        { type: 'check_task', task_id: `${id}à®³à¯Ù`, status: 'done', confidence: 0.95 },
+        { type: 'check_task', task_id: `${id}${id}abbb`, status: 'done', confidence: 0.95 }, // same task again
+        { type: 'check_task', task_id: '11111111-2222-4333-8444-555555555555junk', status: 'done', confidence: 0.99 },
+      ],
+    }
+    const res = await run(db, 'watered the plants')
+    expect(res.applied).toHaveLength(1)
+    expect(res.applied[0]).toMatchObject({ task_id: id, label: 'Water plants' })
   })
 
   it('caps a runaway action list at 10', async () => {
@@ -201,14 +225,74 @@ describe('reminders', () => {
     expect(db.rows('reminders')[0].status).toBe('done')
   })
 
-  it('answers a pending-reminders question without writing anything', async () => {
+  it('answers a pending-reminders question, changing nothing but the log', async () => {
     const db = makeDb()
     gemini.reply = { actions: [{ type: 'query_reminders', confidence: 0.95 }] }
     const res = await run(db, "what's on my list?")
     expect(res.answers).toHaveLength(1)
     expect(res.answers[0]).toContain('Buy sunscreen')
+    expect(res.ai_action_id).toBeNull() // no undo toast for a question
+    expect(db.rows('reminders')[0].status).toBe('auto')
+    // kept in the AI log as 'answered' - no undo, outside the accuracy stats
+    expect(db.rows('ai_actions')).toHaveLength(1)
+    expect(db.rows('ai_actions')[0]).toMatchObject({ status: 'answered', raw_text: "what's on my list?" })
+    expect(db.rows('ai_actions')[0].actions).toEqual([{ type: 'answer', text: res.answers[0] }])
+  })
+})
+
+describe('questions about your own data', () => {
+  it('answers from a digest of only this user’s rows and logs the answer', async () => {
+    const db = makeDb()
+    db.seed('cardio_logs', [
+      { user_id: USER, date: '2026-07-10', kind: 'run', distance_km: 5, minutes: 30 },
+      { user_id: USER, date: '2026-07-14', kind: 'run', distance_km: 7, minutes: 41 },
+      { user_id: 'someone-else', date: '2026-07-12', kind: 'run', distance_km: 42.2, minutes: 200 },
+    ])
+    db.seed('workout_logs', [
+      { user_id: 'someone-else', date: '2026-07-11', exercise: 'Secret Deadlift', sets: [{ kg: 300, reps: 1 }] },
+    ])
+    gemini.queue = [
+      { actions: [{ type: 'ask_question', question: 'How far did I run this month?', confidence: 0.95 }] },
+      { answer: '12 km across 2 runs this month.' },
+    ]
+    const res = await run(db, 'how far did I run this month?')
+    expect(res.answers).toEqual(['12 km across 2 runs this month.'])
     expect(res.ai_action_id).toBeNull()
-    expect(db.rows('ai_actions')).toHaveLength(0)
+
+    // the answerer's prompt holds this user's data and nothing of anyone else's
+    const answerPrompt = gemini.prompts[1]
+    expect(answerPrompt).toContain('How far did I run this month?')
+    expect(answerPrompt).toContain('2026-07-14 run 7km')
+    expect(answerPrompt).not.toContain('42.2')
+    expect(answerPrompt).not.toContain('Secret Deadlift')
+
+    expect(db.rows('ai_actions')[0]).toMatchObject({ status: 'answered' })
+  })
+
+  it('keeps a mixed message undoable and logs the answer alongside', async () => {
+    const db = makeDb()
+    gemini.queue = [
+      {
+        actions: [
+          { type: 'check_task', task_id: 't1', status: 'done', confidence: 0.95 },
+          { type: 'ask_question', question: 'How often did I take meds this week?', confidence: 0.9 },
+        ],
+      },
+      { answer: 'Today is the first logged day this week.' },
+    ]
+    const res = await run(db, 'took meds - how often did I take them this week?')
+    expect(res.applied).toHaveLength(1)
+    expect(res.ai_action_id).toBeTruthy()
+    const row = db.rows('ai_actions')[0]
+    expect(row.status).toBe('applied')
+    expect(row.actions.map((a: { type: string }) => a.type)).toEqual(['check_task', 'answer'])
+  })
+
+  it('falls back to a gentle message when the answerer fails', async () => {
+    const db = makeDb()
+    gemini.queue = [{ actions: [{ type: 'ask_question', question: 'Best bench?', confidence: 0.9 }] }, null]
+    const res = await run(db, 'best bench?')
+    expect(res.answers).toEqual(['Couldn’t answer that right now — try again in a moment.'])
   })
 })
 
