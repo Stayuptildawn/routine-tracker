@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { isNetworkFailure, WRITE_TIMEOUT_MS } from './offline'
 import { localDate, isoWeekday } from './types'
 import type { AppliedAction, InterpretResponse, LogStatus, ReminderStatus } from './types'
 import type { IconName } from '../components/Icon'
@@ -58,64 +59,94 @@ interface QueuedTap {
   via: string
 }
 
-/** Manual tap check-off / skip. Queues offline instead of failing. */
+function readTaps(): QueuedTap[] {
+  return JSON.parse(localStorage.getItem(TAP_QUEUE_KEY) ?? '[]')
+}
+
+function upsertTap(tap: QueuedTap) {
+  return supabase
+    .from('task_logs')
+    .upsert(
+      { task_id: tap.task_id, date: tap.date, status: tap.status, completed_via: tap.via, logged_at: new Date().toISOString() },
+      { onConflict: 'task_id,date' },
+    )
+    .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS))
+}
+
+/** Manual tap check-off / skip. Queues on bad signal instead of failing -
+ *  weak reception keeps navigator.onLine true, so the request's own outcome
+ *  decides, not the flag. */
 export async function setTaskStatus(
   taskId: string,
   status: LogStatus,
   via: 'manual' | 'ai_text' = 'manual',
   date = localDate(),
 ): Promise<'saved' | 'queued'> {
-  try {
-    const { error } = await supabase
-      .from('task_logs')
-      .upsert(
-        { task_id: taskId, date, status, completed_via: via, logged_at: new Date().toISOString() },
-        { onConflict: 'task_id,date' },
-      )
-    if (error) throw error
-    return 'saved'
-  } catch (err) {
-    if (!navigator.onLine) {
-      queueTap({ task_id: taskId, date, status, via })
-      return 'queued'
-    }
-    throw err
+  const tap = { task_id: taskId, date, status, via }
+  // an older tap is still waiting: queue behind it so the newest one wins
+  if (readTaps().length > 0) {
+    queueTap(tap)
+    void flushTapQueue()
+    return 'queued'
   }
+  const res = await upsertTap(tap)
+  if (!res.error) return 'saved'
+  if (!navigator.onLine || isNetworkFailure(res)) {
+    queueTap(tap)
+    return 'queued'
+  }
+  throw res.error
 }
 
 /** Last-write-wins per (task_id, date): a re-tap replaces the queued one. */
 function queueTap(tap: QueuedTap) {
-  const queue: QueuedTap[] = JSON.parse(localStorage.getItem(TAP_QUEUE_KEY) ?? '[]')
-  const rest = queue.filter((t) => !(t.task_id === tap.task_id && t.date === tap.date))
+  const rest = readTaps().filter((t) => !(t.task_id === tap.task_id && t.date === tap.date))
   localStorage.setItem(TAP_QUEUE_KEY, JSON.stringify([...rest, tap]))
 }
 
-/** Retry taps captured while offline. Returns how many were saved. */
-export async function flushTapQueue(): Promise<number> {
-  const queue: QueuedTap[] = JSON.parse(localStorage.getItem(TAP_QUEUE_KEY) ?? '[]')
-  if (queue.length === 0 || !navigator.onLine) return 0
-  localStorage.setItem(TAP_QUEUE_KEY, '[]')
+/** Taps that haven't reached the server yet - screens lay these over
+ *  freshly loaded rows so a refresh can't undo them. */
+export function pendingTaps(): { task_id: string; date: string; status: LogStatus }[] {
+  return readTaps()
+}
+
+export function pendingTapCount(): number {
+  return readTaps().length
+}
+
+let flushingTaps: Promise<number> | null = null
+
+/** Retry taps that couldn't be sent. Returns how many were saved. */
+export function flushTapQueue(): Promise<number> {
+  // one replay at a time - overlapping ones would resend the same taps
+  flushingTaps ??= replayTaps().finally(() => (flushingTaps = null))
+  return flushingTaps
+}
+
+async function replayTaps(): Promise<number> {
   let sent = 0
-  for (const [i, tap] of queue.entries()) {
-    try {
-      const { error } = await supabase
-        .from('task_logs')
-        .upsert(
-          { task_id: tap.task_id, date: tap.date, status: tap.status, completed_via: tap.via, logged_at: new Date().toISOString() },
-          { onConflict: 'task_id,date' },
-        )
+  // taps queued while this replay ran land in storage - go round again
+  for (;;) {
+    const queue = readTaps()
+    if (queue.length === 0 || !navigator.onLine) return sent
+    localStorage.setItem(TAP_QUEUE_KEY, '[]')
+    for (const [i, tap] of queue.entries()) {
+      const res = await upsertTap(tap)
+      if (!res.error) {
+        sent++
+        continue
+      }
       // server rejected it (e.g. the task was deleted meanwhile) - drop it,
       // retrying can never succeed
-      if (error) continue
-      sent++
-    } catch {
-      // network dropped again: put the rest back, retry on the next 'online'
-      const remaining: QueuedTap[] = JSON.parse(localStorage.getItem(TAP_QUEUE_KEY) ?? '[]')
-      localStorage.setItem(TAP_QUEUE_KEY, JSON.stringify([...queue.slice(i), ...remaining]))
-      break
+      if (!isNetworkFailure(res)) continue
+      // signal dropped again: put the rest back (a newer re-tap of the same
+      // task, queued meanwhile, still wins), retry on the next trigger
+      const newer = readTaps()
+      const stale = queue.slice(i).filter((q) => !newer.some((n) => n.task_id === q.task_id && n.date === q.date))
+      localStorage.setItem(TAP_QUEUE_KEY, JSON.stringify([...stale, ...newer]))
+      return sent
     }
   }
-  return sent
 }
 
 /** Mark a reminder done or dismissed (or back to auto to restore it). */

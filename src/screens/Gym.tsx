@@ -10,6 +10,7 @@ import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
 import { t } from '../i18n'
 import Session from './Session'
 import { usePresence } from '../lib/overlay'
+import { useCardioTracking } from '../lib/cardioTracking'
 import GymCardio from './GymCardio'
 import PlanEditor, { MUSCLE_GROUPS, composeScheme } from './PlanEditor'
 import type { BlockApplyDiff } from './PlanEditor'
@@ -29,6 +30,9 @@ const PHASES: { key: string; name: string; maxWeek: number }[] = [
 ]
 
 const muscleLabel = (m: string) => t.muscles[m] ?? m
+
+/** The volume picture's "last month" window: four whole weeks. */
+const MONTH_DAYS = 28
 
 /** "Knee (moderate), Shoulder (mild)" for the injury lines on this tab. */
 const injuryList = (injuries: Injury[]) =>
@@ -52,6 +56,8 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [block, setBlock] = useState<TrainingBlock | null>(null)
   const [sessions, setSessions] = useState<PlannedSession[]>([])
   const [loggedSets, setLoggedSets] = useState<{ muscle_group: string | null; session_id: string; logged_reps: number | null; logged_at: string | null }[]>([])
+  // hard sets of the trailing 4 weeks, across blocks - the monthly ranking
+  const [monthSets, setMonthSets] = useState<{ muscle_group: string | null }[]>([])
   const [cardio, setCardio] = useState<CardioLog[]>([])
   const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
   const [review, setReview] = useState<{ advice: string; week_start: string } | null>(null) // weekly AI coach note
@@ -67,7 +73,10 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [cardioBase, setCardioBase] = useState<number | null>(null) // null=loading
   // always opens on Strength - the primary view - rather than remembering
   // whichever was open last
-  const [view, setView] = useState<'strength' | 'cardio'>('strength')
+  const [pickedView, setView] = useState<'strength' | 'cardio'>('strength')
+  // cardio logging switched off in Settings (a watch tracks it): strength only
+  const cardioOn = useCardioTracking()
+  const view = cardioOn ? pickedView : 'strength'
 
   const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', sets: '3', reps: '10-12' })
   const [settingUp, setSettingUp] = useState(false)
@@ -104,7 +113,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   editingRef.current = editingPlan
 
   const load = useCallback(async () => {
-    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes, injuriesRes] = await Promise.all([
+    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes, injuriesRes, monthRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
       supabase.from('user_settings').select('program_start, cardio_target_km').maybeSingle(),
@@ -113,7 +122,13 @@ export default function Gym({ visible }: { visible: boolean }) {
       supabase.from('cardio_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100),
       supabase.from('training_reviews').select('advice, week_start').order('week_start', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('injuries').select('*').is('healed_on', null).order('created_at'),
+      supabase
+        .from('planned_sets')
+        .select('muscle_group')
+        .not('logged_reps', 'is', null)
+        .gte('logged_at', new Date(Date.now() - MONTH_DAYS * 86400000).toISOString()),
     ])
+    setMonthSets(monthRes.data ?? [])
     const injuryRows = (injuriesRes.data as Injury[]) ?? []
     setInjuries(injuryRows)
     setReview((reviewRes.data as { advice: string; week_start: string } | null) ?? null)
@@ -588,6 +603,29 @@ export default function Gym({ visible }: { visible: boolean }) {
     }
   }
 
+  // the month at a glance: hard sets per muscle over the trailing four weeks,
+  // most-trained first. Muscles the plan trains (the active block's, else the
+  // one on screen) start at 0, so one that got nothing still shows up - as
+  // the least trained, where it belongs
+  const monthCounts = new Map<string, number>()
+  const rankBlock = block?.block ?? planBlock
+  for (const p of plans) {
+    if (p.block === rankBlock && p.muscle_group && p.muscle_group !== 'Other') monthCounts.set(p.muscle_group, 0)
+  }
+  for (const s of monthSets) {
+    if (s.muscle_group) monthCounts.set(s.muscle_group, (monthCounts.get(s.muscle_group) ?? 0) + 1)
+  }
+  const monthFrom = localDate(new Date(Date.now() - MONTH_DAYS * 86400000))
+  for (const log of logs) {
+    if (!log.muscle_group || !log.sets?.length || log.date < monthFrom) continue
+    monthCounts.set(log.muscle_group, (monthCounts.get(log.muscle_group) ?? 0) + log.sets.length)
+  }
+  const monthVolume = [...monthCounts.entries()].sort((a, b) => b[1] - a[1])
+  const monthMax = monthVolume[0]?.[1] ?? 0
+  const monthMin = monthVolume[monthVolume.length - 1]?.[1] ?? 0
+  // nothing logged all month: a list of zeros ranks nothing
+  const showMonth = monthMax > 0
+
 
   const byDate = new Map<string, WorkoutLog[]>()
   for (const log of logs) {
@@ -632,22 +670,24 @@ export default function Gym({ visible }: { visible: boolean }) {
   return (
     <div className="gym">
       <h1>{t.gym.title}</h1>
-      <div className="energy-row seg-row">
-        <button
-          className={view === 'strength' ? 'energy-btn active' : 'energy-btn'}
-          aria-pressed={view === 'strength'}
-          onClick={() => setView('strength')}
-        >
-          <Icon name="dumbbell" /> {t.gym.strength}
-        </button>
-        <button
-          className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'}
-          aria-pressed={view === 'cardio'}
-          onClick={() => setView('cardio')}
-        >
-          <Icon name="run" /> {t.gym.cardio}
-        </button>
-      </div>
+      {cardioOn && (
+        <div className="energy-row seg-row">
+          <button
+            className={view === 'strength' ? 'energy-btn active' : 'energy-btn'}
+            aria-pressed={view === 'strength'}
+            onClick={() => setView('strength')}
+          >
+            <Icon name="dumbbell" /> {t.gym.strength}
+          </button>
+          <button
+            className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'}
+            aria-pressed={view === 'cardio'}
+            onClick={() => setView('cardio')}
+          >
+            <Icon name="run" /> {t.gym.cardio}
+          </button>
+        </div>
+      )}
       {view === 'strength' && (
         <p className="gentle">
           {t.gym.strengthHint}
@@ -1052,13 +1092,13 @@ export default function Gym({ visible }: { visible: boolean }) {
         <InjuryCard injuries={injuries} block={block} plans={plans} onChanged={load} />
       )}
 
-      {view === 'strength' && block && volume.size > 0 && (
+      {view === 'strength' && ((block && volume.size > 0) || showMonth) && (
         <section className="gym-day volume-card">
           <h2>
             {t.gym.volumePicture}
             <span className="routine-progress">{t.gym.hardSetsPerWeek}</span>
           </h2>
-          <div className="volume-grid">
+          {block && volume.size > 0 && <div className="volume-grid">
             {[...volume.entries()].map(([mg, weeks]) => {
               const max = Math.max(1, ...weeks)
               const currentWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
@@ -1087,7 +1127,30 @@ export default function Gym({ visible }: { visible: boolean }) {
                 </div>
               )
             })}
-          </div>
+          </div>}
+          {showMonth && (
+            <div className="volume-month">
+              <h3 className="volume-month-title">{t.gym.lastFourWeeks}</h3>
+              <ol className="volume-rank">
+                {monthVolume.map(([mg, n]) => {
+                  // ties share the tag; a flat month (all equal) gets none
+                  const tag = monthMax === monthMin ? null : n === monthMax ? 'most' : n === monthMin ? 'least' : null
+                  return (
+                    <li key={mg} className={tag ? `volume-rank-row ${tag}` : 'volume-rank-row'}>
+                      <span className="volume-label">
+                        {muscleLabel(mg)}
+                        {tag && <span className={`volume-tag ${tag}`}>{tag === 'most' ? t.gym.mostTrained : t.gym.leastTrained}</span>}
+                      </span>
+                      <div className="volume-rank-track">
+                        <div className="volume-rank-fill" style={{ width: `${(n / monthMax) * 100}%` }} />
+                      </div>
+                      <span className="volume-rank-count">{t.gym.monthSets(n, Math.round((n / 4) * 10) / 10)}</span>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+          )}
         </section>
       )}
 

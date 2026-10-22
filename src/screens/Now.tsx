@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
-import { interpretMessage, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
+import { interpretMessage, pendingTaps, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
 import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
@@ -155,7 +155,17 @@ export default function Now({
       supabase.from('reminders').select('*').in('status', ['auto', 'reassigned']),
     ])
     setRoutines((routinesRes.data as Routine[]) ?? [])
-    setLogs(new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l])))
+    const logMap = new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l]))
+    // taps still waiting on a bad connection win over the server's older answer
+    for (const tap of pendingTaps()) {
+      if (tap.date !== today) continue
+      const existing = logMap.get(tap.task_id)
+      logMap.set(tap.task_id, {
+        ...(existing ?? { id: '', task_id: tap.task_id, date: today, completed_via: 'manual', notes: null }),
+        status: tap.status,
+      })
+    }
+    setLogs(logMap)
     setEnergy((stateRes.data?.energy as Energy) ?? null)
     setReminders(((remindersRes.data as Reminder[]) ?? []).sort(pendingOrder))
     setLoaded(true)
@@ -201,8 +211,15 @@ export default function Now({
       })
       return map
     })
-    // when queued offline, keep the optimistic state - a reload would revert it
-    if ((await setTaskStatus(task.id, next)) === 'saved') load()
+    // when queued on bad signal, keep the optimistic state - load() lays
+    // queued taps over the server rows, so a refresh keeps it too
+    try {
+      if ((await setTaskStatus(task.id, next)) === 'saved') load()
+    } catch (err) {
+      // the server refused it (not a connection problem): show the truth
+      setNotice(t.now.somethingWrong((err as { message?: string }).message ?? String(err)))
+      load()
+    }
   }
 
   async function send() {

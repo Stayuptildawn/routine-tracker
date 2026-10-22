@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
+import { useCardioTracking } from '../lib/cardioTracking'
 import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
 import { t, locale } from '../i18n'
 import Skeleton from '../components/Skeleton'
@@ -107,7 +108,10 @@ export default function Reflect({ visible }: { visible: boolean }) {
   const [monthly, setMonthly] = useState<MonthlyReflection[]>([]) // end-of-month summaries, newest first
   const [showMonthly, setShowMonthly] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [metric, setMetric] = useState<Metric>('tasks')
+  const [pickedMetric, setMetric] = useState<Metric>('tasks')
+  // cardio logging switched off in Settings: its chart and CSV step aside
+  const cardioOn = useCardioTracking()
+  const metric = !cardioOn && pickedMetric === 'cardio' ? 'tasks' : pickedMetric
   const [frame, setFrame] = useState<Frame>('daily')
   const [explore, setExplore] = useState<{ slots: Slot[]; values: number[] } | null>(null)
 
@@ -285,7 +289,7 @@ export default function Reflect({ visible }: { visible: boolean }) {
             </span>
           </h2>
           <div className="energy-row explore-row">
-            {METRICS.map((m) => (
+            {METRICS.filter((m) => cardioOn || m.id !== 'cardio').map((m) => (
               <button key={m.id} className={metric === m.id ? 'energy-btn active' : 'energy-btn'} onClick={() => setMetric(m.id)}>
                 <Icon name={m.icon} /> {m.label}
               </button>
@@ -353,9 +357,11 @@ export default function Reflect({ visible }: { visible: boolean }) {
         <button className="link" onClick={() => exportWorkoutLogs()}>
           <Icon name="download" /> {t.reflect.csvWorkouts}
         </button>
-        <button className="link" onClick={() => exportCardioLogs()}>
-          <Icon name="download" /> {t.reflect.csvCardio}
-        </button>
+        {cardioOn && (
+          <button className="link" onClick={() => exportCardioLogs()}>
+            <Icon name="download" /> {t.reflect.csvCardio}
+          </button>
+        )}
         <button className="link" onClick={() => exportTrainingSets()}>
           <Icon name="download" /> {t.reflect.csvTraining}
         </button>

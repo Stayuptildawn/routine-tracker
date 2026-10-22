@@ -122,6 +122,13 @@
   box-sizing: border-box;
 }
 
+/* iOS inflates text when the phone turns landscape and doesn't always
+   deflate it on the way back - everything stayed oversized after rotating */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -579,6 +586,7 @@ select option {
 .settings-body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   /* overflow-y:auto also clips horizontally, which shaves the amber focus
      ring off fields at the edges. Negative margin + matching padding widens
      the clip box without moving the content, so the ring has room. */
@@ -1733,6 +1741,7 @@ select option {
 .session-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain; /* a hard flick never drags the page behind */
   padding: var(--sp-4) 0;
   display: flex;
   flex-direction: column;
@@ -2212,6 +2221,91 @@ select option {
 
 .volume-bar.future {
   opacity: 0.2;
+}
+
+/* last 4 weeks: muscles ranked by hard sets, most-trained on top */
+.volume-month {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+.volume-month-title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.volume-rank {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.volume-rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) 1fr auto;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.volume-rank-row .volume-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.volume-tag {
+  padding: 0 var(--sp-1);
+  border-radius: var(--r-full);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.volume-tag.least {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.volume-rank-track {
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.volume-rank-fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--good);
+  opacity: 0.7;
+  border-radius: 3px;
+}
+
+.volume-rank-row.most .volume-rank-fill {
+  opacity: 1;
+}
+
+.volume-rank-row.least .volume-rank-fill {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.volume-rank-count {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .vol-suggestion {

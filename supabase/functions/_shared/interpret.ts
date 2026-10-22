@@ -109,13 +109,11 @@ export async function interpretAndApply(
   time?: string,
   langParam?: string,
 ): Promise<InterpretResult> {
-  let lang: Lang
-  if (langParam) {
-    lang = normLang(langParam)
-  } else {
-    const { data: ls } = await supabase.from('user_settings').select('language').eq('user_id', userId).maybeSingle()
-    lang = normLang(ls?.language)
-  }
+  const { data: ls } = await supabase.from('user_settings').select('language, cardio_tracking').eq('user_id', userId).maybeSingle()
+  const lang: Lang = normLang(langParam ?? ls?.language)
+  // cardio logging switched off in Settings (a watch tracks it): runs and
+  // rides mentioned here are never written as cardio entries
+  const cardioTracked = ls?.cardio_tracking !== false
   const S = SERVER_STRINGS[lang]
   // regex fallbacks below read this copy, so Persian/Arabic digits count too
   const asciiText = normalizeDigits(text)
@@ -181,11 +179,14 @@ Rules:
   against the all-tasks list.
 - log_workout: gym set logging like "bench 60kg 3x8" -> exercise name, sets array (3x8 at 60kg =
   three entries of {kg:60, reps:8}), plus notes if any commentary.
-- log_cardio: runs/walks/cycling -> kind, minutes, distance_km, notes. Capture BOTH numbers
+${cardioTracked
+  ? `- log_cardio: runs/walks/cycling -> kind, minutes, distance_km, notes. Capture BOTH numbers
   when both are said: "ran 5km in 32 min" -> {kind:"run", distance_km:5, minutes:32}.
   "5k"/"5 k" means distance_km:5. Not for lifting. Heart rate ("152 bpm") -> avg_hr: 152.
   When the user says how it felt, also set effort (easy|steady|pushed|all_out),
-  body (fresh|okay|heavy) and/or amount (could_take_more|right|stretch|over_the_line).
+  body (fresh|okay|heavy) and/or amount (could_take_more|right|stretch|over_the_line).`
+  : `- log_cardio: NEVER emit it - this user tracks runs/walks/cycling on their watch. A cardio
+  mention can still match a task via check_task.`}
 - create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
   reminder_text and pick the best category. Set confidence for the category choice.
   Emit exactly ONE create_reminder per distinct to-do — never several copies of the same item.
@@ -404,7 +405,7 @@ User message: "${text}"`
         .select('id')
         .single()
       if (!error) applied.push({ type: 'log_workout', workout_log_id: row.id, exercise: action.exercise, sets: action.sets ?? null })
-    } else if (action.type === 'log_cardio') {
+    } else if (action.type === 'log_cardio' && cardioTracked) {
       // deterministic safety net: models sometimes drop one of the numbers
       let distanceKm = action.distance_km ?? null
       let minutes = action.minutes ?? null

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { usePresence } from '../lib/overlay'
 import { localDate } from '../lib/types'
 import type { LogStatus, Routine, Task, TaskLog, Tier } from '../lib/types'
-import { setTaskStatus } from '../lib/actions'
+import { pendingTaps, setTaskStatus } from '../lib/actions'
 import { t } from '../i18n'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
@@ -66,7 +66,15 @@ export default function Week({ visible }: { visible: boolean }) {
       supabase.from('task_logs').select('*').in('date', currentWeekDates()),
     ])
     setRoutines((routinesRes.data as Routine[]) ?? [])
-    setLogs((logsRes.data as TaskLog[]) ?? [])
+    let rows = (logsRes.data as TaskLog[]) ?? []
+    // marks still waiting on a bad connection win over the server's older answer
+    for (const tap of pendingTaps()) {
+      const existing = rows.find((l) => l.task_id === tap.task_id && l.date === tap.date)
+      rows = existing
+        ? rows.map((l) => (l === existing ? { ...l, status: tap.status } : l))
+        : [...rows, { id: '', task_id: tap.task_id, date: tap.date, status: tap.status, completed_via: 'manual', notes: null }]
+    }
+    setLogs(rows)
     setLoaded(true)
   }, [])
 
@@ -127,13 +135,14 @@ export default function Week({ visible }: { visible: boolean }) {
       return next
     })
     setDrafts({})
-    const results = await Promise.all(
+    const results = await Promise.allSettled(
       entries.map(([key, status]) => {
         const [taskId, date] = key.split('|')
         return setTaskStatus(taskId, status, 'manual', date)
       }),
     )
-    if (results.some((r) => r === 'saved')) load()
+    // a server refusal reloads too, so the grid never shows a mark it lost
+    if (results.some((r) => r.status === 'rejected' || r.value === 'saved')) load()
   }
 
   async function addTask(routineId: string) {

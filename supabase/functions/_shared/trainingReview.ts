@@ -86,7 +86,7 @@ export async function maybeTrainingReview(
         .gte('date', prevStart).lt('date', weekStart),
       supabase.from('training_blocks').select('block, start_date, total_weeks').eq('user_id', userId)
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('user_settings').select('cardio_target_km').eq('user_id', userId).maybeSingle(),
+      supabase.from('user_settings').select('cardio_target_km, cardio_tracking').eq('user_id', userId).maybeSingle(),
       supabase.from('injuries').select('body_part, severity, note, started_on').eq('user_id', userId).is('healed_on', null),
     ])
   // the written plan itself, so advice can speak to it (fetched after
@@ -103,7 +103,11 @@ export async function maybeTrainingReview(
   const cardioKm = Array(WEEKS).fill(0)
   for (const s of sessionsRes.data ?? []) { const i = weekIdx(s.completed_at); if (i >= 0) sessions[i]++ }
   for (const s of setsRes.data ?? []) { const i = weekIdx(s.logged_at); if (i >= 0) sets[i]++ }
-  for (const c of cardioRes.data ?? []) { const i = weekIdx(c.date); if (i >= 0) cardioKm[i] += Number(c.distance_km ?? 0) }
+  // cardio logging switched off in Settings: a watch tracks it, so the app's
+  // (old or empty) cardio rows say nothing about what they actually did
+  const cardioTracked = settingsRes.data?.cardio_tracking !== false
+  const cardioRows = cardioTracked ? cardioRes.data ?? [] : []
+  for (const c of cardioRows) { const i = weekIdx(c.date); if (i >= 0) cardioKm[i] += Number(c.distance_km ?? 0) }
 
   const activity = sessions.map((_, i) => sessions[i] + sets[i] + (cardioKm[i] > 0 ? 1 : 0))
   const activeWeeks = activity.filter((n) => n > 0).length
@@ -173,7 +177,7 @@ export async function maybeTrainingReview(
       ].filter(Boolean).join(', ')}`,
   )
 
-  const lastCardio = (cardioRes.data ?? []).filter((c: any) => c.date >= prevStart)
+  const lastCardio = cardioRows.filter((c: any) => c.date >= prevStart)
   const cardioLines = lastCardio.map(
     (c: any) =>
       `- ${c.kind}: ${[
@@ -226,9 +230,8 @@ CONTEXT - weekly series since logging began ${span} week(s) ago, oldest to newes
 (earlier time is unknown, NOT rest - never treat the start of logging as a spike):
   gym sessions: [${wSessions.join(', ')}]
   hard sets:    [${wSets.join(', ')}]
-  cardio km:    [${wCardioKm.map(r1).join(', ')}]
-Average per active week: ${activeAvg(wSessions)} sessions, ${activeAvg(wSets)} hard sets, ${activeAvg(wCardioKm)} km.
-Trend (first half vs second half): sessions ${trends.sessions}, hard sets ${trends.sets}, cardio ${trends.cardioKm}.
+${cardioTracked ? `  cardio km:    [${wCardioKm.map(r1).join(', ')}]\n` : ''}Average per active week: ${activeAvg(wSessions)} sessions, ${activeAvg(wSets)} hard sets${cardioTracked ? `, ${activeAvg(wCardioKm)} km` : ''}.
+Trend (first half vs second half): sessions ${trends.sessions}, hard sets ${trends.sets}${cardioTracked ? `, cardio ${trends.cardioKm}` : ''}.
 ${blockLine}
 
 THEIR WRITTEN PLAN for this week (sets x reps are the plan's own targets for
@@ -242,9 +245,12 @@ ${exerciseLines.join('\n') || '- none logged'}
 Hard sets per muscle: ${volumeLine}
 Recovery check-ins after sessions:
 ${feedbackLines.join('\n') || '- none'}
-Cardio:
+${cardioTracked
+  ? `Cardio:
 ${cardioLines.join('\n') || '- none logged'}
-Cardio total: ${lastCardioKm} km${targetKm ? ` (their easy-week base is ${targetKm} km)` : ''}
+Cardio total: ${lastCardioKm} km${targetKm ? ` (their easy-week base is ${targetKm} km)` : ''}`
+  : `Cardio: tracked on their watch, outside this app - there is NO cardio data here.
+Never comment on how much cardio they did, and never read its absence as "no cardio".`}
 
 ACTIVE INJURIES (reported by the user; the app has already lightened, swapped or
 removed the exercises that load these areas in upcoming sessions):
@@ -285,8 +291,11 @@ Hard safety rules, in priority order:
 2. Suggest progression only where last week's reps reached the top of the
    target range and the feedback read "right" or "could take more" - and one
    small increment at a time: +2.5 kg OR +1 rep OR +1 set, never several.
-3. Cardio: never suggest more than a 10% weekly distance increase. If effort
-   was "all out" or body "heavy", suggest holding or easing instead.
+3. ${cardioTracked
+  ? `Cardio: never suggest more than a 10% weekly distance increase. If effort
+   was "all out" or body "heavy", suggest holding or easing instead.`
+  : `Cardio is tracked outside this app: no cardio suggestions at all, beyond
+   the injury rule above.`}
 4. If most of the week read as strain (stretch/over the line, all-out cardio),
    one suggestion must be about rest or an easier week.
 5. If nothing in the data justifies a change, fewer suggestions are better -

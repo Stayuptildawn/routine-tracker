@@ -4,6 +4,33 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-10-22
+
+### Added
+- **The month at a glance in the Volume picture.** Under the weekly bars, a
+  "Last 4 weeks" list ranks every muscle by hard sets (planned sessions and
+  freeform lifts) and tags the most- and least-trained. Muscles your plan
+  trains but you didn't touch show up at 0, so a gap can't hide.
+- **Cardio logging can be switched off** (Settings → Cardio logging), for
+  when your watch already tracks it. Off hides the Workout tab's Cardio view
+  and Reflect's cardio chart and CSV, the Now box stops logging runs, and
+  the coach's note and weekly reflection stop commenting on cardio. Nothing
+  is deleted, and turning it back on brings everything back.
+
+### Fixed
+- **Done/Skip taps no longer get lost on weak signal.** A tap whose request
+  drops or hangs (10 s timeout) is now queued even when the phone still
+  counts as online. It stays on screen through refreshes and retries on its
+  own: when the app comes back to the foreground and every 30 s. Queued gym
+  writes that hit bad signal again on retry are kept instead of dropped.
+- **No more runaway scrolling behind a workout session on iPhone.** Typing
+  into a set's kg/reps field could set the page behind the session
+  scrolling endlessly and freeze the app. Full-screen panels now hold the
+  page still and put it back where it was on close.
+- **Rotating the phone no longer leaves everything oversized.** iOS's
+  landscape text boost is turned off, so the layout comes back to normal
+  size when you turn the phone upright.
+
 ## 2026-09-29 (later)
 
 ### Added

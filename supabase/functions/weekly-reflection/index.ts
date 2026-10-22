@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
 
     for (const user of users) {
       // each user's day runs in their own timezone (and language), read fresh every tick
-      const { data: us } = await supabase.from('user_settings').select('timezone, language').eq('user_id', user.id).maybeSingle()
+      const { data: us } = await supabase.from('user_settings').select('timezone, language, cardio_tracking').eq('user_id', user.id).maybeSingle()
       const lang = normLang(us?.language)
       const { date, weekday, minutes } = userNow(us?.timezone)
       const offset = userSpreadMinutes(user.id, SPREAD_MIN)
@@ -97,7 +97,10 @@ Deno.serve(async (req) => {
       if (tasks.length === 0) continue
       const taskById = new Map(tasks.map((t) => [t.id, t]))
 
-      const [{ data: logs }, { data: states }, { data: sessions }, { data: cardio }, { data: checkins }, { data: reminders }] =
+      // cardio logging switched off (a watch tracks it): the app's cardio rows
+      // say nothing about their week, so they stay out of the prompt entirely
+      const cardioTracked = us?.cardio_tracking !== false
+      const [{ data: logs }, { data: states }, { data: sessions }, { data: cardioAll }, { data: checkins }, { data: reminders }] =
         await Promise.all([
           supabase.from('task_logs').select('task_id, date, status').in('task_id', [...taskById.keys()]).in('date', allDates),
           supabase.from('daily_state').select('date, energy').eq('user_id', user.id).in('date', weekDates),
@@ -110,6 +113,8 @@ Deno.serve(async (req) => {
           supabase.from('recovery_checkins').select('muscle_group, amount').eq('user_id', user.id).gte('created_at', weekStart + 'T00:00:00'),
           supabase.from('reminders').select('status, created_at, updated_at').eq('user_id', user.id).gte('updated_at', weekStart + 'T00:00:00'),
         ])
+
+      const cardio = cardioTracked ? cardioAll : []
 
       // an empty week has nothing to reflect on - skip the AI call entirely
       const weekHasData =
@@ -182,9 +187,11 @@ ${routineLines.join('\n') || 'nothing scheduled'}
 
 Energy check-ins: ${energyLine || 'none set'}
 Training: ${doneSessions.length} session(s) finished (${doneSessions.map((s) => s.split_day).join(', ') || 'none'})
-Cardio: ${cardioKm > 0 ? `${Math.round(cardioKm * 10) / 10} km` : ''}${cardioMin > 0 ? ` ${Math.round(cardioMin)} min total` : ''}${cardioKm + cardioMin === 0 ? 'none logged' : ''}
+${cardioTracked
+  ? `Cardio: ${cardioKm > 0 ? `${Math.round(cardioKm * 10) / 10} km` : ''}${cardioMin > 0 ? ` ${Math.round(cardioMin)} min total` : ''}${cardioKm + cardioMin === 0 ? 'none logged' : ''}
+Cardio feel (effort/body/amount per entry): ${cardioFeel || 'not asked'}`
+  : 'Cardio: tracked on their watch, outside this app - no data here; never mention cardio.'}
 Recovery flags ("too much" answers): ${flags.join(', ') || 'none'}
-Cardio feel (effort/body/amount per entry): ${cardioFeel || 'not asked'}
 Reminders completed: ${remindersDone}
 
 Write EXACTLY two sentences, in ${LANGUAGE_NAMES[lang]}:

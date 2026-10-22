@@ -16,6 +16,18 @@ export interface WriteOp {
 
 const KEY = 'pending_ops'
 
+/** Weak signal hangs a request instead of failing it - give up after this
+ *  and treat it like being offline. */
+export const WRITE_TIMEOUT_MS = 10_000
+
+/** supabase-js never throws on a dropped connection or a timeout: it
+ *  resolves with status 0. A real server answer always carries an HTTP
+ *  status. Weak signal keeps navigator.onLine true, so this is the only
+ *  reliable way to tell "retry later" from "the server said no". */
+export function isNetworkFailure(res: { error: unknown; status?: number }): boolean {
+  return !!res.error && (res.status === 0 || res.status === undefined)
+}
+
 function readQueue(): WriteOp[] {
   return JSON.parse(localStorage.getItem(KEY) ?? '[]')
 }
@@ -24,20 +36,26 @@ function writeQueue(queue: WriteOp[]) {
   localStorage.setItem(KEY, JSON.stringify(queue))
 }
 
+export function pendingOpCount(): number {
+  return readQueue().length
+}
+
 async function exec(op: WriteOp): Promise<void> {
+  const signal = AbortSignal.timeout(WRITE_TIMEOUT_MS)
+  let res: { error: { message: string } | null; status?: number }
   if (op.op === 'insert') {
-    const { error } = await supabase.from(op.table).insert(op.values ?? {})
-    if (error) throw Object.assign(new Error(error.message), { server: true })
-    return
+    res = await supabase.from(op.table).insert(op.values ?? {}).abortSignal(signal)
+  } else {
+    let q =
+      op.op === 'update'
+        ? supabase.from(op.table).update(op.values ?? {})
+        : supabase.from(op.table).delete()
+    if (op.ids) q = q.in('id', op.ids)
+    for (const [k, v] of Object.entries(op.match ?? {})) q = q.eq(k, v)
+    res = await q.abortSignal(signal)
   }
-  let q =
-    op.op === 'update'
-      ? supabase.from(op.table).update(op.values ?? {})
-      : supabase.from(op.table).delete()
-  if (op.ids) q = q.in('id', op.ids)
-  for (const [k, v] of Object.entries(op.match ?? {})) q = q.eq(k, v)
-  const { error } = await q
-  if (error) throw Object.assign(new Error(error.message), { server: true })
+  if (!res.error) return
+  throw Object.assign(new Error(res.error.message), { server: !isNetworkFailure(res) })
 }
 
 function enqueue(op: WriteOp) {
@@ -57,13 +75,19 @@ function enqueue(op: WriteOp) {
   writeQueue(queue)
 }
 
-/** Run a write now, or queue it when offline. */
+/** Run a write now, or queue it when the network can't carry it. */
 export async function runOp(op: WriteOp): Promise<'saved' | 'queued'> {
+  // earlier writes still waiting: this one must land after them, not before
+  if (readQueue().length > 0) {
+    enqueue(op)
+    void flushOps()
+    return 'queued'
+  }
   try {
     await exec(op)
     return 'saved'
   } catch (err) {
-    if (!navigator.onLine) {
+    if (!navigator.onLine || !(err as { server?: boolean }).server) {
       enqueue(op)
       return 'queued'
     }
@@ -71,22 +95,32 @@ export async function runOp(op: WriteOp): Promise<'saved' | 'queued'> {
   }
 }
 
+let flushing: Promise<number> | null = null
+
 /** Replay queued writes in order. Server rejections are dropped (retrying
  *  can never succeed); network failures put the rest back for next time. */
-export async function flushOps(): Promise<number> {
-  const queue = readQueue()
-  if (queue.length === 0 || !navigator.onLine) return 0
-  writeQueue([])
+export function flushOps(): Promise<number> {
+  // one replay at a time - overlapping ones would send the same op twice
+  flushing ??= replay().finally(() => (flushing = null))
+  return flushing
+}
+
+async function replay(): Promise<number> {
   let done = 0
-  for (let i = 0; i < queue.length; i++) {
-    try {
-      await exec(queue[i])
-      done++
-    } catch (err) {
-      if ((err as { server?: boolean }).server) continue // dropped
-      writeQueue([...queue.slice(i), ...readQueue()])
-      break
+  // writes queued while this replay ran land in storage - go round again
+  for (;;) {
+    const queue = readQueue()
+    if (queue.length === 0 || !navigator.onLine) return done
+    writeQueue([])
+    for (let i = 0; i < queue.length; i++) {
+      try {
+        await exec(queue[i])
+        done++
+      } catch (err) {
+        if ((err as { server?: boolean }).server) continue // dropped
+        writeQueue([...queue.slice(i), ...readQueue()])
+        return done
+      }
     }
   }
-  return done
 }

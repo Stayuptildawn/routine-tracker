@@ -4,8 +4,9 @@ import { supabase, configured } from './lib/supabase'
 import { isDemo, exitDemo } from './lib/demo'
 import { SEED_ROUTINES } from './lib/seedData'
 import { t, lang, availableLanguages, setLanguage } from './i18n'
-import { flushMessageQueue, flushTapQueue } from './lib/actions'
-import { flushOps } from './lib/offline'
+import { flushMessageQueue, flushTapQueue, pendingTapCount } from './lib/actions'
+import { flushOps, pendingOpCount } from './lib/offline'
+import { refreshCardioTracking } from './lib/cardioTracking'
 import { armBackGuard, onBackButton } from './lib/backButton'
 import { usePresence } from './lib/overlay'
 import Auth from './screens/Auth'
@@ -143,18 +144,29 @@ export default function App() {
     run.finally(() => {
       if (!cancelled) setSeeding(false)
     })
-    flushMessageQueue()
-    flushTapQueue()
-    flushOps()
     const onOnline = () => {
       flushMessageQueue()
       flushTapQueue()
       flushOps()
     }
+    onOnline()
+    refreshCardioTracking()
+    // weak signal never fires 'online' (the flag stays true the whole time),
+    // so writes stuck on a bad connection also retry on resume and on a timer
+    const onVisible = () => document.visibilityState === 'visible' && onOnline()
+    const retry = setInterval(() => {
+      if (pendingTapCount() > 0 || pendingOpCount() > 0) {
+        flushTapQueue()
+        flushOps()
+      }
+    }, 30_000)
     window.addEventListener('online', onOnline)
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       cancelled = true
+      clearInterval(retry)
       window.removeEventListener('online', onOnline)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [session])
 

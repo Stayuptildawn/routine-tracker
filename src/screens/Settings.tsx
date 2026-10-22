@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
 import { translateSeededContent } from '../lib/translateContent'
+import { saveCardioTracking, useCardioTracking } from '../lib/cardioTracking'
 import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
@@ -52,6 +53,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
   // language is a draft: nothing changes until Save (a switch reloads the
   // app, so an accidental tap must never fire it)
   const [langDraft, setLangDraft] = useState(lang)
+  const cardioOn = useCardioTracking()
   // set by Save just before the reload: the reopened Settings offers - once -
   // to also translate the seeded content into the fresh language
   const [offerTranslate, setOfferTranslate] = useState(() => sessionStorage.getItem('offer-translate') === '1')
@@ -201,6 +203,23 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
                 )}
               </>
             )}
+          </section>
+
+          <section className="settings-section">
+            <h2>{t.settings.cardioTracking}</h2>
+            <div className="energy-row">
+              {([true, false] as const).map((on) => (
+                <button
+                  key={String(on)}
+                  className={cardioOn === on ? 'energy-btn active' : 'energy-btn'}
+                  aria-pressed={cardioOn === on}
+                  onClick={() => saveCardioTracking(on)}
+                >
+                  {on ? t.settings.cardioOn : t.settings.cardioOff}
+                </button>
+              ))}
+            </div>
+            <p className="gentle">{t.settings.cardioHint}</p>
           </section>
 
           <section className="settings-section">

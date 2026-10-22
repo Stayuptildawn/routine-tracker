@@ -376,6 +376,9 @@ class DemoQuery {
     this.wantSingle = 'maybe'
     return this
   }
+  abortSignal(_signal: AbortSignal) {
+    return this // nothing to time out - the fake DB answers instantly
+  }
 
   private matching(rows: Row[]): Row[] {
     return rows.filter((r) => this.filters.every((f) => f(r)))
