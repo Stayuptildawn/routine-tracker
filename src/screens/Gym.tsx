@@ -21,6 +21,8 @@ import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
 import { MAX_LEN } from '../lib/limits'
 import InjuryCard from './InjuryCard'
 import { reconcileInjuries } from '../lib/injuries'
+import { suggestTunings } from '../lib/volumeTuning'
+import type { Tuning, TuningCheckin } from '../lib/volumeTuning'
 import type { Injury } from '../lib/injuries'
 
 const PHASES: { key: string; name: string; maxWeek: number }[] = [
@@ -57,9 +59,13 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [sessions, setSessions] = useState<PlannedSession[]>([])
   const [loggedSets, setLoggedSets] = useState<{ muscle_group: string | null; session_id: string; logged_reps: number | null; logged_at: string | null }[]>([])
   // hard sets of the trailing 4 weeks, across blocks - the monthly ranking
-  const [monthSets, setMonthSets] = useState<{ muscle_group: string | null }[]>([])
+  const [monthSets, setMonthSets] = useState<{ muscle_group: string | null; logged_at: string }[]>([])
   const [cardio, setCardio] = useState<CardioLog[]>([])
-  const [overLine, setOverLine] = useState<string[]>([]) // muscles flagged 2+ times recently
+  // plan tuning inputs: check-ins of the last 60 days, and when each muscle
+  // was last tuned (applied or dismissed) - see lib/volumeTuning.ts
+  const [tuneCheckins, setTuneCheckins] = useState<TuningCheckin[]>([])
+  const [lastTuned, setLastTuned] = useState<Map<string, string>>(new Map())
+  const [tuningBusy, setTuningBusy] = useState(false)
   const [review, setReview] = useState<{ advice: string; week_start: string } | null>(null) // weekly AI coach note
   const [injuries, setInjuries] = useState<Injury[]>([]) // active (not healed) injury reports
   const [nextTweaks, setNextTweaks] = useState<string | null>(null) // wrap-up preview
@@ -113,7 +119,8 @@ export default function Gym({ visible }: { visible: boolean }) {
   editingRef.current = editingPlan
 
   const load = useCallback(async () => {
-    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes, injuriesRes, monthRes] = await Promise.all([
+    const tuneSince = new Date(Date.now() - 60 * 86400000).toISOString()
+    const [logsRes, plansRes, settingsRes, firstRes, blockRes, cardioAllRes, reviewRes, injuriesRes, monthRes, checkinRes, tunedRes] = await Promise.all([
       supabase.from('workout_logs').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
       supabase.from('workout_plans').select('*').order('sort_order'),
       supabase.from('user_settings').select('program_start, cardio_target_km').maybeSingle(),
@@ -124,11 +131,23 @@ export default function Gym({ visible }: { visible: boolean }) {
       supabase.from('injuries').select('*').is('healed_on', null).order('created_at'),
       supabase
         .from('planned_sets')
-        .select('muscle_group')
+        .select('muscle_group, logged_at')
         .not('logged_reps', 'is', null)
         .gte('logged_at', new Date(Date.now() - MONTH_DAYS * 86400000).toISOString()),
+      supabase
+        .from('recovery_checkins')
+        .select('muscle_group, amount, created_at')
+        .not('amount', 'is', null)
+        .gte('created_at', tuneSince),
+      supabase.from('plan_tunings').select('muscle_group, created_at').gte('created_at', tuneSince),
     ])
     setMonthSets(monthRes.data ?? [])
+    setTuneCheckins((checkinRes.data as TuningCheckin[]) ?? [])
+    const tuned = new Map<string, string>()
+    for (const r of (tunedRes.data ?? []) as { muscle_group: string; created_at: string }[]) {
+      if (r.created_at > (tuned.get(r.muscle_group) ?? '')) tuned.set(r.muscle_group, r.created_at)
+    }
+    setLastTuned(tuned)
     const injuryRows = (injuriesRes.data as Injury[]) ?? []
     setInjuries(injuryRows)
     setReview((reviewRes.data as { advice: string; week_start: string } | null) ?? null)
@@ -151,26 +170,12 @@ export default function Gym({ visible }: { visible: boolean }) {
         .order('day_number')
       const sessRows = (sess as PlannedSession[]) ?? []
       setSessions(sessRows)
-      const [setsRes, checkinRes] = await Promise.all([
-        supabase
-          .from('planned_sets')
-          .select('muscle_group, session_id, logged_reps, logged_at')
-          .in('session_id', sessRows.map((s) => s.id))
-          .not('logged_at', 'is', null),
-        supabase
-          .from('recovery_checkins')
-          .select('muscle_group, amount')
-          .eq('amount', 'over_the_line')
-          .gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()),
-      ])
-      setLoggedSets(setsRes.data ?? [])
-      const counts = new Map<string, number>()
-      for (const c of checkinRes.data ?? []) counts.set(c.muscle_group, (counts.get(c.muscle_group) ?? 0) + 1)
-      setOverLine(
-        [...counts.entries()]
-          .filter(([mg, n]) => n >= 2 && !localStorage.getItem(`vol-sugg-${mg}`))
-          .map(([mg]) => mg),
-      )
+      const { data: setsData } = await supabase
+        .from('planned_sets')
+        .select('muscle_group, session_id, logged_reps, logged_at')
+        .in('session_id', sessRows.map((s) => s.id))
+        .not('logged_at', 'is', null)
+      setLoggedSets(setsData ?? [])
     }
     // plan card follows the active block on FIRST load only - after that the
     // user's picks stick, so a refresh mid-edit never yanks the tab away
@@ -237,6 +242,67 @@ export default function Gym({ visible }: { visible: boolean }) {
     await supabase
       .from('user_settings')
       .upsert({ cardio_target_km: v, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  }
+
+  /** A volume-picture suggestion, applied: the plan row gets its new set
+   *  count (this phase on), the tuning is recorded - that starts the
+   *  muscle's cooldown and tells the weekly coach - and, when the row belongs
+   *  to the running block, the usual "apply to this block too?" question
+   *  follows, so remaining sessions can pick the change up. */
+  async function applyTuning(c: Tuning) {
+    if (tuningBusy) return
+    setTuningBusy(true)
+    try {
+      const { error } = await supabase.from('workout_plans').update({ schemes: c.schemes }).eq('id', c.plan.id)
+      if (error) {
+        setApplyResult(t.gym.tune.failed)
+        return
+      }
+      await recordTuning(c, 'applied')
+      if (block && block.block === c.plan.block) {
+        setBlockApply({
+          added: [],
+          removed: [],
+          changed: [{ exercise: c.plan.exercise, prevExercise: c.plan.exercise, split_day: c.plan.split_day, schemes: c.schemes }],
+          removedSplits: [],
+          cardio: {},
+        })
+      } else {
+        setApplyResult(t.gym.tune.applied(c.plan.exercise, c.toSets))
+      }
+      await load()
+    } finally {
+      setTuningBusy(false)
+    }
+  }
+
+  /** "Not now": nothing changes, but the muscle's check-ins start over, so
+   *  the same answers never bring the same suggestion back. */
+  async function dismissTuning(c: Tuning) {
+    if (tuningBusy) return
+    setTuningBusy(true)
+    try {
+      await recordTuning(c, 'dismissed')
+      await load()
+    } finally {
+      setTuningBusy(false)
+    }
+  }
+
+  async function recordTuning(c: Tuning, action: 'applied' | 'dismissed') {
+    const row = {
+      muscle_group: c.muscle,
+      exercise: c.plan.exercise,
+      split_day: c.plan.split_day,
+      block: c.plan.block,
+      delta: c.delta,
+      from_sets: c.fromSets,
+      to_sets: c.toSets,
+      action,
+    }
+    await supabase.from('plan_tunings').insert(row)
+    // the suggestion leaves the screen now, not when the reload lands
+    setLastTuned((prev) => new Map(prev).set(c.muscle, new Date().toISOString()))
   }
 
   /** The "apply to this block too?" yes-branch: added exercises get sets
@@ -625,6 +691,32 @@ export default function Gym({ visible }: { visible: boolean }) {
   const monthMin = monthVolume[monthVolume.length - 1]?.[1] ?? 0
   // nothing logged all month: a list of zeros ranks nothing
   const showMonth = monthMax > 0
+
+  // what the month + check-ins suggest for the plan: ±1 set, applied by tap.
+  // A block younger than four weeks is judged on its own weeks only - the
+  // previous block's sets would make its plan look over-delivered
+  const tuneFrom = block && block.start_date > monthFrom ? block.start_date : monthFrom
+  const tuneLogged = new Map<string, number>()
+  for (const s of monthSets) {
+    if (s.muscle_group && localDate(new Date(s.logged_at)) >= tuneFrom) tuneLogged.set(s.muscle_group, (tuneLogged.get(s.muscle_group) ?? 0) + 1)
+  }
+  for (const log of logs) {
+    if (!log.muscle_group || !log.sets?.length || log.date < tuneFrom) continue
+    tuneLogged.set(log.muscle_group, (tuneLogged.get(log.muscle_group) ?? 0) + log.sets.length)
+  }
+  const tuning = suggestTunings({
+    plans: plans.filter((p) => p.block === rankBlock),
+    phase: block ? phaseKey(Math.min(weekFromStart(block.start_date), block.total_weeks)) : '1-2',
+    loggedSets: tuneLogged,
+    weeks: (new Date(localDate() + 'T00:00:00').getTime() - new Date(tuneFrom + 'T00:00:00').getTime()) / (7 * 86400000),
+    checkins: tuneCheckins,
+    lastTuned,
+    injuries,
+  })
+  // "behind plan" only means something against a running block; and when
+  // every muscle is behind, the story is fewer sessions overall - one line
+  const behind = block ? tuning.behind : []
+  const allBehind = behind.length > 1 && behind.length === tuning.planned
 
 
   const byDate = new Map<string, WorkoutLog[]>()
@@ -1056,22 +1148,6 @@ export default function Gym({ visible }: { visible: boolean }) {
         />
       )}
 
-      {view === 'strength' && overLine.map((mg) => (
-        <div key={mg} className="notice vol-suggestion">
-          {t.gym.overLineNotice(muscleLabel(mg))}
-          <button
-            className="link"
-            onClick={() => {
-              localStorage.setItem(`vol-sugg-${mg}`, '1')
-              setOverLine(overLine.filter((m) => m !== mg))
-            }}
-            aria-label={t.common.dismiss}
-          >
-            <Icon name="x" />
-          </button>
-        </div>
-      ))}
-
       {view === 'strength' && (review || injuries.length > 0) && (
         <section className="gym-day training-card">
           <h2>
@@ -1092,7 +1168,7 @@ export default function Gym({ visible }: { visible: boolean }) {
         <InjuryCard injuries={injuries} block={block} plans={plans} onChanged={load} />
       )}
 
-      {view === 'strength' && ((block && volume.size > 0) || showMonth) && (
+      {view === 'strength' && ((block && volume.size > 0) || showMonth || tuning.changes.length > 0) && (
         <section className="gym-day volume-card">
           <h2>
             {t.gym.volumePicture}
@@ -1149,6 +1225,40 @@ export default function Gym({ visible }: { visible: boolean }) {
                   )
                 })}
               </ol>
+            </div>
+          )}
+          {(tuning.changes.length > 0 || behind.length > 0) && (
+            <div className="volume-month volume-tune">
+              {tuning.changes.length > 0 && <h3 className="volume-month-title">{t.gym.tune.title}</h3>}
+              {tuning.changes.map((c) => (
+                <div key={c.plan.id} className="tune-row">
+                  <p className="tune-change">
+                    <strong>{c.plan.exercise}</strong> <span className="tune-split">{c.plan.split_day}</span>{' '}
+                    <span className={c.delta < 0 ? 'tune-sets less' : 'tune-sets more'}>{t.gym.tune.change(c.fromSets, c.toSets)}</span>
+                  </p>
+                  <p className="gentle tune-why">
+                    {c.delta < 0
+                      ? t.gym.tune.tooMuch(muscleLabel(c.muscle), c.answers)
+                      : t.gym.tune.room(muscleLabel(c.muscle), c.answers, c.perWeek, c.target)}
+                  </p>
+                  <div className="sign-out-actions tune-actions">
+                    <button className="save" onClick={() => applyTuning(c)} disabled={tuningBusy}>
+                      {t.gym.tune.apply}
+                    </button>
+                    <button className="energy-btn" onClick={() => dismissTuning(c)} disabled={tuningBusy}>
+                      {t.gym.tune.dismiss}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {behind.length > 0 && (
+                <p className="gentle tune-behind">
+                  {allBehind
+                    ? t.gym.tune.allBehind
+                    : t.gym.tune.behind(behind.map((b) => `${muscleLabel(b.muscle)} ${b.perWeek}/${b.target}`).join(' · '))}
+                </p>
+              )}
+              {tuning.changes.length > 0 && <p className="gentle tune-foot">{t.gym.tune.footnote}</p>}
             </div>
           )}
         </section>
@@ -1319,6 +1429,7 @@ export default function Gym({ visible }: { visible: boolean }) {
                 {[
                   blockApply.added.length > 0 ? t.gym.addedList(blockApply.added.map((a) => a.exercise).join(', ')) : null,
                   blockApply.removed.length > 0 ? t.gym.removedList(blockApply.removed.map((r) => r.exercise).join(', ')) : null,
+                  blockApply.changed.length > 0 ? t.gym.changedList(blockApply.changed.map((c) => c.exercise).join(', ')) : null,
                 ]
                   .filter(Boolean)
                   .join(' · ')}

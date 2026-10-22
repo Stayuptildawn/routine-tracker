@@ -4,6 +4,31 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-10-22 (later)
+
+### Added
+- **Suggested plan changes, applied with one tap.** Under the Volume
+  picture, the app reads your last four weeks of sets against the plan
+  together with your after-session check-ins, and proposes one set more or
+  fewer on a specific exercise, with the reason in numbers. Easing off comes
+  when check-ins keep saying "A stretch" or "Over the line". A set is added
+  only when you said "Could take more" *and* you're logging at least 80% of
+  the planned sets, and never on an exercise an active injury puts at risk.
+  **Apply** changes the plan from the current phase on and then asks
+  whether the running block's remaining sessions should follow. **Not now**
+  sets it aside. Either way, that muscle only gets a new suggestion from
+  check-ins you give after that. A muscle that's light because sessions
+  didn't happen gets a note instead of more sets on paper. The weekly
+  coach's note now knows which changes you applied and won't advise
+  undoing them.
+
+### Changed
+- The "over the line a couple of times — want one set fewer?" notice is
+  gone; the suggested changes above replace it with something you can
+  apply.
+- When you save a plan edit that only changes sets x reps, the "apply to
+  this block too?" question now names what changed.
+
 ## 2026-10-22
 
 ### Added

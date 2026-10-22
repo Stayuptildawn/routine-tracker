@@ -204,8 +204,6 @@ export const de: Strings = {
     startBlockFromPlan: (n: number) => `▶ Block ${n} starten (6 Wochen aus dem Plan)`,
     currentBlockUnfinished: (name: string) =>
       `Der laufende ${name} ist nicht fertig — der neue Block wird zum aktiven (nichts wird gelöscht).`,
-    overLineNotice: (muscle: string) =>
-      `${muscle} hat zuletzt ein paarmal „über der Grenze“ gemeldet — nächste Woche einen Satz weniger? (Bearbeite den Plan unten; die laufende Woche bleibt wie geplant.)`,
     volumePicture: 'Volumenbild',
     hardSetsPerWeek: ' harte Sätze pro Woche',
     coachTitle: 'Coach-Notiz',
@@ -216,6 +214,19 @@ export const de: Strings = {
     mostTrained: 'am meisten',
     leastTrained: 'am wenigsten',
     monthSets: (n: number, w: number) => `${n} Sätze · ~${w}/Wo`,
+    tune: {
+      title: 'Vorgeschlagene Planänderungen',
+      change: (from: number, to: number) => `${from} → ${to} Sätze`,
+      tooMuch: (muscle: string, n: number) => `${muscle}: zuletzt ${n}× „Grenzwertig“ oder „Über der Grenze“ — ein Satz weniger lässt Raum zur Erholung.`,
+      room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n}× „Ginge mehr“, und du hast ${perWeek} von ${target} geplanten Sätzen pro Woche geloggt — ein Satz mehr ist ein kleiner Schritt.`,
+      behind: (list: string) => `Leichter als geplant (Sätze pro Woche, geloggt/geplant): ${list}. Das liegt an den Einheiten, nicht am Plan — mehr Sätze auf dem Papier ändern daran nichts, er bleibt wie er ist.`,
+      allBehind: 'Alle Muskeln liegen diesen Monat unter dem Plan — das kommt von weniger Einheiten als geplant, nicht vom Plan selbst, er bleibt wie er ist.',
+      apply: 'Übernehmen',
+      dismiss: 'Nicht jetzt',
+      applied: (exercise: string, sets: number) => `Plan aktualisiert: ${exercise} hat jetzt ${sets} Sätze.`,
+      failed: 'Plan konnte nicht aktualisiert werden — prüfe deine Verbindung und versuch es noch einmal.',
+      footnote: 'Aus deinen letzten 4 Wochen und deinen Rückmeldungen. Übernehmen ändert den Plan ab dieser Phase; geloggte Sätze ändern sich nie.',
+    },
     setupTitle: 'Richte dein Training ein',
     setupSubtitle: 'Zwei Wege zum Start — beides bleibt jederzeit anpassbar.',
     useStarter: '▶ Den Starterplan verwenden',
@@ -238,6 +249,7 @@ export const de: Strings = {
     planCardio: (c: string) => `Ausdauer: ${c}`,
     addedList: (list: string) => `Hinzugefügt: ${list}`,
     removedList: (list: string) => `Entfernt: ${list}`,
+    changedList: (list: string) => `Geändert: ${list}`,
     applyPrompt: (blockName: string) =>
       ` — auch in die restlichen Einheiten von ${blockName} übernehmen, oder erst ab dem nächsten Block?`,
     applyToBlock: 'In diesen Block übernehmen',

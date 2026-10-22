@@ -204,8 +204,6 @@ export const cs: Strings = {
     startBlockFromPlan: (n: number) => `▶ Začít blok ${n} (6 týdnů podle plánu)`,
     currentBlockUnfinished: (name: string) =>
       `Aktuální ${name} ještě není dokončený — aktivním se stane nový blok (nic se nemaže).`,
-    overLineNotice: (muscle: string) =>
-      `${muscle} v poslední době párkrát hlásí „přes čáru“ — co příští týden o sérii míň? (Uprav plán níže; tenhle týden zůstává, jak je.)`,
     volumePicture: 'Obraz objemu',
     hardSetsPerWeek: ' tvrdých sérií týdně',
     coachTitle: 'Poznámka kouče',
@@ -216,6 +214,19 @@ export const cs: Strings = {
     mostTrained: 'nejvíc',
     leastTrained: 'nejméně',
     monthSets: (n: number, w: number) => `${n} sérií · ~${w}/týd`,
+    tune: {
+      title: 'Navržené změny plánu',
+      change: (from: number, to: number) => `${from} → ${to} sérií`,
+      tooMuch: (muscle: string, n: number) => `${muscle}: poslední dobou ${n}× „Na hraně“ nebo „Přes čáru“ — o sérii méně dá prostor na regeneraci.`,
+      room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n}× „Sneslo by víc“ a zapsal jsi ${perWeek} z ${target} plánovaných sérií týdně — o sérii víc je malý krok.`,
+      behind: (list: string) => `Lehčí než plán (série týdně, zapsané/plánované): ${list}. Je to dáno tréninky, ne plánem — víc sérií na papíře to nezmění, plán zůstává jak je.`,
+      allBehind: 'Tento měsíc jsou všechny svaly pod plánem — je to dáno menším počtem tréninků, než plán počítá, ne plánem samotným, a ten zůstává, jak je.',
+      apply: 'Použít',
+      dismiss: 'Teď ne',
+      applied: (exercise: string, sets: number) => `Plán upraven: ${exercise} má teď ${sets} sérií.`,
+      failed: 'Plán se nepodařilo upravit — zkontroluj připojení a zkus to znovu.',
+      footnote: 'Podle posledních 4 týdnů a tvých hodnocení. Použití mění plán od této fáze; zapsané série se nikdy nemění.',
+    },
     setupTitle: 'Nachystej si trénink',
     setupSubtitle: 'Dva způsoby, jak začít — u obou jde potom všechno upravit.',
     useStarter: '▶ Použít připravený plán',
@@ -238,6 +249,7 @@ export const cs: Strings = {
     planCardio: (c: string) => `Kardio: ${c}`,
     addedList: (list: string) => `Přidáno: ${list}`,
     removedList: (list: string) => `Odebráno: ${list}`,
+    changedList: (list: string) => `Změněno: ${list}`,
     applyPrompt: (blockName: string) =>
       ` — promítnout i do zbylých tréninků bloku ${blockName}, nebo až od dalšího bloku?`,
     applyToBlock: 'Promítnout do tohoto bloku',

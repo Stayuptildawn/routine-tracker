@@ -202,8 +202,6 @@ export const tr: Strings = {
     startBlockFromPlan: (n: number) => `▶ ${n}. bloğa başla (plandan 6 hafta)`,
     currentBlockUnfinished: (name: string) =>
       `Şu anki ${name} daha bitmedi — yeni blok etkin olur (hiçbir şey silinmez).`,
-    overLineNotice: (muscle: string) =>
-      `${muscle} son zamanlarda birkaç kez “sınırın üstünde” dedi — gelecek hafta bir set azaltalım mı? (Aşağıdan planı düzenle; bu hafta olduğu gibi kalır.)`,
     volumePicture: 'Hacim tablosu',
     hardSetsPerWeek: ' haftalık gerçek set',
     coachTitle: 'Koç notu',
@@ -214,6 +212,19 @@ export const tr: Strings = {
     mostTrained: 'en çok',
     leastTrained: 'en az',
     monthSets: (n: number, w: number) => `${n} set · ~${w}/hf`,
+    tune: {
+      title: 'Önerilen plan değişiklikleri',
+      change: (from: number, to: number) => `${from} → ${to} set`,
+      tooMuch: (muscle: string, n: number) => `${muscle}: son zamanlarda ${n} kez “Sınırda” ya da “Sınırın üstünde” — bir set eksik toparlanmaya yer açar.`,
+      room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n} kez “Daha fazlasını kaldırırdım” ve haftada planlanan ${target} setin ${perWeek} kadarını kaydettin — bir set fazlası küçük bir adım.`,
+      behind: (list: string) => `Plandan hafif (haftalık set, kaydedilen/planlanan): ${list}. Bu antrenman günlerinden geliyor, plandan değil — kâğıt üstünde set eklemek bunu değiştirmez, plan olduğu gibi kalıyor.`,
+      allBehind: 'Bu ay tüm kaslar planın altında — bu, planın beklediğinden az antrenmandan geliyor, planın kendisinden değil; plan olduğu gibi kalıyor.',
+      apply: 'Uygula',
+      dismiss: 'Şimdi değil',
+      applied: (exercise: string, sets: number) => `Plan güncellendi: ${exercise} artık ${sets} set.`,
+      failed: 'Plan güncellenemedi — bağlantını kontrol edip tekrar dene.',
+      footnote: 'Son 4 haftana ve geri bildirimlerine göre. Uygulamak planı bu evreden itibaren değiştirir; kaydedilmiş setler asla değişmez.',
+    },
     setupTitle: 'Antrenmanını kur',
     setupSubtitle: 'Başlamanın iki yolu var — ikisinde de her şey sonradan düzenlenebilir.',
     useStarter: '▶ Hazır planı kullan',
@@ -236,6 +247,7 @@ export const tr: Strings = {
     planCardio: (c: string) => `Kardiyo: ${c}`,
     addedList: (list: string) => `Eklendi: ${list}`,
     removedList: (list: string) => `Çıkarıldı: ${list}`,
+    changedList: (list: string) => `Değişti: ${list}`,
     applyPrompt: (blockName: string) =>
       ` — bu, ${blockName} bloğunun kalan seanslarına da uygulansın mı, yoksa yalnızca sonraki bloktan itibaren mi?`,
     applyToBlock: 'Bu bloğa uygula',

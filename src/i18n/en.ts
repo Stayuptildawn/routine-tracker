@@ -220,8 +220,6 @@ export const en = {
     startBlockFromPlan: (n: number) => `▶ Start Block ${n} (6 weeks from the plan)`,
     currentBlockUnfinished: (name: string) =>
       `The current ${name} isn't finished — the new block becomes the active one (nothing is deleted).`,
-    overLineNotice: (muscle: string) =>
-      `${muscle} has said “over the line” a couple of times lately — want one set fewer next week? (Edit the plan below; the current week stays as planned.)`,
     volumePicture: 'Volume picture',
     hardSetsPerWeek: ' hard sets per week',
     coachTitle: 'Coach’s note',
@@ -232,6 +230,19 @@ export const en = {
     mostTrained: 'most',
     leastTrained: 'least',
     monthSets: (n: number, w: number) => `${n} sets · ~${w}/wk`,
+    tune: {
+      title: 'Suggested plan changes',
+      change: (from: number, to: number) => `${from} → ${to} sets`,
+      tooMuch: (muscle: string, n: number) => `${muscle} check-ins said “A stretch” or “Over the line” ${n}× lately — one set fewer leaves room to recover.`,
+      room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle} said “Could take more” ${n}× and you logged ${perWeek} of ${target} planned sets a week — one more set is a small step up.`,
+      behind: (list: string) => `Lighter than planned (sets a week, logged/planned): ${list}. That comes from sessions, not the plan — more sets on paper wouldn’t change it, so it stays as written.`,
+      allBehind: 'Every muscle is lighter than planned this month — that comes from fewer sessions than the plan expects, not from the plan itself, so it stays as written.',
+      apply: 'Apply',
+      dismiss: 'Not now',
+      applied: (exercise: string, sets: number) => `Plan updated: ${exercise} is now ${sets} sets.`,
+      failed: 'Couldn’t update the plan — check your connection and try again.',
+      footnote: 'From your last 4 weeks and your check-ins. Applying changes the plan from this phase on; logged sets never change.',
+    },
     setupTitle: 'Set up your training',
     setupSubtitle: 'Two ways to begin — everything stays editable either way.',
     useStarter: '▶ Use the starter plan',
@@ -254,6 +265,7 @@ export const en = {
     planCardio: (c: string) => `Cardio: ${c}`,
     addedList: (list: string) => `Added: ${list}`,
     removedList: (list: string) => `Removed: ${list}`,
+    changedList: (list: string) => `Changed: ${list}`,
     applyPrompt: (blockName: string) =>
       ` — put this into ${blockName}'s remaining sessions too, or only from the next block?`,
     applyToBlock: 'Apply to this block',

@@ -2308,6 +2308,54 @@ select option {
   font-variant-numeric: tabular-nums;
 }
 
+/* suggested plan changes: one row per ±1 set, applied by tap */
+.tune-row {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tune-row:first-of-type {
+  padding-top: 0;
+}
+
+.tune-change {
+  margin: 0;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.tune-split {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.tune-sets {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tune-sets.less {
+  color: var(--accent);
+}
+
+.tune-sets.more {
+  color: var(--good);
+}
+
+.tune-why {
+  margin: var(--sp-1) 0 var(--sp-2);
+}
+
+.tune-actions {
+  gap: var(--sp-2);
+}
+
+.tune-behind,
+.tune-foot {
+  margin: var(--sp-3) 0 0;
+}
+
 .vol-suggestion {
   display: flex;
   align-items: center;

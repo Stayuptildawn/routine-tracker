@@ -23,8 +23,15 @@ export async function recoveryAdjustments(): Promise<Map<string, number>> {
     .select('muscle_group, amount')
     .gte('created_at', since)
     .not('amount', 'is', null)
+  return checkinAdjustments(data ?? [])
+}
+
+/** The scoring behind recoveryAdjustments, on rows already fetched: "over
+ *  the line" counts 1 against, "stretch" half, "could take more" 1 for. */
+export function checkinAdjustments(rows: { muscle_group: string; amount: string | null }[]): Map<string, number> {
   const perMuscle = new Map<string, { tooMuch: number; room: number; answers: number }>()
-  for (const row of data ?? []) {
+  for (const row of rows) {
+    if (!row.amount) continue
     const m = perMuscle.get(row.muscle_group) ?? { tooMuch: 0, room: 0, answers: 0 }
     m.answers++
     if (row.amount === 'over_the_line') m.tooMuch += 1

@@ -205,8 +205,6 @@ export const es: Strings = {
     startBlockFromPlan: (n: number) => `▶ Empezar el bloque ${n} (6 semanas desde el plan)`,
     currentBlockUnfinished: (name: string) =>
       `El ${name} actual no está terminado — el nuevo bloque pasa a ser el activo (no se borra nada).`,
-    overLineNotice: (muscle: string) =>
-      `${muscle} ha dicho «demasiado» un par de veces últimamente — ¿una serie menos la próxima semana? (Edita el plan abajo; la semana actual se queda como está.)`,
     volumePicture: 'Mapa de volumen',
     hardSetsPerWeek: ' series efectivas por semana',
     coachTitle: 'Nota del coach',
@@ -217,6 +215,19 @@ export const es: Strings = {
     mostTrained: 'más',
     leastTrained: 'menos',
     monthSets: (n: number, w: number) => `${n} series · ~${w}/sem`,
+    tune: {
+      title: 'Cambios sugeridos al plan',
+      change: (from: number, to: number) => `${from} → ${to} series`,
+      tooMuch: (muscle: string, n: number) => `${muscle}: «Algo justa de más» o «Demasiada» ${n} veces últimamente — una serie menos deja margen para recuperar.`,
+      room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: «Aguantaba más» ${n} veces y registraste ${perWeek} de ${target} series previstas por semana — una serie más es un paso pequeño.`,
+      behind: (list: string) => `Más ligero de lo previsto (series por semana, hechas/previstas): ${list}. Viene de las sesiones, no del plan — más series en el papel no lo cambiarían, así que se queda como está.`,
+      allBehind: 'Todos los músculos van más ligeros de lo previsto este mes — viene de hacer menos sesiones de las que el plan espera, no del plan, así que se queda como está.',
+      apply: 'Aplicar',
+      dismiss: 'Ahora no',
+      applied: (exercise: string, sets: number) => `Plan actualizado: ${exercise} pasa a ${sets} series.`,
+      failed: 'No se pudo actualizar el plan — revisa tu conexión e inténtalo de nuevo.',
+      footnote: 'Según tus últimas 4 semanas y tus valoraciones. Aplicar cambia el plan desde esta fase; las series registradas nunca cambian.',
+    },
     setupTitle: 'Prepara tu entrenamiento',
     setupSubtitle: 'Dos formas de empezar — todo sigue siendo editable en ambas.',
     useStarter: '▶ Usar el plan inicial',
@@ -239,6 +250,7 @@ export const es: Strings = {
     planCardio: (c: string) => `Cardio: ${c}`,
     addedList: (list: string) => `Añadidos: ${list}`,
     removedList: (list: string) => `Quitados: ${list}`,
+    changedList: (list: string) => `Cambiados: ${list}`,
     applyPrompt: (blockName: string) =>
       ` — ¿aplicarlo también a las sesiones restantes de ${blockName}, o solo desde el próximo bloque?`,
     applyToBlock: 'Aplicar a este bloque',

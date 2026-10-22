@@ -203,8 +203,6 @@ export const ru: Strings = {
     startBlockFromPlan: (n: number) => `▶ Начать блок ${n} (6 недель из плана)`,
     currentBlockUnfinished: (name: string) =>
       `Текущий ${name} ещё не закончен — активным станет новый блок (ничего не удаляется).`,
-    overLineNotice: (muscle: string) =>
-      `${muscle} в последнее время пару раз отвечала «перебор» — убрать один подход на следующей неделе? (Отредактируй план ниже; текущая неделя не меняется.)`,
     volumePicture: 'Картина объёма',
     hardSetsPerWeek: ' рабочих подходов в неделю',
     coachTitle: 'Заметка тренера',
@@ -215,6 +213,19 @@ export const ru: Strings = {
     mostTrained: 'больше всего',
     leastTrained: 'меньше всего',
     monthSets: (n: number, w: number) => `${n} подходов · ~${w}/нед`,
+    tune: {
+      title: 'Предлагаемые изменения плана',
+      change: (from: number, to: number) => `${from} → ${to} подх.`,
+      tooMuch: (muscle: string, n: number) => `${muscle}: в последнее время ${n} раз «На пределе» или «Перебор» — на подход меньше, чтобы было время восстановиться.`,
+      room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n} раз «Могло быть больше», и ты записал ${perWeek} из ${target} запланированных подходов в неделю — ещё один подход — маленький шаг.`,
+      behind: (list: string) => `Легче, чем в плане (подходов в неделю, записано/по плану): ${list}. Дело в тренировках, а не в плане — лишние подходы на бумаге этого не изменят, план остаётся как есть.`,
+      allBehind: 'В этом месяце все мышцы ниже плана — дело в меньшем числе тренировок, чем ждёт план, а не в самом плане, он остаётся как есть.',
+      apply: 'Применить',
+      dismiss: 'Не сейчас',
+      applied: (exercise: string, sets: number) => `План обновлён: ${exercise} — теперь ${sets} подх.`,
+      failed: 'Не удалось обновить план — проверь соединение и попробуй ещё раз.',
+      footnote: 'По последним 4 неделям и твоим отзывам. Применение меняет план с этой фазы; записанные подходы не меняются никогда.',
+    },
     setupTitle: 'Настрой тренировки',
     setupSubtitle: 'Два способа начать — в обоих всё можно менять потом.',
     useStarter: '▶ Взять готовый план',
@@ -237,6 +248,7 @@ export const ru: Strings = {
     planCardio: (c: string) => `Кардио: ${c}`,
     addedList: (list: string) => `Добавлено: ${list}`,
     removedList: (list: string) => `Убрано: ${list}`,
+    changedList: (list: string) => `Изменено: ${list}`,
     applyPrompt: (blockName: string) =>
       ` — применить и к оставшимся тренировкам блока «${blockName}», или только со следующего блока?`,
     applyToBlock: 'Применить к этому блоку',

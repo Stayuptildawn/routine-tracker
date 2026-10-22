@@ -66,7 +66,7 @@ export async function maybeTrainingReview(
     return i >= 0 && i < WEEKS ? i : -1
   }
 
-  const [sessionsRes, setsRes, cardioRes, checkinRes, lastSetsRes, liftsRes, blockRes, settingsRes, injuriesRes] =
+  const [sessionsRes, setsRes, cardioRes, checkinRes, lastSetsRes, liftsRes, blockRes, settingsRes, injuriesRes, tuningsRes] =
     await Promise.all([
       supabase.from('planned_sessions').select('completed_at').eq('user_id', userId)
         .gte('completed_at', windowStart + 'T00:00:00').lt('completed_at', weekStart + 'T00:00:00')
@@ -88,6 +88,10 @@ export async function maybeTrainingReview(
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('user_settings').select('cardio_target_km, cardio_tracking').eq('user_id', userId).maybeSingle(),
       supabase.from('injuries').select('body_part, severity, note, started_on').eq('user_id', userId).is('healed_on', null),
+      // plan changes the user applied from the volume picture's suggestions
+      supabase.from('plan_tunings').select('muscle_group, exercise, split_day, from_sets, to_sets, created_at')
+        .eq('user_id', userId).eq('action', 'applied').gte('created_at', addDays(weekStart, -21) + 'T00:00:00')
+        .order('created_at'),
     ])
   // the written plan itself, so advice can speak to it (fetched after
   // blockRes since the snapshot should be the active block's plan; with no
@@ -222,6 +226,9 @@ export async function maybeTrainingReview(
     (i) => `- ${i.body_part.replace('_', ' ')}: ${i.severity}, since ${i.started_on}${i.note ? ` ("${i.note}")` : ''}`,
   )
 
+  const tuningLines = ((tuningsRes.data ?? []) as { muscle_group: string; exercise: string; split_day: string; from_sets: number; to_sets: number; created_at: string }[])
+    .map((r) => `- ${r.exercise} (${r.muscle_group}, ${r.split_day}): ${r.from_sets} -> ${r.to_sets} sets, on ${r.created_at.slice(0, 10)}`)
+
   const prompt = `You are a careful strength & conditioning assistant reviewing a recreational
 lifter's week. You value joint health and long-term consistency over fast progress.
 You never diagnose injuries and never give medical advice.
@@ -255,6 +262,13 @@ Never comment on how much cardio they did, and never read its absence as "no car
 ACTIVE INJURIES (reported by the user; the app has already lightened, swapped or
 removed the exercises that load these areas in upcoming sessions):
 ${injuryLines.join('\n') || '- none'}
+
+PLAN CHANGES THEY APPLIED RECENTLY (from the app's volume suggestions - the
+written plan above already includes them):
+${tuningLines.join('\n') || '- none'}
+Never suggest undoing one of these within three weeks of it, and don't suggest
+a second change for the same exercise yet - give it time to show an effect.
+You may mention how a change is going if the logs or check-ins speak to it.
 
 Reply with JSON: two string fields, both written in ${LANGUAGE_NAMES[lang]}.
 
