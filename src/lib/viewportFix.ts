@@ -5,16 +5,20 @@
 // relaunched. Detecting the keyboard closing via visualViewport and nudging
 // the window scroll makes WebKit re-anchor fixed layout.
 
+import { reanchorLocked } from './overlay'
+
 export function armViewportFix() {
   const vv = window.visualViewport
   if (!vv) return
 
   const reanchor = () => {
+    // an open dialog pins the body, which needs its own nudge
+    if (reanchorLocked()) return
     const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
     const y = Math.min(window.scrollY, max)
     // a real scroll delta is required - scrollTo(current) is a no-op and
     // leaves the stale pan in place
-    window.scrollTo(0, y + 1)
+    window.scrollTo(0, y > 0 ? y - 1 : y + 1)
     window.scrollTo(0, y)
   }
 
@@ -29,6 +33,17 @@ export function armViewportFix() {
       settle = setTimeout(reanchor, 250)
     }
     keyboardOpen = open
+  })
+
+  // rotating leaves the same kind of stale pan behind (worst with a dialog
+  // open), so drawn and tappable positions drift apart; re-anchor once the
+  // rotation animation has finished
+  let lastWidth = window.innerWidth
+  window.addEventListener('resize', () => {
+    if (window.innerWidth === lastWidth) return
+    lastWidth = window.innerWidth
+    clearTimeout(settle)
+    settle = setTimeout(reanchor, 400)
   })
 
   // resuming the app can restore a stale pan too (iOS snapshots the old

@@ -6,6 +6,12 @@ deployed alongside).
 
 ## 2026-10-22 (later)
 
+### Fixed
+- **Taps land where you touch after rotating with a session open.**
+  Turning the phone while a session (or any full-screen panel) was open
+  left iOS with a stale viewport offset, so taps registered off from the
+  buttons. The app now re-anchors the screen once the rotation settles.
+
 ### Added
 - **Suggested plan changes, applied with one tap.** Under the Volume
   picture, the app reads your last four weeks of sets against the plan

@@ -32,22 +32,46 @@ export function useScrollLock() {
   useEffect(() => {
     if (locks++ === 0) {
       lockedY = window.scrollY
-      const s = document.body.style
-      s.position = 'fixed'
-      s.top = `-${lockedY}px`
-      s.left = '0'
-      s.right = '0'
+      pin()
     }
     return () => {
       if (--locks > 0) return
-      const s = document.body.style
-      s.position = ''
-      s.top = ''
-      s.left = ''
-      s.right = ''
+      unpin()
       window.scrollTo(0, lockedY)
     }
   }, [])
+}
+
+function pin() {
+  const s = document.body.style
+  s.position = 'fixed'
+  s.top = `-${lockedY}px`
+  s.left = '0'
+  s.right = '0'
+}
+
+function unpin() {
+  const s = document.body.style
+  s.position = ''
+  s.top = ''
+  s.left = ''
+  s.right = ''
+}
+
+/** Re-anchor fixed layout while a dialog holds the page. A pinned body has
+ *  nothing to scroll, so the usual 1px nudge does nothing and iOS keeps the
+ *  stale viewport pan from before a rotation - taps then land off from where
+ *  things are drawn. Unpin, nudge the real document, pin again (all in one
+ *  task, so nothing flashes). Returns false when no dialog is open. */
+export function reanchorLocked() {
+  if (locks === 0) return false
+  unpin()
+  const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+  lockedY = Math.min(lockedY, max)
+  window.scrollTo(0, lockedY > 0 ? lockedY - 1 : lockedY + 1)
+  window.scrollTo(0, lockedY)
+  pin()
+  return true
 }
 
 /** Everything a full-screen dialog needs to behave like one: focus stays
