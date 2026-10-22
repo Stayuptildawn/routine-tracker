@@ -214,7 +214,7 @@ export const ru: Strings = {
     leastTrained: 'меньше всего',
     monthSets: (n: number, w: number) => `${n} подходов · ~${w}/нед`,
     tune: {
-      title: 'Предлагаемые изменения плана',
+      toggle: (n: number) => `Предлагаемые изменения плана (${n})`,
       change: (from: number, to: number) => `${from} → ${to} подх.`,
       tooMuch: (muscle: string, n: number) => `${muscle}: в последнее время ${n} раз «На пределе» или «Перебор» — на подход меньше, чтобы было время восстановиться.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n} раз «Могло быть больше», и ты записал ${perWeek} из ${target} запланированных подходов в неделю — ещё один подход — маленький шаг.`,

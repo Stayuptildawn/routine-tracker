@@ -210,7 +210,7 @@ export const zh: Strings = {
     leastTrained: '最少',
     monthSets: (n: number, w: number) => `${n} 组 · 约 ${w}/周`,
     tune: {
-      title: '建议的计划调整',
+      toggle: (n: number) => `建议的计划调整 (${n})`,
       change: (from: number, to: number) => `${from} → ${to} 组`,
       tooMuch: (muscle: string, n: number) => `${muscle} 最近 ${n} 次反馈“有点勉强”或“超出承受”——少一组留出恢复空间。`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle} ${n} 次反馈“还有余力”，且每周完成 ${perWeek}/${target} 组计划——加一组是小小的一步。`,

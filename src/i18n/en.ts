@@ -231,7 +231,7 @@ export const en = {
     leastTrained: 'least',
     monthSets: (n: number, w: number) => `${n} sets · ~${w}/wk`,
     tune: {
-      title: 'Suggested plan changes',
+      toggle: (n: number) => `Suggested plan changes (${n})`,
       change: (from: number, to: number) => `${from} → ${to} sets`,
       tooMuch: (muscle: string, n: number) => `${muscle} check-ins said “A stretch” or “Over the line” ${n}× lately — one set fewer leaves room to recover.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle} said “Could take more” ${n}× and you logged ${perWeek} of ${target} planned sets a week — one more set is a small step up.`,

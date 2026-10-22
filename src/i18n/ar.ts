@@ -211,7 +211,7 @@ export const ar: Strings = {
     leastTrained: 'الأقل',
     monthSets: (n: number, w: number) => `${n} مجموعة · ~${w}/أسبوع`,
     tune: {
-      title: 'تعديلات مقترحة على الخطة',
+      toggle: (n: number) => `تعديلات مقترحة على الخطة (${n})`,
       change: (from: number, to: number) => `${from} ← ${to} مجموعات`,
       tooMuch: (muscle: string, n: number) => `${muscle}: «على الحدّ» أو «فوق الطاقة» ${n} مرات مؤخرًا — مجموعة أقل تترك مجالًا للتعافي.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: «أحتمل أكثر» ${n} مرات، وسجّلت ${perWeek} من ${target} مجموعات مخططة أسبوعيًا — مجموعة إضافية خطوة صغيرة.`,

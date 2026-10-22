@@ -212,7 +212,7 @@ export const ja: Strings = {
     leastTrained: '最少',
     monthSets: (n: number, w: number) => `${n}セット・約${w}/週`,
     tune: {
-      title: 'プランの変更案',
+      toggle: (n: number) => `プランの変更案 (${n})`,
       change: (from: number, to: number) => `${from} → ${to}セット`,
       tooMuch: (muscle: string, n: number) => `${muscle}：最近${n}回「ぎりぎり」か「限界超え」——1セット減らして回復の余地を。`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}：「まだ余裕あり」が${n}回、週の予定${target}セット中${perWeek}セットを記録——1セット増やすのは小さな一歩。`,

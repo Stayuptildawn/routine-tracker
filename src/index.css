@@ -2308,7 +2308,16 @@ select option {
   font-variant-numeric: tabular-nums;
 }
 
-/* suggested plan changes: one row per ±1 set, applied by tap */
+/* suggested plan changes: folded behind a toggle (like past flex
+   sessions), one row per ±1 set, applied by tap */
+.tune-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+  font-weight: 600;
+}
+
 .tune-row {
   padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--border);

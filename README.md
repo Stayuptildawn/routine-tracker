@@ -3,20 +3,17 @@
 <p align="center"><em>A routine tracker that works with your brain, whatever it's like.</em></p>
 
 <p align="center">
-A routine tracker anyone can use: you just type (or say)<br>
-<em>"ran 5k and did my morning routine"</em> and it ticks the right boxes for you.<br>
-Built gentle enough for ADHD brains — which makes it lighter for every brain.<br>
-Self-hosted and free to run, no subscription.
+You just type (or say) <em>"ran 5k and did my morning routine"</em><br>
+and it ticks the right boxes for you.<br>
+Built gentle enough for ADHD brains, which makes it lighter for every brain.<br>
+Self-hosted, free to run, no subscription.
 </p>
 
 <p align="center"><sub>React · Supabase · Gemini · installable PWA · 11 languages · AGPL-3.0</sub></p>
 
 <p align="center">
-  <a href="https://stayuptildawn.github.io/routine-tracker/?demo"><strong>▶ Try the live demo</strong></a>
-  — no account, no install; it runs entirely in your browser with a week of
-  sample data. Even the AI composer has a stand-in: simple phrasings
-  (task names, "bench 60kg 3x8", "ran 5k in 25 min", "remind me to…")
-  really apply, with undo and the AI log working.
+  <a href="https://stayuptildawn.github.io/routine-tracker/?demo"><strong>▶ Try the live demo</strong></a><br>
+  <sub>No account, no install. It runs entirely in your browser with a week of sample data.</sub>
 </p>
 
 <p align="center">
@@ -24,19 +21,26 @@ Self-hosted and free to run, no subscription.
   <img src="docs/screenshots/workout.jpg" width="32%" alt="The Workout tab: a 6-week training block grid and weekly volume bars">
   <img src="docs/screenshots/reflect.jpg" width="32%" alt="The Reflect tab: an AI-written note about the week and daily bars">
 </p>
-<p align="center">
-  <img src="docs/screenshots/session.jpg" width="32%" alt="The session player: sets with last time's numbers pre-filled and a safety cue">
-  <img src="docs/screenshots/week.jpg" width="32%" alt="The Week tab: a done/skipped grid per routine — a record, not a scorecard">
-  <img src="docs/screenshots/cardio.jpg" width="32%" alt="The Cardio view: weekly target rail, quick logging, and per-run pace">
-</p>
+
+## Try it first
+
+The quickest way to get it is to open the
+[demo](https://stayuptildawn.github.io/routine-tracker/?demo) and type
+something into the box on the Now tab, the way you'd say it to a friend:
+
+> *"took my meds, drank water and benched 80 for 5"*
+
+Even the demo has a stand-in for the AI, so simple phrasings (task names,
+*"bench 60kg 3x8"*, *"ran 5k in 25 min"*, *"remind me to..."*) really apply,
+with undo and the AI log working. Nothing leaves your browser.
 
 ## Why I built this
 
-I was managing my routines with Google Docs, and honestly it was painful. It
-was unresponsive on my phone, and every small update meant scrolling around a
-big table hunting for the right cell. That is way too much work for just being
-spontaneous, and it demands exactly the kind of focused effort that routines
-are supposed to remove from your day.
+I was managing my routines in Google Docs, and honestly it was painful. It was
+unresponsive on my phone, and every small update meant scrolling around a big
+table hunting for the right cell. That is way too much work for just being
+spontaneous, and it asks for exactly the kind of focused effort that routines
+are supposed to take out of your day.
 
 The apps made for this are mostly behind a paywall. The good ADHD planners
 charge around [$3 to $12 per month](https://habi.app/insights/best-adhd-planner-apps/),
@@ -51,448 +55,438 @@ long to set up or use, ADHD brains
 [abandon it before it delivers any value](https://kabitapp.com/blog/habit-tracker-adhd),
 and the feature-heavy ones turn into
 ["productive procrastination"](https://www.mindfulsuite.com/reviews/best-habit-tracker-apps),
-you spend 20 minutes looking at completion charts instead of doing the habits.
-The best tracker is
+where you spend 20 minutes looking at completion charts instead of doing the
+habits. The best tracker is
 [the one that takes less time to use than the habit itself](https://routinebase.com/best-habit-tracker-apps/).
 
 So the whole idea here is one text box. You write what you did in plain words
 and the AI files it. No hunting through lists, no forms, no fee.
 
-The other reason was simple. My life was spread across too many apps. Routines
-in one, workout notes in another, reminders somewhere else, and I was the one
-keeping them all in sync. I just wanted one place that holds everything, so
-checking my day is one move and not a hunt through five different apps.
+The other reason was simple. My life was spread across too many apps:
+routines in one, workout notes in another, reminders somewhere else, and I was
+the one keeping them all in sync. I just wanted one place that holds
+everything, so checking my day is one move and not a hunt through five apps.
 
 And honestly, I don't think you need an AuDHD brain to get something out of
-this. I built it around mine, but everyone has days where a list feels like too
-much, or where typing *"went for a run"* is easier than tapping through menus.
-Wanting less friction in your day is not only a neurodivergent thing.
+this. I built it around mine, but everyone has days where a list feels like
+too much, or where typing *"went for a run"* is easier than tapping through
+menus.
 
-I'm also nowhere near done with it. I keep adding to it, and I'd like it to fit
-more people than just me. So if you have an idea, I'm happy to hear it. And if
-the project is useful to you and you want to help keep it going, suggestions
-and donations are both welcome.
+> ...if you feel, like me, that building an app like this from scratch and
+> washing the dishes land at the same spot on the scale, because the size of
+> the task was never the hard part, just getting yourself to *execute* it is,
+> then this was built for us. :)
 
-## This app is made for you if
+## What it does for you
 
-> ...you feel, like me, that building an app like this from scratch and washing
-> the dishes land at the same spot on the scale, because the size of the task was
-> never the hard part, just getting yourself to *execute* it is. If a five-minute
-> chore and a five-week project feel equally heavy to start, then this was built
-> for us. :)
+- **Files your day from one sentence.** *"did morning routine except
+  shower"* checks off the whole routine and marks the shower as skipped. One
+  message can hold several things at once.
+- **Shrinks the day when you're low.** *"low energy today"* switches to the
+  core minimum, and finishing that still counts as a full win.
+- **Answers questions about your own record.** *"how consistent have I been
+  with meds?"*, *"what's my best bench?"*, and it says so when the answer
+  isn't in your data instead of guessing a number.
+- **Remembers things for you.** *"remind me to call the bank tomorrow at
+  5pm"* becomes a reminder with a due time and a push at that hour.
+- **Runs your training.** Six-week blocks, a session player with last time's
+  numbers pre-filled, recovery check-ins, and plan changes it suggests from
+  your own volume and feedback, applied only when you tap Apply.
+- **Works around injuries.** Tell it your knee hurts, see exactly what would
+  change in your upcoming sessions, and undo all of it with one tap on Healed.
+- **Reflects, gently.** Two sentences a day about a pattern it noticed, and
+  one small experiment to try. No scores.
 
-## What it does
+## What it will not do
 
-### ☀️ One message box that reads plain language
+- **No streaks, no shame.** Skips show up neutral, blanks stay blank, and
+  there is no red X anywhere in the app! Words like "failed" and "missed" are
+  banned in everything the AI writes for you.
+- **No silent changes.** Every AI action is logged with one-tap undo, the
+  unsure ones come back as "Did you mean...?" chips, and nothing ever edits
+  your training plan without you pressing a button first.
+- **No pretending to be a doctor.** The injury feature adjusts your sessions,
+  but sharp, worsening or lasting pain goes to a physio or a doctor, and the
+  app says so.
+- **No subscription, no ads, no tracking.** You host it yourself on free
+  tiers, and your data is one tap away from a CSV export.
+- **No bluffing.** The model is not always right, my own log hovers around
+  70% of actions kept. Every miss is visible and one tap from undone, which
+  beats a model you have to babysit.
 
-You just write what you did (or ask what you want to know) the way you'd say it
-out loud, and the AI works out what you meant. There is no phrasing to memorize
-and no command syntax, since the whole point was to remove that kind of friction,
-not add a new one.
+## Features
 
-- It reads a whole messy sentence at once, and it can hold several things in one
-  go. *"took my meds, drank water and benched 80 for 5"* lands as a medication
-  check, a water check and a logged set, all from the one message.
-- It gets the parts of how people actually talk, the exceptions and the
-  negations. *"did morning routine except shower"* checks off the whole routine
-  and marks the shower as skipped, and *"skip the run today"* does the opposite
-  of a check without you hunting for a button.
-- It knows the difference between telling it something and asking it something.
-  *"low energy today"* switches the whole day to minimum mode, while a question
-  just reads your data back to you and changes nothing. Voice input works too,
-  so you can say it instead of typing.
-- You can ask it pretty much anything about your own record. *"how many runs
-  did I do this month?"*, *"how consistent have I been with meds?"*, *"what's
-  my best bench?"*, *"how has my energy been?"* The answer pops up right there
-  on the Now screen, and it's also kept in the AI log, marked as answered, so
-  you can find it again later. It only ever answers from your own data. If
-  the answer isn't in there, it tells you so instead of guessing a number.
-- Reminders understand the clock, in both directions. *"remind me to call the
-  bank tomorrow at 5pm"* (or *"...in 10 mins"*) becomes a categorized reminder
-  with a due time, and a push nudge fires within ~5 minutes of that hour.
-  Later, *"bought the sunscreen"* clears the matching open reminder again —
-  a status change, never a delete, and undo restores exactly what was there.
-- The record is editable by talking, not just today's: *"did the dishes
-  yesterday"* lands on yesterday's row, and undoing it fixes yesterday too.
-  Cardio takes the whole story in one line — *"ran 5k in 25 min at 152 bpm,
-  felt easy"* logs distance, time, heart rate and the recovery answer.
-- The same brain is reachable from Android's **share sheet**: share text
-  into the app from anywhere and it lands in the message box for review.
-- It scores its own confidence, so it never bluffs. What it's sure of applies
-  instantly with one-tap undo, the maybes come back as "Did you mean...?" chips
-  you tap to confirm, and anything it's genuinely unsure about does nothing at
-  all. Every batch of actions is logged and reversible, and the log keeps a
-  running accuracy score (questions don't count toward it, since they change
-  nothing). Nothing happens silently. And to be straight about
-  it: the model is not always right — my own log hovers around 70% kept. The
-  design bet is different: every miss is visible in the log and one tap from
-  undone, which beats a model you have to babysit.
+| Feature | What it does |
+|---|---|
+| **One message box** | Plain language in, check-offs, sets, cardio, reminders and energy out. Past days too: *"did the dishes yesterday"* lands on yesterday's row. Voice input works. |
+| **Confidence, not guesses** | Sure actions apply with undo, the maybes come back as one-tap chips, and anything it's unsure about does nothing at all. |
+| **Questions about your data** | The answer pops up on the Now tab and stays in the AI log, built only from a summary of your own rows. |
+| **Routines that adapt** | Tasks have tiers (core, standard, bonus). On a low day you only see the core. |
+| **Time anchors** | A routine set to "around 8:00" floats to the top near its time with a little countdown ring, a time-blindness aid, not an alarm. |
+| **Routine player** | One task at a time, full screen, two big buttons, for the days when a list is already too much. An **Up next** strip picks the one task that makes most sense right now. |
+| **Training blocks** | 6-week PPL then Upper/Lower, rep-wave periodization, an injury-safe execution cue on every exercise. One tap generates the whole block. |
+| **Session player** | Every set with last time's numbers pre-filled, and the safety cue pinned under the exercise name. |
+| **Volume picture** | Hard sets per muscle per week, plus a *"Last 4 weeks"* ranking that tags your most and least trained muscle. |
+| **Suggested plan changes** | One set more or fewer on a specific exercise, with the reason in real numbers. Folded into a list, applied with one tap. |
+| **Injury reports** | Upcoming sets get lighter, swapped or taken out depending on how bad it is, cardio included. **Healed** puts back exactly what changed. |
+| **Weekly coach's note** | An AI read of your week against a 12-week trend, with 3 to 5 small, safety-first suggestions. |
+| **Reflection** | Two sentences twice a day, in your timezone, plus an Explore chart from the last 24 hours up to 12 months. |
+| **Eleven languages** | Real localization, right-to-left for Arabic and Farsi, and the Jalali calendar for Farsi. |
 
-<p align="center">
-  <img src="docs/screenshots/ailog.jpg" width="40%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
-</p>
+<details>
+<summary><strong>Everything else it does</strong></summary>
 
-### 📅 Routines that adapt to the day
+<br>
 
-- Tasks have tiers (core / standard / bonus). On a low-energy day you only see
-  the core minimum, and completing that still counts as a full win.
-- Routines can have a time anchor ("around 8:00"). Near their time they float
-  to the top with a little countdown ring — a time-blindness aid, not an alarm.
-- A **routine player**: one task at a time, full screen, two big buttons, for
-  the days when a list is already too much. An always-on **"Up next" strip**
-  picks the single most sensible pending task (instantly, no AI call) — tap
-  it and the player opens right there.
+**The message box, in more detail.**
+
+- It gets how people actually talk, the exceptions and the negations.
+  *"skip the run today"* does the opposite of a check without you hunting for
+  a button.
+- Reminders understand the clock in both directions: *"...in 10 mins"* works,
+  and later *"bought the sunscreen"* clears the matching open reminder again.
+  That's a status change, never a delete, and undo restores exactly what was
+  there.
+- Cardio takes the whole story in one line: *"ran 5k in 25 min at 152 bpm,
+  felt easy"* logs distance, time, heart rate and how it felt.
+- On Android, the **share sheet** works too: share text into the app from
+  anywhere and it lands in the message box for review.
+- The AI log keeps a running accuracy score. Questions don't count toward it,
+  since they change nothing.
+
+**Routines.**
+
 - Routines can be **paused** from the week view: hidden from the day, the AI
-  and the nudges, history intact, one tap to bring back.
-- Optional **push nudges**: if a routine's anchor passes and its core tasks are
-  still pending, you get one gentle notification ("Morning routine is ready
-  when you are") — at most once per routine per day, and never "you missed".
-  Reminders with a due date get one morning nudge; give one a clock time and
-  its nudge arrives at that hour instead.
-- No streaks, no shame. Skips show up neutral, blanks stay blank, past days can
-  be corrected from the week grid, and taps work offline (they queue and sync).
+  and the nudges, history intact, one tap to bring them back.
+- Optional **push nudges**: if a routine's anchor passes and its core tasks
+  are still pending, you get one gentle notification (*"Morning routine is
+  ready when you are"*), at most once per routine per day.
+- Past days can be corrected from the week grid.
+- Taps work offline, and that includes the annoying in-between case: one bar
+  of signal outside the house, where the phone swears it's online but nothing
+  actually gets through. I kept losing Done taps there, the task would just
+  pop back up later! Now a tap that hangs for 10 seconds is kept, stays on
+  screen, and retries on its own.
 
-<p align="center">
-  <img src="docs/screenshots/weekeditor.jpg" width="40%" alt="Editing a routine: rename with Save/Cancel, tiers, and day-of-week pills per task">
-</p>
+**Training.**
 
-### 🏋️ A full training module
+- **Flexible sessions.** Fewer gym days than planned is fine, weekly volume
+  matters more than the exact split. The composer builds an upper, lower or
+  full-body day (or a whole short week) from what your week still needs.
+- After a session, an optional **recovery check-in** per muscle: how it
+  recovered, how hard it worked, how the amount felt. Those answers feed the
+  suggested plan changes.
+- The **suggested plan changes** are fixed rules, not the AI, so the same
+  data always gives the same answer. They ease off when your check-ins keep
+  saying "a stretch" or "over the line", and they only add a set when you said
+  "could take more" *and* you're logging at least 80% of the planned sets,
+  never on an exercise an injury puts at risk. If a muscle is light because
+  the sessions just didn't happen, you get a note instead, since more sets on
+  paper wouldn't change a thing. **Apply** edits the plan from the current
+  phase on and asks whether the running block should follow, **Not now** sets
+  it aside, and either way that muscle starts fresh.
+- The coach's note knows which suggestions you applied, so it won't tell you
+  to undo the set you dropped last week. It also refreshes right away when you
+  report or heal an injury.
+- Off-plan lifts count: *"hammer curls 14kg 3x12"* gets tagged with its
+  muscle group and shows up in the volume picture instead of disappearing.
+- A **cardio view** with quick logging, weekly distance and pace. If your
+  watch already tracks all of that, like mine does, switch **Cardio logging**
+  off in Settings. The cardio view, its chart and CSV disappear, the composer
+  stops logging runs, and the coach stops commenting on cardio it can't see.
+  Nothing is deleted.
+- The plan is fully yours to edit, sets × reps per phase as plain fields.
+  Exercise names autocomplete from a 1,289-exercise database and fill in the
+  muscle group for you. Nothing saves until you press Save.
 
-- Your program lives as **training blocks** (6-week PPL then Upper/Lower,
-  rep-wave periodization, an injury-safe execution cue on every exercise).
-  One tap generates all sessions and sets for a block.
-- The **session player** shows every exercise with its sets, last time's
-  numbers pre-filled as placeholders (double progression made easy), and the
-  safety cue pinned under the name. *"leg press 120 4x8"* typed anywhere fills
-  those exact planned sets.
-- After a session, an optional **recovery check-in** per muscle (how it
-  recovered, how hard it worked, how the amount felt) — and if a muscle says
-  "over the line" twice, you get a dismissible suggestion, never a silent plan
-  edit.
-- A **volume picture** (hard sets per muscle per week) and a **cardio view**
-  with quick logging, weekly distance, and pace — runs, walks, cycles, swims.
-  Off-plan lifts count too: *"hammer curls 14kg 3x12"* typed in the composer
-  gets tagged with its muscle group and shows up in the weekly chart instead
-  of disappearing.
-- **Injury reports.** If something hurts, you tell the Workout tab where
-  (neck, shoulder, elbow, wrist, lower back, hip, knee or ankle) and how bad
-  it is, and the app shows you exactly what would change in your upcoming
-  sessions before anything happens. On a mild injury the exercises that load
-  that area drop a set and go lighter. On a moderate one they get swapped for
-  a joint-friendlier movement from your own plan, or taken out if nothing
-  safe exists for that muscle. On a severe one, anything that touches the
-  area at all is swapped or taken out. Every adjusted exercise carries a
-  short cue in the session, and new sessions you start while injured get the
-  same treatment. That includes flexible sessions: the composer simply
-  doesn't pick what the injury rules out, so a lower-body day with a sore
-  knee is built from hip thrusts and leg curls instead of leg press.
-- Injuries reach the **cardio** side too. Each one says which kinds are fine,
-  which to keep easy and which to skip for now: a knee rules out running, a
-  shoulder or neck rules out swimming, and with both it's cycling or walking.
-  The Cardio card shows that per injury, starts the quick log on a kind that
-  suits you, and holds the weekly target at an easy level while you heal (no
-  build weeks). You can still log a run if you want to, it's your call, and
-  it just reminds you which injury it loads. The cardio note on your planned
-  sessions moves to something that suits every injury you have at once. When it's better, one tap on **Healed** puts back exactly what
-  the injury changed, and sets you already logged are never touched. It's not
-  medical advice, and the card says so: sharp, worsening or lasting pain goes
-  to a physio or a doctor.
-- Once a week, an AI **coach's note**: it reads last week's sets, reps,
-  weights, per-muscle volume, recovery check-ins and cardio feel against the
-  12-week trend, and suggests 3–5 small, safety-first tweaks (one increment
-  at a time, less for anything that felt "over the line", cardio capped at
-  +10% a week). Active injuries come first: it never pushes progression on
-  anything that loads an injured area, and it refreshes right away when you
-  report or heal one instead of waiting for the next week. Advisory only — it
-  never edits your plan. The long-view sibling, a **Training patterns** card,
-  lands on the Reflect tab.
-- The plan is fully yours to edit: exercises, sessions, form cues, and sets ×
-  reps per phase as plain fields (no format to memorize). Exercise names
-  autocomplete from a 1,289-exercise database as you type, and picking one
-  fills in the muscle group for you. Nothing saves until
-  you press Save — Cancel really cancels, deletes are undoable until then —
-  and if you change the plan mid-block, the app asks whether the running
-  block's remaining sessions should pick it up or leave it for the next one.
+**Reflection and your data.**
 
-<p align="center">
-  <img src="docs/screenshots/checkin.jpg" width="40%" alt="After a session: an optional recovery check-in per muscle, three quick questions">
-  <img src="docs/screenshots/planeditor.jpg" width="40%" alt="The plan editor: draft-based Save/Cancel and sets × reps per phase as plain fields">
-</p>
-
-### 🌱 Reflection, gently
-
-- Weekly bars count everything you did — tasks, gym sessions, cardio — with
+- Weekly bars count everything you did (tasks, gym sessions, cardio) as
   patterns instead of pass/fail.
-- An **Explore chart**: tasks, hard sets or cardio km over the last 24 hours
-  (hourly), 7 days, 32 days, 6 months or 12 months, with min/max/avg.
-- Twice a day — a morning pass and a closing pass at night, in your own
-  timezone — the AI writes two sentences about your week so far: one pattern
-  it noticed, one permission-based suggestion. Words like "failed" and
-  "missed" are banned at the prompt level and checked again after. It also
-  knows when you've just started logging, so your first week is treated as a
-  baseline instead of being compared against empty history.
+- The reflection knows when you've just started logging, so your first week
+  is a baseline instead of a comparison against empty history.
 - Half an hour before the nightly reflection, one push reminds you to log
-  anything still floating around, so the reflection reads a complete day.
-- Your data is yours: one-tap CSV export of tasks, workouts, training sets,
-  cardio, recovery check-ins and reminders.
+  anything still floating around.
+- One-tap CSV export of tasks, workouts, training sets, cardio, recovery
+  check-ins and reminders.
 
-### 🌍 Eleven languages, real localization
+**The basics.**
 
-English, Français, Español, Deutsch, 中文, العربية, فارسی, Türkçe, Русский,
-Čeština and 日本語 — switchable in Settings. This isn't a machine-translated
-skin: the seeded routines, the starter plan's safety cues and every screen are
-translated, Arabic and Farsi flip the entire layout right-to-left, and Farsi
-shows dates in the Jalali calendar. The server side follows along too — push
-nudges, the composer's answers and the AI reflections all arrive in your
-language. And since your routines were seeded in whatever language was active
-at sign-up, switching offers a one-tap translation of that seeded content into
-the new language (exact lookup across the packs, no AI, your own words are
-never touched). Every string lives in one typed file per language
-(`src/i18n/`), so adding a language is copy, translate, register — TypeScript
-flags anything a translation misses.
+- Installable PWA with realtime sync across devices.
+- Instant tab switches (screens stay mounted and refresh quietly).
+- In the installed app the back button closes whatever is open, then returns
+  to the day, and never throws you out.
+- No browser popups anywhere, destructive taps confirm in-app.
+- Settings for theme (auto, light, dark), language, timezone and the cardio
+  switch.
 
-### ⚙️ And the basics done right
+</details>
 
-Installable PWA, realtime sync across devices,
-offline queues for messages, taps and gym logging. Tab switches are instant
-(screens stay mounted and refresh quietly in the background), and in the
-installed app the hardware back button behaves like a native app's: it closes
-whatever is open, then returns to the day, and never throws you out. No
-browser popups anywhere — destructive taps confirm in-app, dialogs trap
-keyboard focus properly. A settings screen with theme (auto/light/dark),
-language and per-user timezone, fully editable routines, tasks and training
-plans. And a **live demo** ([try it](https://stayuptildawn.github.io/routine-tracker/?demo))
-that runs the whole app against an in-browser fake backend — no account, no
-server, data stays in your browser.
+<p align="center">
+  <img src="docs/screenshots/session.jpg" width="24%" alt="The session player: sets with last time's numbers pre-filled and a safety cue">
+  <img src="docs/screenshots/checkin.jpg" width="24%" alt="After a session: an optional recovery check-in per muscle, three quick questions">
+  <img src="docs/screenshots/week.jpg" width="24%" alt="The Week tab: a done/skipped grid per routine, a record, not a scorecard">
+  <img src="docs/screenshots/ailog.jpg" width="24%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
+</p>
 
-## Design
+## How it works
 
-The UI follows its own bedtime advice (dim lights, no screens): a warm,
-low-blue "lamplight" palette, one amber accent, sage green for done. The body
-font is Atkinson Hyperlegible, which was designed by the Braille Institute for
-maximum legibility. There is no red X anywhere in the app!
+```
+  "took my meds and benched 80 for 5"
+                 │
+                 ▼
+   interpret-message (Edge Function)
+   + today's tasks, open reminders, your clock
+                 │
+                 ▼
+     Gemini: a list of actions, each with a confidence
+                 │
+      ┌──────────┼──────────────────┐
+      ▼          ▼                  ▼
+   ≥ 0.9       0.6 to 0.9         < 0.6
+   applied,    "Did you mean...?"  nothing
+   with undo   chips to confirm    happens
+      │
+      ▼
+   ai_actions log (every batch reversible)
+```
 
-Every icon is a hand-rolled inline SVG stroke set (no icon font, no emoji in
-the chrome), so the icons render identically on every device and inherit the
-theme colors instead of whatever your OS ships.
+The interpret core (`supabase/functions/_shared/interpret.ts`) gets your text
+plus today's date, weekday and local clock, loads today's scheduled tasks and
+your open reminders, and asks Gemini for a structured list of actions. The
+day's tasks go straight into the prompt as candidates, which at personal scale
+works better than embeddings and costs basically nothing. If a planned
+training session is open today, logged sets fill that session's planned sets,
+so the message box and the session player write the same rows.
 
-## Stack
+Questions go one step further. The simple ones (*"when did I last..."*,
+*"what's pending?"*) are answered straight from the database. For anything
+else, a second call (`_shared/askData.ts`) answers from a compact summary of
+your last 90 days, and the model is told to use only that summary.
 
-React + Vite + TypeScript · Supabase (Postgres, Auth, Realtime, Edge
-Functions, pg_cron) · Gemini Flash-Lite · GitHub Pages · Web Push · PWA
+One lesson from running this on small models is baked in: anything
+time-shaped is never left to the model's arithmetic. *"in 10 mins"*, *"at
+5pm"*, *"tomorrow"*, *"yesterday"* are all resolved in code against your clock
+and timezone, the model only has to point at the right task or reminder. And
+every AI call in the project goes through one shared helper
+(`_shared/gemini.ts`) that owns the model chain, so an overloaded model, a
+used-up quota or a retired model name just means "try the next one" instead of
+taking the feature down.
 
-No chart libraries, no drag-and-drop libraries, no CSS framework. The bars are
-plain divs and the whole design system is one CSS file.
+## Quick start
 
-Exercise-name autocomplete is powered by a trimmed extract (names + muscle
-groups only, ~9 KB gzipped, loaded on demand) of the MIT-licensed
-[exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) by Hasan
-Eyildirim — regenerate it with `scripts/build-exercise-db.mjs`.
+**Just want to see it?** Open the
+[demo](https://stayuptildawn.github.io/routine-tracker/?demo), that's it.
 
-## How many users can this handle?
+**Want your own?** You need a free [Supabase](https://supabase.com) project, a
+free [Gemini API key](https://aistudio.google.com/apikey) and a GitHub
+account for hosting. Then:
 
-Honestly, it's built for one person, me. I have cleaned up the roughest
-single-user parts over time — each user picks their own timezone and language
-in Settings, the starter routines and workout plan are opt-in, and every
-background job walks all accounts — so a handful of accounts on one instance
-works fine. Signups are meant to be off once your own account exists.
+```sh
+git clone https://github.com/Stayuptildawn/routine-tracker.git
+cd routine-tracker
+cp .env.example .env    # fill in from Supabase Settings > API
+npm install
+npm run dev
+```
 
-That said, since people ask, here's where the free-tier ceilings actually
-are, in the order they'd break:
-
-1. **Gemini (unbilled): the real limit.** Roughly 15 requests/minute and
-   ~1,000–1,500/day on the free tier. Every message is one request, and a
-   free-form question about your data is two (one to understand it, one to
-   answer it). A 2-model fallback chain stretches this a bit. At
-   20–30 messages per user per day, that's **~30–50 active users** before
-   midday rate-limit errors — and one user never gets close.
-2. **Supabase Realtime: 200 concurrent connections.** An open app holds one
-   or two, so about **100–150 simultaneously open apps**.
-3. **Everything else is far away.** Edge Functions allow 500K
-   invocations/month (the cron jobs — nudges every 5 minutes, reflections
-   every 15, the daily canary — use ~12K), the 500MB database
-   is years of personal data (a whole 6-week training block is ~700 tiny
-   rows), and GitHub Pages barely notices a 450KB app.
-
-If you enabled Gemini billing, the AI cost is about $0.0002 per message (~100
-messages a day is well under $1/month), and the ceiling moves to Realtime
-connections. But making it truly multi-user would also need real work:
-per-user timezones, per-user Telegram links, onboarding instead of my seed
-routines. For what it actually does, one person and zero cost, there is a lot
-of room to spare.
-
-## Is your data safe?
-
-Short answer: yes, and I checked it, I didn't just assume.
-
-Every table in the database is locked to its owner. This is not the app being
-careful, it is the database itself (Postgres Row Level Security) that refuses
-to give your rows to anyone else. So even if I made a mistake in the code and
-asked for everyone's data, the database would still only return yours. I went
-through every table and confirmed it, including the ones that don't store an
-owner directly and have to check it through a join.
-
-The key that ships inside the app is public on purpose. That's how Supabase
-works, and it opens nothing without you being logged in. The secrets that
-actually matter (the AI key, the admin key, the push and bot tokens) stay on
-the server and never reach the code you download. Everything runs over HTTPS,
-and the app never renders raw HTML, so there is very little for injection
-attacks to grab. The AI only ever touches your own data, so even a strange
-message can't reach past your account.
-
-The same goes for questions. When you ask something about your data, the
-server builds a short summary of your own rows, and that summary is the only
-thing the AI sees. It runs as you, every query behind it is filtered to your
-account on top of the database rules, and the AI has no way to go looking for
-anything else. There's a test that puts another user's data in the database
-and checks that none of it ends up in what the AI gets. One thing to be clear
-about though: to answer, that summary is sent to Gemini, which is Google's.
-That's the same as every message you type already, but you should know it.
-
-Now the honest limits. This is a personal project I host myself, and no
-security company has audited it. The per-user isolation is solid at the
-database level, but some background jobs run with higher access and rely on
-my code to stay scoped to the right person, so that part needs care instead
-of trusting the database to catch a mistake. And GitHub Pages does not let me set a couple of
-extra security headers I would add if I ran the server myself.
-
-None of this worries me for what the project is, but I would rather tell you
-straight than pretend it's perfect.
-
-## Setup
+<details>
+<summary><strong>Full setup, step by step</strong></summary>
 
 ### 1. Supabase project
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migrations in `supabase/migrations/` **in order** (0001 upward) in
-   the SQL editor, or `supabase db push` with the CLI. Note: the editor runs
-   each paste as one transaction, so run them one file at a time.
+2. Run the migrations in `supabase/migrations/` **in order** (0001 upward)
+   with `supabase db push`, or paste them one file at a time into the SQL
+   editor (it runs each paste as one transaction).
 3. In **Authentication > Providers**, enable Email. Disable "Confirm email"
-   if you want instant single-user signup.
+   if you want instant signup.
 
 ### 2. Edge Functions
 
 ```sh
 npm i -g supabase
 supabase login
-supabase secrets set GEMINI_API_KEY=<your-gemini-api-key>   # aistudio.google.com/apikey
+supabase secrets set GEMINI_API_KEY=<your-gemini-api-key>
 supabase functions deploy interpret-message --project-ref <ref>
 supabase functions deploy refresh-coach --project-ref <ref>
 ```
 
-`refresh-coach` is what rewrites the coach's note right after you report or
-heal an injury. Without it, injuries still adjust your sessions, and the note
-catches up on its next weekly pass.
-
 Mind that you should keep the Gemini project unbilled to stay on the free
 tier. The functions share code from `supabase/functions/_shared/`, which the
-CLI uploads automatically (the dashboard paste-editor can't).
+CLI uploads for you (the dashboard paste-editor can't).
 
-**Optional extras**, each independent:
+**Optional extras**, each one independent:
 
-- **AI reflections**: set a `CRON_SECRET` secret, deploy `weekly-reflection`
-  with `--no-verify-jwt`, enable the `pg_cron` and `pg_net` extensions, and
-  schedule a `net.http_post` to it **every 15 minutes** with an
-  `x-cron-secret` header. The function itself decides when to actually write:
-  twice a day per user (morning and night), in that user's timezone. The same
-  pass also writes the weekly training review (the coach's note on the
-  Workout tab and the Training patterns card on Reflect) once per user per
-  week — self-healing, no extra cron needed. One
-  gotcha that cost me an afternoon: pass `timeout_milliseconds := 20000` in
-  the `net.http_post` call — pg_net's default is 5 seconds, which kills the
-  function exactly when it has real work to do.
+- **AI reflections and the weekly coach**: set a `CRON_SECRET` secret, deploy
+  `weekly-reflection` with `--no-verify-jwt`, enable `pg_cron` and `pg_net`,
+  and schedule a `net.http_post` to it every 15 minutes with an
+  `x-cron-secret` header. The function decides by itself when to actually
+  write, in each user's timezone. One gotcha that cost me an afternoon: pass
+  `timeout_milliseconds := 20000`, since pg_net's default of 5 seconds kills
+  the function exactly when it has real work to do.
 - **Push nudges**: generate keys with `npx web-push generate-vapid-keys`, set
   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a mailto:) and
-  `CRON_SECRET` secrets, add the public key as a `VITE_VAPID_PUBLIC_KEY`
-  repo secret, deploy `send-nudges` with `--no-verify-jwt`, and schedule it
-  **every 5 minutes** (same 20-second timeout as the reflection). It covers
-  the anchor nudges, due-today reminders — including ones with a clock time,
-  which push within ~5 minutes of their hour — and the pre-reflection
-  reminder at 21:30. iOS needs the PWA installed to the home screen.
-- **AI canary**: deploy `ai-canary` with `--no-verify-jwt`, set `CANARY_SECRET`
-  (its own secret, so rotating it can't break the other jobs) and
-  `OWNER_EMAIL` secrets, and schedule it once a day like the others. If the
-  whole Gemini model chain ever fails — quota gone, model retired, key
-  revoked — you get one push that morning instead of finding out mid-message.
+  `CRON_SECRET`, add the public key as a `VITE_VAPID_PUBLIC_KEY` repo secret,
+  deploy `send-nudges` with `--no-verify-jwt`, and schedule it every 5
+  minutes (same 20-second timeout). iOS needs the app installed to the home
+  screen.
+- **AI canary**: deploy `ai-canary` with `--no-verify-jwt`, set
+  `CANARY_SECRET` and `OWNER_EMAIL`, and schedule it once a day. If the whole
+  Gemini model chain ever fails, you get one push that morning instead of
+  finding out mid-message.
 - **CI function deploys**: add a `SUPABASE_ACCESS_TOKEN` repo secret and a
   `SUPABASE_PROJECT_REF` repo variable, and every push that touches
-  `supabase/functions/` deploys them automatically (after the unit tests
-  pass), so the deployed code can't drift from the repo. Without the secret
+  `supabase/functions/` deploys them after the tests pass. Without the secret
   the workflow just skips itself.
 
-### 3. Local dev
+### 3. Deploy on GitHub Pages
 
-```sh
-cp .env.example .env    # fill in from Supabase Settings > API
-npm install
-npm run dev
-```
-
-On your first sign-in the app seeds a starter set of routines
-(`src/lib/seedData.ts`, you can edit them there or in the app).
-
-### 4. Deploy (GitHub Pages)
-
-1. Create a GitHub repo and push.
-2. Repo **Settings > Pages**: set Source to "GitHub Actions".
-3. Repo **Settings > Secrets and variables > Actions**: add
-   `VITE_SUPABASE_URL` and `VITE_SUPABASE_API_KEY` as repository secrets
-   (just the values, nothing else!).
-4. Push to `main` and `.github/workflows/deploy.yml` builds and publishes it
-   (it even retries the flaky Pages deploy step once for you).
+1. Push the repo to GitHub.
+2. **Settings > Pages**: set Source to "GitHub Actions".
+3. **Settings > Secrets and variables > Actions**: add `VITE_SUPABASE_URL`
+   and `VITE_SUPABASE_API_KEY` as repository secrets (just the values,
+   nothing else!).
+4. Push to `main` and `.github/workflows/deploy.yml` builds and publishes it.
 5. Supabase **Authentication > URL Configuration**: add your Pages URL
    (`https://<user>.github.io/<repo>/`) as a redirect URL.
 
-Also, once your own account exists, I recommend turning off "Allow new users
-to sign up" in the Supabase Auth settings, so strangers can't use your AI
-quota.
+Once your own account exists, I recommend turning off "Allow new users to
+sign up" in the Supabase Auth settings, so strangers can't use your AI quota.
 
-## How the AI input works
+</details>
 
-The interpret core (`supabase/functions/_shared/interpret.ts`, behind the
-app's `interpret-message` function) receives your text plus today's date,
-weekday and local clock, loads today's scheduled tasks and your
-open reminders, and asks Gemini for a structured list of actions: check-offs
-(today or a past day), workout sets, cardio (with heart rate and how it
-felt), creating reminders (with due dates and times), clearing reminders,
-energy level, or read-only questions. Actions with confidence ≥ 0.9 are
-applied immediately (still undoable, every batch is recorded in
-`ai_actions`), the 0.6–0.9 ones come back as one-tap confirm chips, and below
-that nothing happens at all. If a planned training session is open today,
-logged sets fill the session's planned sets instead of the freeform log, so
-the composer and the session player write the same rows. The day's tasks and open reminders are injected straight into the
-prompt as candidates, which at personal scale works better than embeddings
-and costs basically nothing.
+## Project structure
 
-Questions go one step further. The simple ones (*"when did I last…"*,
-*"what's pending?"*) are answered straight from the database. For anything
-else, the parser only restates the question, and a second call
-(`supabase/functions/_shared/askData.ts`) answers it from a compact summary of
-your last 90 days: routines and how often each task got done, energy,
-reminders, lifts, cardio, the current block, active injuries and the latest
-coach's note. The model is told to use only that summary and to say so
-plainly when the answer isn't in it.
+```
+routine-tracker/
+├── src/
+│   ├── screens/          # Now, Week, Gym (Workout), Reflect, Session, Settings...
+│   ├── lib/              # the logic: blocks, flex sessions, injuries, volume
+│   │                     #   tuning, offline queue, demo fake backend
+│   ├── i18n/             # one typed file per language (en.ts is the source)
+│   ├── components/       # icons, skeletons, the in-app confirm button
+│   └── index.css         # the whole design system, one file
+├── supabase/
+│   ├── migrations/       # 0001 upward, run in order
+│   └── functions/
+│       ├── _shared/      # interpret, askData, trainingReview, gemini helper
+│       ├── interpret-message/
+│       ├── refresh-coach/
+│       ├── weekly-reflection/
+│       ├── send-nudges/
+│       └── ai-canary/
+├── tests/                # vitest: parsing, planners, the offline queue
+├── scripts/              # exercise-db builder, live smoke test
+└── docs/screenshots/
+```
 
-One lesson from running this on the small models is baked in: anything
-time-shaped is never left to the model's arithmetic. *"in 10 mins"*, *"at
-5pm"*, *"tomorrow"*, *"yesterday"* are all resolved deterministically in
-code against your clock and timezone; the model only has to point at the
-right task or reminder. Repeated actions get deduped and the action list is
-capped. Every AI call in the project — the parser, the reflections, the
-weekly training review, the canary — goes through one shared helper
-(`supabase/functions/_shared/gemini.ts`) that owns the model chain and its
-fallthrough rules: overload, quota, a retired model name or truncated JSON
-all mean "try the next model", so one bad model never takes the feature down.
+## Design
+
+The UI follows its own bedtime advice (dim lights, no screens): a warm,
+low-blue "lamplight" palette, one amber accent, sage green for done. The body
+font is Atkinson Hyperlegible, which was designed by the Braille Institute for
+maximum legibility.
+
+Every icon is a hand-rolled inline SVG (no icon font, no emoji in the
+chrome), so they look the same on every device and follow the theme colors
+instead of whatever your OS ships.
+
+## Stack
+
+React, Vite and TypeScript on the front. Supabase (Postgres, Auth, Realtime,
+Edge Functions, pg_cron) behind it, Gemini Flash-Lite for the AI, Web Push for
+nudges, and GitHub Pages for hosting.
+
+No chart libraries, no drag-and-drop libraries, no CSS framework. The bars are
+plain divs and the whole design system is one CSS file.
+
+Exercise-name autocomplete uses a trimmed extract (names and muscle groups
+only, about 9 KB gzipped, loaded on demand) of the MIT-licensed
+[exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) by Hasan
+Eyildirim. Regenerate it with `scripts/build-exercise-db.mjs`.
+
+## FAQ
+
+**Does it cost anything?**
+
+Not on the free tiers, which is how I run it. If you turn on Gemini billing,
+the AI costs about $0.0002 per message, so around 100 messages a day stays
+well under $1 a month.
+
+**How many users can this handle?**
+
+It's built for one person, me. Each user has their own timezone and
+language, the starter routines and plan are opt-in, and every background job
+walks all accounts, so a handful of accounts on one instance works fine. Here
+is where the free tiers would actually break, in order:
+
+1. **Gemini (unbilled) is the real limit.** Roughly 15 requests a minute and
+   about 1,000 to 1,500 a day. Every message is one request, a free-form
+   question is two. At 20 to 30 messages per user per day, that's about 30 to
+   50 active users, and one user never gets close.
+2. **Supabase Realtime allows 200 concurrent connections**, so about 100 to
+   150 apps open at the same time.
+3. **Everything else is far away.** The cron jobs use about 12K of the 500K
+   monthly function calls, a whole 6-week training block is about 700 tiny
+   rows in a 500 MB database, and GitHub Pages barely notices a 450 KB app.
+
+**Is my data safe?**
+
+Every table is locked to its owner by the database itself (Postgres Row
+Level Security), so even if I made a mistake in the code and asked for
+everyone's data, the database would still only return yours. The key inside the app is public on
+purpose, that's how Supabase works, and it opens nothing without you being
+logged in. The secrets that matter (the AI key, the admin key, the push keys)
+stay on the server.
+
+When you ask a question, the server builds a short summary of your own rows
+and that summary is the only thing the AI sees. There's a test that puts
+another user's data in the database and checks that none of it reaches the
+AI. That summary, like every message you type, is sent to Gemini, which is
+Google's.
+
+This is a personal project I host myself, and no security company has
+audited it. Some background jobs run with higher access and rely on my code to
+stay scoped to the right person, and GitHub Pages doesn't let me set a couple
+of extra security headers I'd add on my own server.
+
+**Can it read my workouts from Apple Health or my watch?**
+
+No. An installed web app can't read Apple Health or Health Connect, so
+there's a **Cardio logging** switch in Settings instead. If your watch already
+tracks your runs, turn it off and the app stops asking.
+
+**Is the injury feature medical advice?**
+
+No. It adjusts your upcoming sessions so you can keep training around
+something that hurts, and it says plainly that sharp, worsening or lasting
+pain goes to a physio or a doctor.
+
+**Can I add my language?**
+
+Yes. Copy `src/i18n/en.ts`, translate the values and
+register it in `src/i18n/index.ts`. Every pack is typed against the English
+one, so TypeScript tells you about anything you missed.
+
+## About me
+
+I'm Mohammad. I built this around my own AuDHD brain, because I needed it and
+couldn't find one that didn't charge me monthly for it. I'm nowhere near done
+with it, I keep adding to it, and I'd like it to fit more people than just
+me. So if you have an idea, I'm happy to hear it, and if the project is
+useful to you and you want to help keep it going, suggestions and donations
+are both welcome.
 
 ## License
 
 Copyright (C) 2026 Mohammad Soleimani Roudi
 
-This program is free software: you can redistribute it and modify it under the
-terms of the [GNU Affero General Public License](LICENSE) (AGPL), version 3 or
-later. It comes with no warranty.
+This program is free software: you can redistribute it and modify it under
+the terms of the [GNU Affero General Public License](LICENSE) (AGPL), version
+3 or later. It comes with no warranty.
 
-I picked the AGPL on purpose. It's the one license that also covers hosting, so
-if someone runs a changed version of this as a web service, they have to share
-their source too. Given the whole reason I built this (no paywalls, keep it free
-for the next person), that felt like the honest choice.
+I picked the AGPL on purpose. It's the one license that also covers hosting,
+so if someone runs a changed version of this as a web service, they have to
+share their source too. Given the whole reason I built this (no paywalls, keep
+it free for the next person), that felt like the honest choice.

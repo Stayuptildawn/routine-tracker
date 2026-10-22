@@ -212,7 +212,7 @@ export const fa: Strings = {
     leastTrained: 'کمترین',
     monthSets: (n: number, w: number) => `${n} ست · ~${w}/هفته`,
     tune: {
-      title: 'تغییرهای پیشنهادی برنامه',
+      toggle: (n: number) => `تغییرهای پیشنهادی برنامه (${n})`,
       change: (from: number, to: number) => `${from} ← ${to} ست`,
       tooMuch: (muscle: string, n: number) => `${muscle}: اخیراً ${n} بار «لب مرز» یا «از توانم بیشتر» — یک ست کمتر جا برای ریکاوری باز می‌کند.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n} بار «جا داشتم» و هفته‌ای ${perWeek} از ${target} ست برنامه را ثبت کردی — یک ست بیشتر قدم کوچکی است.`,

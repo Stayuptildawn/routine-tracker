@@ -215,7 +215,7 @@ export const cs: Strings = {
     leastTrained: 'nejméně',
     monthSets: (n: number, w: number) => `${n} sérií · ~${w}/týd`,
     tune: {
-      title: 'Navržené změny plánu',
+      toggle: (n: number) => `Navržené změny plánu (${n})`,
       change: (from: number, to: number) => `${from} → ${to} sérií`,
       tooMuch: (muscle: string, n: number) => `${muscle}: poslední dobou ${n}× „Na hraně“ nebo „Přes čáru“ — o sérii méně dá prostor na regeneraci.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n}× „Sneslo by víc“ a zapsal jsi ${perWeek} z ${target} plánovaných sérií týdně — o sérii víc je malý krok.`,

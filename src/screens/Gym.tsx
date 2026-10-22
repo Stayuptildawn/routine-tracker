@@ -99,6 +99,7 @@ export default function Gym({ visible }: { visible: boolean }) {
   const [flexWeekDays, setFlexWeekDays] = useState<number | null>(null)
   const [flexWeekPreview, setFlexWeekPreview] = useState<FlexWeekPlan | null>(null)
   const [showPastFlex, setShowPastFlex] = useState(false)
+  const [showTune, setShowTune] = useState(false) // suggested plan changes, folded like past flex sessions
   // the composer is a secondary tool: it stays folded so the card reads as
   // one line until the day actually calls for it
   const [flexOpen, setFlexOpen] = useState(false)
@@ -1229,8 +1230,12 @@ export default function Gym({ visible }: { visible: boolean }) {
           )}
           {(tuning.changes.length > 0 || behind.length > 0) && (
             <div className="volume-month volume-tune">
-              {tuning.changes.length > 0 && <h3 className="volume-month-title">{t.gym.tune.title}</h3>}
-              {tuning.changes.map((c) => (
+              {tuning.changes.length > 0 && (
+                <button className="link tune-toggle" aria-expanded={showTune} onClick={() => setShowTune((v) => !v)}>
+                  <Icon name={showTune ? 'arrow-up' : 'arrow-down'} /> {t.gym.tune.toggle(tuning.changes.length)}
+                </button>
+              )}
+              {showTune && tuning.changes.map((c) => (
                 <div key={c.plan.id} className="tune-row">
                   <p className="tune-change">
                     <strong>{c.plan.exercise}</strong> <span className="tune-split">{c.plan.split_day}</span>{' '}
@@ -1251,6 +1256,7 @@ export default function Gym({ visible }: { visible: boolean }) {
                   </div>
                 </div>
               ))}
+              {showTune && tuning.changes.length > 0 && <p className="gentle tune-foot">{t.gym.tune.footnote}</p>}
               {behind.length > 0 && (
                 <p className="gentle tune-behind">
                   {allBehind
@@ -1258,7 +1264,6 @@ export default function Gym({ visible }: { visible: boolean }) {
                     : t.gym.tune.behind(behind.map((b) => `${muscleLabel(b.muscle)} ${b.perWeek}/${b.target}`).join(' · '))}
                 </p>
               )}
-              {tuning.changes.length > 0 && <p className="gentle tune-foot">{t.gym.tune.footnote}</p>}
             </div>
           )}
         </section>

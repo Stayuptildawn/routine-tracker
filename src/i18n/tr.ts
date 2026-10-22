@@ -213,7 +213,7 @@ export const tr: Strings = {
     leastTrained: 'en az',
     monthSets: (n: number, w: number) => `${n} set · ~${w}/hf`,
     tune: {
-      title: 'Önerilen plan değişiklikleri',
+      toggle: (n: number) => `Önerilen plan değişiklikleri (${n})`,
       change: (from: number, to: number) => `${from} → ${to} set`,
       tooMuch: (muscle: string, n: number) => `${muscle}: son zamanlarda ${n} kez “Sınırda” ya da “Sınırın üstünde” — bir set eksik toparlanmaya yer açar.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: ${n} kez “Daha fazlasını kaldırırdım” ve haftada planlanan ${target} setin ${perWeek} kadarını kaydettin — bir set fazlası küçük bir adım.`,

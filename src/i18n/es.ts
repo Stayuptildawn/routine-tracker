@@ -216,7 +216,7 @@ export const es: Strings = {
     leastTrained: 'menos',
     monthSets: (n: number, w: number) => `${n} series · ~${w}/sem`,
     tune: {
-      title: 'Cambios sugeridos al plan',
+      toggle: (n: number) => `Cambios sugeridos al plan (${n})`,
       change: (from: number, to: number) => `${from} → ${to} series`,
       tooMuch: (muscle: string, n: number) => `${muscle}: «Algo justa de más» o «Demasiada» ${n} veces últimamente — una serie menos deja margen para recuperar.`,
       room: (muscle: string, n: number, perWeek: number, target: number) => `${muscle}: «Aguantaba más» ${n} veces y registraste ${perWeek} de ${target} series previstas por semana — una serie más es un paso pequeño.`,
