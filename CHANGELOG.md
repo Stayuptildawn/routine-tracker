@@ -4,6 +4,15 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-11-05
+
+### Fixed
+- **Volume picture bars line up again on the phone.** In "Last 4 weeks",
+  each row sized its own columns, so a longer count or muscle name next to
+  a bar squeezed it and the lengths stopped being comparable. All rows now
+  share one set of columns, so every bar starts and ends on the same track
+  and the counts sit right-aligned beside them.
+
 ## 2026-10-22 (later)
 
 ### Fixed

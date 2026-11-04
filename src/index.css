@@ -2237,20 +2237,24 @@ select option {
   color: var(--text);
 }
 
+/* one grid for the whole list, rows on its subgrid: the count column
+   sizes to the widest count, so every track is the same length and
+   the bars compare on one scale (per-row grids let long counts
+   shorten their own track) */
 .volume-rank {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto;
   gap: var(--sp-2);
 }
 
 .volume-rank-row {
   display: grid;
-  grid-template-columns: minmax(0, 9rem) 1fr auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--sp-2);
 }
 
 .volume-rank-row .volume-label {
@@ -2306,6 +2310,7 @@ select option {
   color: var(--text-dim);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  text-align: end;
 }
 
 /* suggested plan changes: folded behind a toggle (like past flex
