@@ -210,7 +210,8 @@ export const zh: Strings = {
     lastFourWeeks: '最近 4 周',
     mostTrained: '最多',
     leastTrained: '最少',
-    monthSets: (n: number, w: number) => `${n} 组 · 约 ${w}/周`,
+    monthSets: (n: number) => `${n} 组`,
+    monthPerWeek: (w: number) => `约 ${w}/周`,
     tune: {
       toggle: (n: number) => `建议的计划调整 (${n})`,
       change: (from: number, to: number) => `${from} → ${to} 组`,

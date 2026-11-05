@@ -211,7 +211,8 @@ export const ar: Strings = {
     lastFourWeeks: 'آخر 4 أسابيع',
     mostTrained: 'الأكثر',
     leastTrained: 'الأقل',
-    monthSets: (n: number, w: number) => `${n} مجموعة · ~${w}/أسبوع`,
+    monthSets: (n: number) => `${n} مجموعة`,
+    monthPerWeek: (w: number) => `~${w}/أسبوع`,
     tune: {
       toggle: (n: number) => `تعديلات مقترحة على الخطة (${n})`,
       change: (from: number, to: number) => `${from} ← ${to} مجموعات`,

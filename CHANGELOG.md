@@ -50,6 +50,10 @@ Fixes from a full security audit. Nothing here was known to be exploited.
   a bar squeezed it and the lengths stopped being comparable. All rows now
   share one set of columns, so every bar starts and ends on the same track
   and the counts sit right-aligned beside them.
+- **The set counts and weekly averages line up too.** "52 sets · ~13/wk"
+  was one piece of text, so the weekly average drifted left or right with
+  the number of digits. The total and the weekly average are now two
+  columns of their own, each aligned down the list.
 
 ## 2026-10-22 (later)
 

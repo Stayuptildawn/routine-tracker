@@ -212,7 +212,8 @@ export const fa: Strings = {
     lastFourWeeks: '۴ هفتهٔ اخیر',
     mostTrained: 'بیشترین',
     leastTrained: 'کمترین',
-    monthSets: (n: number, w: number) => `${n} ست · ~${w}/هفته`,
+    monthSets: (n: number) => `${n} ست`,
+    monthPerWeek: (w: number) => `~${w}/هفته`,
     tune: {
       toggle: (n: number) => `تغییرهای پیشنهادی برنامه (${n})`,
       change: (from: number, to: number) => `${from} ← ${to} ست`,

@@ -231,7 +231,8 @@ export const en = {
     lastFourWeeks: 'Last 4 weeks',
     mostTrained: 'most',
     leastTrained: 'least',
-    monthSets: (n: number, w: number) => `${n} sets · ~${w}/wk`,
+    monthSets: (n: number) => `${n} sets`,
+    monthPerWeek: (w: number) => `~${w}/wk`,
     tune: {
       toggle: (n: number) => `Suggested plan changes (${n})`,
       change: (from: number, to: number) => `${from} → ${to} sets`,

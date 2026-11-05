@@ -1221,7 +1221,8 @@ export default function Gym({ visible }: { visible: boolean }) {
                       <div className="volume-rank-track">
                         <div className="volume-rank-fill" style={{ width: `${(n / monthMax) * 100}%` }} />
                       </div>
-                      <span className="volume-rank-count">{t.gym.monthSets(n, Math.round((n / 4) * 10) / 10)}</span>
+                      <span className="volume-rank-count">{t.gym.monthSets(n)}</span>
+                      <span className="volume-rank-count">{t.gym.monthPerWeek(Math.round((n / 4) * 10) / 10)}</span>
                     </li>
                   )
                 })}

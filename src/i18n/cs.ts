@@ -215,7 +215,8 @@ export const cs: Strings = {
     lastFourWeeks: 'Poslední 4 týdny',
     mostTrained: 'nejvíc',
     leastTrained: 'nejméně',
-    monthSets: (n: number, w: number) => `${n} sérií · ~${w}/týd`,
+    monthSets: (n: number) => `${n} sérií`,
+    monthPerWeek: (w: number) => `~${w}/týd`,
     tune: {
       toggle: (n: number) => `Navržené změny plánu (${n})`,
       change: (from: number, to: number) => `${from} → ${to} sérií`,

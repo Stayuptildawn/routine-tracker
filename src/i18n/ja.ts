@@ -212,7 +212,8 @@ export const ja: Strings = {
     lastFourWeeks: '直近4週間',
     mostTrained: '最多',
     leastTrained: '最少',
-    monthSets: (n: number, w: number) => `${n}セット・約${w}/週`,
+    monthSets: (n: number) => `${n}セット`,
+    monthPerWeek: (w: number) => `約${w}/週`,
     tune: {
       toggle: (n: number) => `プランの変更案 (${n})`,
       change: (from: number, to: number) => `${from} → ${to}セット`,

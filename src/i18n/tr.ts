@@ -213,7 +213,8 @@ export const tr: Strings = {
     lastFourWeeks: 'Son 4 hafta',
     mostTrained: 'en çok',
     leastTrained: 'en az',
-    monthSets: (n: number, w: number) => `${n} set · ~${w}/hf`,
+    monthSets: (n: number) => `${n} set`,
+    monthPerWeek: (w: number) => `~${w}/hf`,
     tune: {
       toggle: (n: number) => `Önerilen plan değişiklikleri (${n})`,
       change: (from: number, to: number) => `${from} → ${to} set`,

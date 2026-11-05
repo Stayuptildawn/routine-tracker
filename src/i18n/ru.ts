@@ -214,7 +214,8 @@ export const ru: Strings = {
     lastFourWeeks: 'Последние 4 недели',
     mostTrained: 'больше всего',
     leastTrained: 'меньше всего',
-    monthSets: (n: number, w: number) => `${n} подходов · ~${w}/нед`,
+    monthSets: (n: number) => `${n} подходов`,
+    monthPerWeek: (w: number) => `~${w}/нед`,
     tune: {
       toggle: (n: number) => `Предлагаемые изменения плана (${n})`,
       change: (from: number, to: number) => `${from} → ${to} подх.`,

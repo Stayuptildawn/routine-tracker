@@ -2237,16 +2237,17 @@ select option {
   color: var(--text);
 }
 
-/* one grid for the whole list, rows on its subgrid: the count column
-   sizes to the widest count, so every track is the same length and
-   the bars compare on one scale (per-row grids let long counts
-   shorten their own track) */
+/* one grid for the whole list, rows on its subgrid: the two count
+   columns (total, weekly average) size to their widest entry, so every
+   track is the same length, the bars compare on one scale, and both
+   numbers line up down the list (per-row grids let long counts shorten
+   their own track and push the average sideways) */
 .volume-rank {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto auto;
   gap: var(--sp-2);
 }
 

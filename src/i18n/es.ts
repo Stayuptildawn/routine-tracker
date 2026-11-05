@@ -216,7 +216,8 @@ export const es: Strings = {
     lastFourWeeks: 'Últimas 4 semanas',
     mostTrained: 'más',
     leastTrained: 'menos',
-    monthSets: (n: number, w: number) => `${n} series · ~${w}/sem`,
+    monthSets: (n: number) => `${n} series`,
+    monthPerWeek: (w: number) => `~${w}/sem`,
     tune: {
       toggle: (n: number) => `Cambios sugeridos al plan (${n})`,
       change: (from: number, to: number) => `${from} → ${to} series`,
