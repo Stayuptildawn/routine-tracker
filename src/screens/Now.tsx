@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
-import { interpretMessage, pendingTaps, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
+import { AiLimitError, interpretMessage, pendingTaps, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
 import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
@@ -180,7 +180,6 @@ export default function Now({
     const channel = supabase
       .channel('now-view')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_logs' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_state' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, load)
       .subscribe()
     return () => {
@@ -247,7 +246,7 @@ export default function Now({
         load()
       }
     } catch (err) {
-      setNotice(t.now.cantReachAi(String(err)))
+      setNotice(err instanceof AiLimitError ? t.now.aiDailyLimit : t.now.cantReachAi(String(err)))
     } finally {
       setBusy(false)
     }

@@ -5,7 +5,8 @@
 // sit at a stable per-user minute within the 45 minutes after 09:00 / 22:00,
 // so a whole timezone's cohort never lands on a single tick. Deploy with
 // verify_jwt OFF - authenticated by the x-cron-secret header instead. A
-// manual run can pass {"force": true} to skip the time windows.
+// manual run can pass {"force": true} plus an x-force-secret header matching
+// the FORCE_SECRET env to skip the time windows.
 //
 // Runs with the service role: every query scopes by user_id explicitly.
 //
@@ -13,13 +14,14 @@
 // number or comparison. Generic coach-speak is banned in the prompt AND
 // checked after - a vague reflection is worse than none.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.110.0'
 import { askGemini } from '../_shared/gemini.ts'
-import { json } from '../_shared/http.ts'
+import { json, secretMatches } from '../_shared/http.ts'
 import { LANGUAGE_NAMES, normLang } from '../_shared/lang.ts'
 import { userNow, addDays, userSpreadMinutes } from '../_shared/localtime.ts'
 import { maybeTrainingReview } from '../_shared/trainingReview.ts'
 import { maybeMonthlyReflection } from '../_shared/monthlyReflection.ts'
+import { selectAll } from '../_shared/db.ts'
 
 // English-only by design: non-English reflections rely on the prompt-level
 // ban (translated equivalents can't be enumerated reliably), and English
@@ -35,34 +37,71 @@ const MORNING_MIN = 9 * 60 // 09:00 local - the week-so-far card refreshes
 const NIGHT_MIN = 22 * 60 // 22:00 local - the closing pass, after the day is logged
 const WINDOW_MIN = 15 // must match the cron cadence
 const SPREAD_MIN = 45 // per-user jitter span; night pass still ends before midnight
+// pg_net gives the whole run 20 s; stop starting new users well before that.
+// Whoever is left is logged - the shuffle below means it isn't always the same
+// people, and no account can park itself in front of everyone else.
+const RUN_BUDGET_MS = 14_000
+
+function shuffle<T>(items: T[]): T[] {
+  const a = [...items]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 Deno.serve(async (req) => {
-  if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
+  if (!(await secretMatches(req.headers.get('x-cron-secret'), Deno.env.get('CRON_SECRET')))) {
     return new Response('forbidden', { status: 403 })
   }
 
   try {
-    // cron sends no body; a manual run can send {"force": true}
-    const { force } = await req.json().catch(() => ({ force: false }))
+    const started = Date.now()
+    // cron sends no body; a manual run can send {"force": true}, which skips
+    // every user's time window - so it needs its own FORCE_SECRET header too
+    // (unset = force is off). The cron secret alone never forces a full run.
+    const { force: forceAsked } = await req.json().catch(() => ({ force: false }))
+    const force = forceAsked === true && (await secretMatches(req.headers.get('x-force-secret'), Deno.env.get('FORCE_SECRET')))
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     // page through ALL users - a fixed perPage would silently drop whoever
-    // lands past the first page
+    // lands past the first page; a failed page fails the tick loudly
     const users = []
     for (let page = 1; ; page++) {
-      const { data: usersPage } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
-      users.push(...(usersPage?.users ?? []))
-      if ((usersPage?.users ?? []).length < 200) break
+      const { data: usersPage, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
+      if (error) throw error
+      users.push(...usersPage.users)
+      if (usersPage.users.length < 200) break
     }
+    // every user's timezone and language in one paged read - the window check
+    // below must stay cheap no matter how many accounts exist
+    type Settings = { user_id: string; timezone: string | null; language: string | null; cardio_tracking: boolean | null }
+    const settingsRows = await selectAll<Settings>(() =>
+      supabase.from('user_settings').select('user_id, timezone, language, cardio_tracking').order('user_id'),
+    )
+    const settingsOf = new Map(settingsRows.map((r) => [r.user_id, r]))
+    const due = shuffle(
+      users.filter((user) => {
+        if (force) return true
+        const { minutes } = userNow(settingsOf.get(user.id)?.timezone ?? undefined)
+        const offset = userSpreadMinutes(user.id, SPREAD_MIN)
+        const inWindow = (m: number) => minutes >= m + offset && minutes < m + offset + WINDOW_MIN
+        return inWindow(MORNING_MIN) || inWindow(NIGHT_MIN)
+      }),
+    )
     const results: Record<string, string> = {}
+    let deferred = 0
 
-    for (const user of users) {
-      // each user's day runs in their own timezone (and language), read fresh every tick
-      const { data: us } = await supabase.from('user_settings').select('timezone, language, cardio_tracking').eq('user_id', user.id).maybeSingle()
+    for (const user of due) {
+      if (Date.now() - started > RUN_BUDGET_MS) {
+        deferred = due.length - due.indexOf(user)
+        console.error(`weekly-reflection: run budget spent, ${deferred} user(s) not reached this tick`)
+        break
+      }
+      // each user's day runs in their own timezone (and language)
+      const us = settingsOf.get(user.id)
       const lang = normLang(us?.language)
-      const { date, weekday, minutes } = userNow(us?.timezone)
-      const offset = userSpreadMinutes(user.id, SPREAD_MIN)
-      const inWindow = (m: number) => minutes >= m + offset && minutes < m + offset + WINDOW_MIN
-      if (!force && !inWindow(MORNING_MIN) && !inWindow(NIGHT_MIN)) continue
+      const { date, weekday } = userNow(us?.timezone ?? undefined)
       const weekStart = addDays(date, -(weekday - 1)) // Monday of the current week
 
       // weekly training review (trend read + plan advice): once per week,
@@ -229,9 +268,9 @@ Study Time the same 9am slot where 4 of its 5 completions happened?"`
       results[user.id] = body
     }
 
-    return json({ reflected: Object.keys(results).length })
+    return json({ reflected: Object.keys(results).length, deferred })
   } catch (err) {
     console.error('weekly-reflection error:', err)
-    return json({ error: String(err) }, 500)
+    return json({ error: 'internal error' }, 500)
   }
 })

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, configured } from './lib/supabase'
 import { isDemo, exitDemo } from './lib/demo'
+import { setQueueOwner } from './lib/queueOwner'
+import { dropBrowserSubscription } from './lib/push'
 import { SEED_ROUTINES } from './lib/seedData'
 import { t, lang, availableLanguages, setLanguage } from './i18n'
 import { flushMessageQueue, flushTapQueue, pendingTapCount } from './lib/actions'
@@ -79,7 +81,13 @@ export default function App() {
     sessionStorage.removeItem('reopen-settings')
   }, [])
   const settings = usePresence(settingsOpen)
-  const [recovering, setRecovering] = useState(false)
+  // a reload mid-recovery must not skip the forced password set
+  const [recovering, setRecoveringState] = useState(() => sessionStorage.getItem('recovering') === '1')
+  const setRecovering = (on: boolean) => {
+    if (on) sessionStorage.setItem('recovering', '1')
+    else sessionStorage.removeItem('recovering')
+    setRecoveringState(on)
+  }
 
   // installed-PWA back (Android button, iOS swipe): open overlays close
   // themselves via useOverlay; this fallback returns to Now, and always
@@ -109,10 +117,19 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
+      setQueueOwner(data.session?.user.id ?? null)
       setSession(data.session)
       setReady(true)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      // queues are keyed by account: switch before anything reads them
+      setQueueOwner(s?.user.id ?? null)
+      // session gone (expired, or signed out on another device): this browser
+      // must stop showing that account's notifications
+      if (event === 'SIGNED_OUT') {
+        void dropBrowserSubscription().catch(() => {})
+        setRecovering(false)
+      }
       setSession(s)
       // invite/reset links land here: force a password set before the app
       if (event === 'PASSWORD_RECOVERY') setRecovering(true)

@@ -1,11 +1,29 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // GitHub Pages serves from /<repo-name>/; CI sets VITE_BASE_PATH accordingly.
 const base = process.env.VITE_BASE_PATH ?? '/'
 
-export default defineConfig({
+/** The client bundle is public. Refuse to build with a key that bypasses
+ *  RLS (a new-style sb_secret_ key or a legacy JWT whose role is service_role). */
+function assertPublicKey(key: string | undefined) {
+  if (!key) return
+  const k = key.trim().replace(/^["']|["']$/g, '')
+  let role: string | undefined
+  try {
+    role = JSON.parse(Buffer.from(k.split('.')[1] ?? '', 'base64url').toString()).role
+  } catch {
+    /* not a JWT - new-style keys are checked by prefix */
+  }
+  if (k.startsWith('sb_secret_') || role === 'service_role') {
+    throw new Error('VITE_SUPABASE_API_KEY is a secret/service_role key - use the publishable (anon) key')
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  assertPublicKey(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_API_KEY)
+  return {
   base,
   build: {
     rollupOptions: {
@@ -49,4 +67,5 @@ export default defineConfig({
       },
     }),
   ],
+}
 })

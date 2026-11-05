@@ -324,13 +324,17 @@ CLI uploads for you (the dashboard paste-editor can't).
   `x-cron-secret` header. The function decides by itself when to actually
   write, in each user's timezone. One gotcha that cost me an afternoon: pass
   `timeout_milliseconds := 20000`, since pg_net's default of 5 seconds kills
-  the function exactly when it has real work to do.
+  the function exactly when it has real work to do. A manual run can send
+  `{"force": true}` to skip the time windows; that also needs an
+  `x-force-secret` header matching a separate `FORCE_SECRET` secret, and
+  stays off while that secret is unset.
 - **Push nudges**: generate keys with `npx web-push generate-vapid-keys`, set
   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a mailto:) and
   `CRON_SECRET`, add the public key as a `VITE_VAPID_PUBLIC_KEY` repo secret,
   deploy `send-nudges` with `--no-verify-jwt`, and schedule it every 5
   minutes (same 20-second timeout). iOS needs the app installed to the home
-  screen.
+  screen. The database only accepts subscriptions from the real browser push
+  services (Google, Mozilla, Apple, Microsoft), at most 10 per account.
 - **AI canary**: deploy `ai-canary` with `--no-verify-jwt`, set
   `CANARY_SECRET` and `OWNER_EMAIL`, and schedule it once a day. If the whole
   Gemini model chain ever fails, you get one push that morning instead of
@@ -350,6 +354,11 @@ CLI uploads for you (the dashboard paste-editor can't).
 4. Push to `main` and `.github/workflows/deploy.yml` builds and publishes it.
 5. Supabase **Authentication > URL Configuration**: add your Pages URL
    (`https://<user>.github.io/<repo>/`) as a redirect URL.
+
+Sign-in uses the PKCE flow, so a confirmation or password-reset link only
+works in the same browser that asked for it. Open the email on that device.
+Dashboard invites don't sign anyone in for the same reason; have new people
+sign up from the app instead.
 
 Once your own account exists, I recommend turning off "Allow new users to
 sign up" in the Supabase Auth settings, so strangers can't use your AI quota.
@@ -424,7 +433,9 @@ is where the free tiers would actually break, in order:
 1. **Gemini (unbilled) is the real limit.** Roughly 15 requests a minute and
    about 1,000 to 1,500 a day. Every message is one request, a free-form
    question is two. At 20 to 30 messages per user per day, that's about 30 to
-   50 active users, and one user never gets close.
+   50 active users, and one user never gets close. Each account also has
+   its own daily cap (150 messages and 12 coach refreshes, reset at midnight
+   UTC), so one runaway script can't spend the shared key for everyone.
 2. **Supabase Realtime allows 200 concurrent connections**, so about 100 to
    150 apps open at the same time.
 3. **Everything else is far away.** The cron jobs use about 12K of the 500K
@@ -438,7 +449,8 @@ Level Security), so even if I made a mistake in the code and asked for
 everyone's data, the database would still only return yours. The key inside the app is public on
 purpose, that's how Supabase works, and it opens nothing without you being
 logged in. The secrets that matter (the AI key, the admin key, the push keys)
-stay on the server.
+stay on the server. Before sign-in the database answers nothing at all, and
+the demo runs on a fake in your browser.
 
 When you ask a question, the server builds a short summary of your own rows
 and that summary is the only thing the AI sees. There's a test that puts
@@ -447,7 +459,8 @@ AI. That summary, like every message you type, is sent to Gemini, which is
 Google's.
 
 This is a personal project I host myself, and no security company has
-audited it. Some background jobs run with higher access and rely on my code to
+audited it. I did run an automated security audit in November 2026 and fixed
+what it found. Some background jobs run with higher access and rely on my code to
 stay scoped to the right person, and GitHub Pages doesn't let me set a couple
 of extra security headers I'd add on my own server.
 

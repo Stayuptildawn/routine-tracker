@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { queueKey } from './queueOwner'
 
 // Offline write queue for the gym (bad reception territory): planned set
 // logging, session state, check-ins and cardio entries queue when the
@@ -14,7 +15,17 @@ export interface WriteOp {
   match?: Record<string, string> // for update/delete by equality
 }
 
-const KEY = 'pending_ops'
+/** The only tables the gym screens queue writes for. A replayed op comes
+ *  from localStorage, so anything else in there is refused, not sent. */
+const QUEUED_TABLES = new Set(['cardio_logs', 'planned_sessions', 'planned_sets', 'recovery_checkins'])
+
+function isReplayable(op: WriteOp): boolean {
+  if (!op || !QUEUED_TABLES.has(op.table)) return false
+  if (op.op === 'insert') return true
+  if (op.op !== 'update' && op.op !== 'delete') return false
+  // an update/delete must name its rows - never touch a whole table
+  return (op.ids?.length ?? 0) > 0 || Object.keys(op.match ?? {}).length > 0
+}
 
 /** Weak signal hangs a request instead of failing it - give up after this
  *  and treat it like being offline. */
@@ -29,11 +40,13 @@ export function isNetworkFailure(res: { error: unknown; status?: number }): bool
 }
 
 function readQueue(): WriteOp[] {
-  return JSON.parse(localStorage.getItem(KEY) ?? '[]')
+  const key = queueKey('pending_ops')
+  return key ? JSON.parse(localStorage.getItem(key) ?? '[]') : []
 }
 
 function writeQueue(queue: WriteOp[]) {
-  localStorage.setItem(KEY, JSON.stringify(queue))
+  const key = queueKey('pending_ops')
+  if (key) localStorage.setItem(key, JSON.stringify(queue))
 }
 
 export function pendingOpCount(): number {
@@ -41,6 +54,7 @@ export function pendingOpCount(): number {
 }
 
 async function exec(op: WriteOp): Promise<void> {
+  if (!isReplayable(op)) throw Object.assign(new Error(`refusing queued op on ${op?.table}`), { server: true })
   const signal = AbortSignal.timeout(WRITE_TIMEOUT_MS)
   let res: { error: { message: string } | null; status?: number }
   if (op.op === 'insert') {
@@ -59,6 +73,7 @@ async function exec(op: WriteOp): Promise<void> {
 }
 
 function enqueue(op: WriteOp) {
+  if (!queueKey('pending_ops')) throw new Error('not signed in')
   const queue = readQueue()
   // last-write-wins for repeated updates to the same single row
   if (op.op === 'update' && op.ids?.length === 1) {

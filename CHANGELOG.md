@@ -4,6 +4,44 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-11-05 (security)
+
+Fixes from a full security audit. Nothing here was known to be exploited.
+
+### Changed
+- **Email links open only in the browser that asked for them.** Sign-in now
+  uses the PKCE flow: a password-reset or confirmation link works in the
+  browser where you requested it. Opened anywhere else, the sign-in screen
+  says so (confirming an account still works, then you sign in normally).
+  Before, a crafted link could quietly sign a visitor into someone else's
+  account.
+- **Signing out turns this browser's nudges off.** The next person on a
+  shared device no longer gets the previous account's reminders, and a
+  session that expires stops them too.
+- **Offline saves belong to the account that made them.** Taps, gym sets and
+  messages queued without signal wait under their own account and only
+  replay when that person is signed in again; they never land in another
+  account on the same device.
+- **A `?demo` link no longer switches a signed-in browser into the demo.**
+- **A daily limit on AI messages** (150 a day, plus 12 coach refreshes). The
+  composer says so when it's reached; tapping still works.
+
+### Security
+- Push endpoints are limited to the real browser push services, capped at 10
+  per account, sent with a timeout, and the nudge job pages through every
+  user instead of stopping at 1,000 rows.
+- The reflection job reads all settings in one go, works through the day's
+  users in random order with a time budget, and no AI call can hang it.
+- The leftover Telegram link table is dropped. Database: no anon access,
+  child rows must point at your own parents, length caps on text that feeds
+  the AI, and realtime only for the tables a screen listens to.
+- Cron secrets are compared in constant time and refused when unset; a
+  forced reflection run needs its own `FORCE_SECRET`.
+- Errors no longer echo internals; notifications only open pages of this
+  app; CSV exports neutralise spreadsheet formulas; CI tokens and
+  permissions are scoped to the steps that need them and actions are pinned;
+  the build refuses a secret Supabase key.
+
 ## 2026-11-05
 
 ### Fixed

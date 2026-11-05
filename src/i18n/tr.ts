@@ -51,6 +51,7 @@ export const tr: Strings = {
     forgotPassword: 'Şifreni mi unuttun?',
     toSignUp: 'İlk kez mi geliyorsun? Hesap oluştur',
     toSignIn: 'Hesabın var mı? Giriş yap',
+    linkOtherBrowser: 'E-postalarımızdaki bağlantılar yalnızca onları isteyen tarayıcıda açılır. Yeni bir hesabı mı onaylıyordun? Artık giriş yapabilirsin. Şifreni mi sıfırlıyordun? Buradan yeni bir bağlantı iste.',
   },
 
   setPassword: {
@@ -89,6 +90,7 @@ export const tr: Strings = {
     speechLang: 'tr-TR',
     offlineQueued: 'Çevrimdışı — kaydedildi, bağlantı gelince gönderilecek.',
     somethingWrong: (err: string) => `Bir şeyler ters gitti: ${err}`,
+    aiDailyLimit: 'Bugünkü mesaj sınırına ulaştın. Doğrudan dokunmak hâlâ çalışıyor, sınır yarın sıfırlanır.',
     cantReachAi: (err: string) => `AI’ye ulaşılamadı: ${err}`,
     noMatch: 'Hiçbir şey eşleşmedi — görevin adını söyle ya da hatırlatma olarak ekle.',
     didYouMean: 'Şunu mu demek istedin:',

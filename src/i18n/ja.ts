@@ -51,6 +51,7 @@ export const ja: Strings = {
     forgotPassword: 'パスワードをお忘れですか？',
     toSignUp: 'はじめての方はアカウント作成へ',
     toSignIn: 'アカウントをお持ちの方はログイン',
+    linkOtherBrowser: 'メールのリンクは、リクエストしたブラウザーでしか開けません。新しいアカウントの確認なら、もうログインできます。パスワードの再設定なら、ここから新しいリンクをリクエストしてください。',
   },
 
   setPassword: {
@@ -89,6 +90,7 @@ export const ja: Strings = {
     speechLang: 'ja-JP',
     offlineQueued: 'オフラインです — 保存しました。接続が戻り次第送信します。',
     somethingWrong: (err: string) => `問題が起きました：${err}`,
+    aiDailyLimit: '今日のメッセージ上限に達しました。タップでの記録はそのまま使えます。上限は明日リセットされます。',
     cantReachAi: (err: string) => `AI に接続できませんでした：${err}`,
     noMatch: '該当が見つかりませんでした — タスク名を書くか、リマインダーとして追加してみてください。',
     didYouMean: 'もしかして：',

@@ -2,7 +2,10 @@ import { supabase } from './supabase'
 import type { WorkoutLog } from './types'
 
 function csvCell(v: unknown): string {
-  const s = v == null ? '' : String(v)
+  let s = v == null ? '' : String(v)
+  // text that a spreadsheet would run as a formula gets a leading quote
+  // (numbers stay numbers: a plain -3 is data, not a formula)
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 

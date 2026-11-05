@@ -6,10 +6,11 @@
 // scopes every query by the caller's own user id - it can only ever read
 // and write the signed-in user's rows.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.110.0'
 import { maybeTrainingReview } from '../_shared/trainingReview.ts'
 import { normLang } from '../_shared/lang.ts'
 import { addDays, userNow } from '../_shared/localtime.ts'
+import { claimAiCall } from '../_shared/aiBudget.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +36,8 @@ Deno.serve(async (req) => {
     )
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user) return json({ error: 'not authenticated' }, 401)
+    // every call forces a fresh (paid) review - budget them per user
+    if (!(await claimAiCall(supabase, 'refresh-coach'))) return json({ error: 'daily limit reached' }, 429)
 
     const { data: settings } = await supabase
       .from('user_settings')
@@ -48,6 +51,7 @@ Deno.serve(async (req) => {
     const written = await maybeTrainingReview(supabase, auth.user.id, lang, weekStart, true)
     return json({ refreshed: written })
   } catch (err) {
-    return json({ error: String(err) }, 500)
+    console.error('refresh-coach error:', err)
+    return json({ error: 'internal error' }, 500)
   }
 })

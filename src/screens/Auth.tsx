@@ -6,6 +6,16 @@ import InstallPrompt from './InstallPrompt'
 
 type Mode = 'signin' | 'signup' | 'reset'
 
+// A ?code= that reached the sign-in screen is an email link opened in a
+// browser that didn't ask for it (PKCE keeps the verifier where the request
+// was made). Note it once and tidy the URL.
+const strayEmailLink = new URLSearchParams(location.search).has('code')
+if (strayEmailLink) {
+  const url = new URL(location.href)
+  url.searchParams.delete('code')
+  history.replaceState(null, '', url.pathname + url.search + url.hash)
+}
+
 export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -72,6 +82,7 @@ export default function Auth() {
         <div className="notice good">{t.auth.confirmSent}</div>
       )}
       {error && <div className="notice">{error}</div>}
+      {strayEmailLink && !sent && !error && <div className="notice">{t.auth.linkOtherBrowser}</div>}
 
       {mode === 'signin' && (
         <button className="link" onClick={() => { setMode('reset'); setError(null); setSent(false) }}>

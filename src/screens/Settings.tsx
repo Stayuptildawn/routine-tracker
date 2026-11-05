@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useOverlay } from '../lib/overlay'
+import { signOut } from '../lib/session'
 import { translateSeededContent } from '../lib/translateContent'
 import { saveCardioTracking, useCardioTracking } from '../lib/cardioTracking'
 import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
@@ -272,7 +273,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
               <div className="sign-out-confirm">
                 <p className="gentle">{t.settings.signOutQ(email)}</p>
                 <div className="sign-out-actions">
-                  <button className="sign-out" onClick={() => supabase.auth.signOut()}>
+                  <button className="sign-out" onClick={signOut}>
                     {t.settings.yesSignOut}
                   </button>
                   <button className="link" onClick={() => setConfirmSignOut(false)}>

@@ -2,8 +2,12 @@ node_modules/
 dist/
 dev-dist/
 .env
-.env.local
+.env.*
+!.env.example
 *.local
+*.pem
+*.key
+*.p12
 .DS_Store
 
 # personal source material - never commit

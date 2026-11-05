@@ -1,11 +1,23 @@
 import { supabase } from './supabase'
 import { isNetworkFailure, WRITE_TIMEOUT_MS } from './offline'
+import { queueKey } from './queueOwner'
 import { localDate, isoWeekday } from './types'
 import type { AppliedAction, InterpretResponse, LogStatus, ReminderStatus } from './types'
 import type { IconName } from '../components/Icon'
 import { t, lang } from '../i18n'
 
-const QUEUE_KEY = 'pending_messages'
+function readMessages(): string[] {
+  const key = queueKey('pending_messages')
+  return key ? JSON.parse(localStorage.getItem(key) ?? '[]') : []
+}
+
+function writeMessages(queue: string[]) {
+  const key = queueKey('pending_messages')
+  if (key) localStorage.setItem(key, JSON.stringify(queue))
+}
+
+/** Thrown when the server's per-user AI budget for today is spent. */
+export class AiLimitError extends Error {}
 
 /** Send free text to the interpret-message edge function. Queues offline. */
 export async function interpretMessage(text: string): Promise<InterpretResponse | 'queued'> {
@@ -13,13 +25,15 @@ export async function interpretMessage(text: string): Promise<InterpretResponse 
     const { data, error } = await supabase.functions.invoke<InterpretResponse>('interpret-message', {
       body: { text, date: localDate(), weekday: isoWeekday(), time: new Date().toTimeString().slice(0, 5), lang },
     })
-    if (error) throw error
+    if (error) {
+      const status = (error as { context?: { status?: number } }).context?.status
+      if (status === 429) throw new AiLimitError('daily limit reached')
+      throw error
+    }
     return data!
   } catch (err) {
-    if (!navigator.onLine) {
-      const queue: string[] = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
-      queue.push(text)
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+    if (!(err instanceof AiLimitError) && !navigator.onLine && queueKey('pending_messages')) {
+      writeMessages([...readMessages(), text])
       return 'queued'
     }
     throw err
@@ -28,9 +42,9 @@ export async function interpretMessage(text: string): Promise<InterpretResponse 
 
 /** Retry messages captured while offline. Returns how many were sent. */
 export async function flushMessageQueue(): Promise<number> {
-  const queue: string[] = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
+  const queue = readMessages()
   if (queue.length === 0 || !navigator.onLine) return 0
-  localStorage.setItem(QUEUE_KEY, '[]')
+  writeMessages([])
   let sent = 0
   for (const text of queue) {
     try {
@@ -38,8 +52,7 @@ export async function flushMessageQueue(): Promise<number> {
       sent++
     } catch {
       // put it back and stop; we'll retry on the next 'online' event
-      const remaining: string[] = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
-      localStorage.setItem(QUEUE_KEY, JSON.stringify([text, ...remaining]))
+      writeMessages([text, ...readMessages()])
       break
     }
   }
@@ -47,10 +60,9 @@ export async function flushMessageQueue(): Promise<number> {
 }
 
 export function queuedMessageCount(): number {
-  return (JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]') as string[]).length
+  return readMessages().length
 }
 
-const TAP_QUEUE_KEY = 'pending_taps'
 
 interface QueuedTap {
   task_id: string
@@ -60,7 +72,13 @@ interface QueuedTap {
 }
 
 function readTaps(): QueuedTap[] {
-  return JSON.parse(localStorage.getItem(TAP_QUEUE_KEY) ?? '[]')
+  const key = queueKey('pending_taps')
+  return key ? JSON.parse(localStorage.getItem(key) ?? '[]') : []
+}
+
+function writeTaps(taps: QueuedTap[]) {
+  const key = queueKey('pending_taps')
+  if (key) localStorage.setItem(key, JSON.stringify(taps))
 }
 
 function upsertTap(tap: QueuedTap) {
@@ -101,7 +119,7 @@ export async function setTaskStatus(
 /** Last-write-wins per (task_id, date): a re-tap replaces the queued one. */
 function queueTap(tap: QueuedTap) {
   const rest = readTaps().filter((t) => !(t.task_id === tap.task_id && t.date === tap.date))
-  localStorage.setItem(TAP_QUEUE_KEY, JSON.stringify([...rest, tap]))
+  writeTaps([...rest, tap])
 }
 
 /** Taps that haven't reached the server yet - screens lay these over
@@ -129,7 +147,7 @@ async function replayTaps(): Promise<number> {
   for (;;) {
     const queue = readTaps()
     if (queue.length === 0 || !navigator.onLine) return sent
-    localStorage.setItem(TAP_QUEUE_KEY, '[]')
+    writeTaps([])
     for (const [i, tap] of queue.entries()) {
       const res = await upsertTap(tap)
       if (!res.error) {
@@ -143,7 +161,7 @@ async function replayTaps(): Promise<number> {
       // task, queued meanwhile, still wins), retry on the next trigger
       const newer = readTaps()
       const stale = queue.slice(i).filter((q) => !newer.some((n) => n.task_id === q.task_id && n.date === q.date))
-      localStorage.setItem(TAP_QUEUE_KEY, JSON.stringify([...stale, ...newer]))
+      writeTaps([...stale, ...newer])
       return sent
     }
   }
@@ -204,7 +222,7 @@ export async function undoAiAction(aiActionId: string, actions: AppliedAction[])
       // restore whatever status the reminder had before the AI cleared it
       await setReminderStatus(a.reminder_id, a.prev_status ?? 'auto')
     } else if (a.type === 'set_energy') {
-      await supabase.from('daily_state').delete().eq('date', localDate())
+      await supabase.from('daily_state').delete().eq('date', a.log_date ?? localDate())
     }
   }
   await supabase.from('ai_actions').update({ status: 'undone' }).eq('id', aiActionId)

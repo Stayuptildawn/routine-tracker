@@ -8,13 +8,13 @@
 // the CANARY_SECRET env (its own secret, so rotating it never breaks the
 // other cron jobs). Also needs OWNER_EMAIL plus the usual VAPID_* secrets.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
-import webpush from 'npm:web-push@3'
+import { createClient } from 'npm:@supabase/supabase-js@2.110.0'
 import { askGemini } from '../_shared/gemini.ts'
-import { json } from '../_shared/http.ts'
+import { json, secretMatches } from '../_shared/http.ts'
+import { pushToUser, setVapid } from '../_shared/push.ts'
 
 Deno.serve(async (req) => {
-  if (req.headers.get('x-cron-secret') !== Deno.env.get('CANARY_SECRET')) {
+  if (!(await secretMatches(req.headers.get('x-cron-secret'), Deno.env.get('CANARY_SECRET')))) {
     return new Response('forbidden', { status: 403 })
   }
 
@@ -28,15 +28,17 @@ Deno.serve(async (req) => {
   // every model failed - tell the owner while it's still morning
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const ownerEmail = Deno.env.get('OWNER_EMAIL')
-    const { data } = ownerEmail ? await supabase.auth.admin.listUsers({ page: 1, perPage: 200 }) : { data: null }
-    const owner = data?.users?.find((u) => u.email === ownerEmail)
+    const ownerEmail = Deno.env.get('OWNER_EMAIL')?.toLowerCase()
+    // page through every user - the owner may not sit on the first page
+    let owner: { id: string } | undefined
+    for (let page = 1; ownerEmail && !owner; page++) {
+      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
+      if (error) throw error
+      owner = data.users.find((u) => u.email?.toLowerCase() === ownerEmail && u.email_confirmed_at)
+      if (data.users.length < 200) break
+    }
     if (owner) {
-      webpush.setVapidDetails(
-        Deno.env.get('VAPID_SUBJECT')!,
-        Deno.env.get('VAPID_PUBLIC_KEY')!,
-        Deno.env.get('VAPID_PRIVATE_KEY')!,
-      )
+      setVapid()
       const { data: subs } = await supabase
         .from('push_subscriptions')
         .select('endpoint, p256dh, auth')
@@ -46,16 +48,7 @@ Deno.serve(async (req) => {
         body: `Heads up: the AI pipeline is failing (${lastError.slice(0, 140)})`,
         tag: 'ai-canary', // replaces, never stacks
       })
-      for (const sub of subs ?? []) {
-        try {
-          await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
-        } catch (err: unknown) {
-          const status = (err as { statusCode?: number }).statusCode
-          if (status === 404 || status === 410) {
-            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
-          }
-        }
-      }
+      await pushToUser(supabase, owner.id, subs ?? [], payload, 'ai-canary')
     }
   } catch (err) {
     console.error('ai-canary alert failed:', err)

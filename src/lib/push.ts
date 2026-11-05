@@ -21,7 +21,11 @@ export async function getNudgeState(): Promise<'on' | 'off' | 'unsupported'> {
   if (!pushSupported()) return 'unsupported'
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
-  return sub ? 'on' : 'off'
+  if (!sub) return 'off'
+  // the browser can hold a subscription another account on this device
+  // registered - it's only "on" when the row is this account's own
+  const { data } = await supabase.from('push_subscriptions').select('endpoint').eq('endpoint', sub.endpoint).maybeSingle()
+  return data ? 'on' : 'off'
 }
 
 export async function enableNudges(): Promise<'on' | 'denied' | 'unsupported'> {
@@ -29,19 +33,38 @@ export async function enableNudges(): Promise<'on' | 'denied' | 'unsupported'> {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return 'denied'
   const reg = await navigator.serviceWorker.ready
-  const sub =
-    (await reg.pushManager.getSubscription()) ??
-    (await reg.pushManager.subscribe({
+  const subscribe = () =>
+    reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC!) as BufferSource,
-    }))
-  const keys = sub.toJSON().keys
-  if (!keys?.p256dh || !keys?.auth) throw new Error('subscription missing keys')
-  const { error } = await supabase
-    .from('push_subscriptions')
-    .upsert({ endpoint: sub.endpoint, p256dh: keys.p256dh, auth: keys.auth })
-  if (error) throw error
+    })
+  const save = (sub: PushSubscription) => {
+    const keys = sub.toJSON().keys
+    if (!keys?.p256dh || !keys?.auth) throw new Error('subscription missing keys')
+    return supabase.from('push_subscriptions').upsert({ endpoint: sub.endpoint, p256dh: keys.p256dh, auth: keys.auth })
+  }
+  const existing = await reg.pushManager.getSubscription()
+  const { error } = await save(existing ?? (await subscribe()))
+  if (error && existing) {
+    // a leftover subscription another account on this device still owns:
+    // retire it and register a fresh one for this account
+    await existing.unsubscribe()
+    const { error: retry } = await save(await subscribe())
+    if (retry) throw retry
+  } else if (error) {
+    throw error
+  }
   return 'on'
+}
+
+/** Stops this browser receiving pushes without touching the server row -
+ *  for when the session is already gone (expired, or signed out elsewhere).
+ *  The push service then answers 410 and the cron removes the row. */
+export async function dropBrowserSubscription(): Promise<void> {
+  if (!pushSupported()) return
+  const reg = await navigator.serviceWorker.ready
+  const sub = await reg.pushManager.getSubscription()
+  await sub?.unsubscribe()
 }
 
 export async function disableNudges(): Promise<void> {

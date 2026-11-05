@@ -32,6 +32,13 @@ export const configured = isDemo || (isValidUrl(url) && Boolean(key))
 
 // In demo mode every query runs against the in-browser fake instead - the
 // entire app is unaware, it just talks to `supabase` as usual.
+//
+// PKCE, not the implicit flow: an email link only signs in the browser that
+// asked for it (the code needs a verifier kept in this browser's storage).
+// The implicit flow accepted any #access_token in the URL, so a crafted link
+// could quietly sign a visitor into someone else's account.
 export const supabase: SupabaseClient = isDemo
   ? (demoClient as unknown as SupabaseClient)
-  : createClient(configured ? url! : 'https://placeholder.supabase.co', configured ? key! : 'placeholder-key')
+  : createClient(configured ? url! : 'https://placeholder.supabase.co', configured ? key! : 'placeholder-key', {
+      auth: { flowType: 'pkce' },
+    })

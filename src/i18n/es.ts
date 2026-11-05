@@ -52,6 +52,7 @@ export const es: Strings = {
     forgotPassword: '¿Olvidaste la contraseña?',
     toSignUp: '¿Primera vez? Crea una cuenta',
     toSignIn: '¿Ya tienes cuenta? Inicia sesión',
+    linkOtherBrowser: 'Los enlaces de nuestros correos solo se abren en el navegador que los pidió. ¿Confirmabas una cuenta nueva? Ya puedes entrar. ¿Restablecías tu contraseña? Pide un enlace nuevo aquí.',
   },
 
   setPassword: {
@@ -92,6 +93,7 @@ export const es: Strings = {
     speechLang: 'es-ES',
     offlineQueued: 'Sin conexión — guardado, se enviará al volver la red.',
     somethingWrong: (err: string) => `Algo salió mal: ${err}`,
+    aiDailyLimit: 'Llegaste al límite de mensajes de hoy. Tocar sigue funcionando y mañana se reinicia.',
     cantReachAi: (err: string) => `No se pudo contactar con la IA: ${err}`,
     noMatch: 'Nada coincide — nombra la tarea o añádela como recordatorio.',
     didYouMean: '¿Quisiste decir…?',

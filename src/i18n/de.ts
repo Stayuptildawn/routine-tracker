@@ -51,6 +51,7 @@ export const de: Strings = {
     forgotPassword: 'Passwort vergessen?',
     toSignUp: 'Zum ersten Mal hier? Konto erstellen',
     toSignIn: 'Schon ein Konto? Anmelden',
+    linkOtherBrowser: 'Links aus unseren E-Mails öffnen sich nur in dem Browser, der sie angefordert hat. Neues Konto bestätigt? Du kannst dich jetzt anmelden. Passwort zurücksetzen? Fordere hier einen neuen Link an.',
   },
 
   setPassword: {
@@ -91,6 +92,7 @@ export const de: Strings = {
     speechLang: 'de-DE',
     offlineQueued: 'Offline — gespeichert, wird gesendet, sobald das Netz zurück ist.',
     somethingWrong: (err: string) => `Etwas ist schiefgelaufen: ${err}`,
+    aiDailyLimit: 'Du hast das heutige Nachrichtenlimit erreicht. Antippen funktioniert weiter, morgen geht es wieder.',
     cantReachAi: (err: string) => `KI nicht erreichbar: ${err}`,
     noMatch: 'Nichts passt — nenne die Aufgabe beim Namen oder lege sie als Erinnerung an.',
     didYouMean: 'Meintest du:',

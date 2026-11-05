@@ -39,16 +39,22 @@ vi.stubGlobal('localStorage', {
   getItem: (k: string) => store.get(k) ?? null,
   setItem: (k: string, v: string) => void store.set(k, v),
   removeItem: (k: string) => void store.delete(k),
+  key: (i: number) => [...store.keys()][i] ?? null,
+  get length() {
+    return store.size
+  },
 })
 vi.stubGlobal('navigator', { onLine: true })
 
 const { setTaskStatus, flushTapQueue, pendingTaps } = await import('../src/lib/actions')
 const { runOp, flushOps, pendingOpCount } = await import('../src/lib/offline')
+const { setQueueOwner } = await import('../src/lib/queueOwner')
 
 beforeEach(() => {
   store.clear()
   results.length = 0
   sent.length = 0
+  setQueueOwner('user-a')
 })
 
 describe('task taps on weak signal', () => {
@@ -96,6 +102,44 @@ describe('gym write queue on weak signal', () => {
     // runOp's own background flush may already be replaying - wait it out
     await flushOps()
     await flushOps()
+    expect(pendingOpCount()).toBe(0)
+  })
+})
+
+describe('queues belong to the account that wrote them', () => {
+  it('a tap queued by one account is invisible to, and never replayed by, the next', async () => {
+    results.push(NET)
+    await setTaskStatus('t1', 'done', 'manual', '2026-10-22')
+    setQueueOwner(null) // signed out
+    expect(pendingTaps()).toEqual([])
+    setQueueOwner('user-b')
+    sent.length = 0
+    expect(await flushTapQueue()).toBe(0)
+    expect(sent).toEqual([])
+    // back as the owner: the tap is still there and goes out
+    setQueueOwner('user-a')
+    results.push(OK)
+    expect(await flushTapQueue()).toBe(1)
+  })
+
+  it('the first account after the update adopts the old unscoped queue', () => {
+    store.set('pending_taps', JSON.stringify([{ task_id: 't9', date: '2026-10-22', status: 'done', via: 'manual' }]))
+    setQueueOwner('user-c')
+    expect(pendingTaps().map((t) => t.task_id)).toEqual(['t9'])
+    expect(store.has('pending_taps')).toBe(false)
+  })
+
+  it('refuses replayed ops on tables the gym screens never queue, or without a row filter', async () => {
+    store.set(
+      'pending_ops:user-a',
+      JSON.stringify([
+        { table: 'push_subscriptions', op: 'insert', values: { endpoint: 'https://evil.example/x' } },
+        { table: 'planned_sets', op: 'delete' },
+      ]),
+    )
+    sent.length = 0
+    await flushOps()
+    expect(sent).toEqual([])
     expect(pendingOpCount()).toBe(0)
   })
 })

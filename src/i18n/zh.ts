@@ -50,6 +50,7 @@ export const zh: Strings = {
     forgotPassword: '忘记密码？',
     toSignUp: '第一次来？创建一个账号',
     toSignIn: '已有账号？直接登录',
+    linkOtherBrowser: '邮件里的链接只能在发起请求的浏览器中打开。如果你是在确认新账号，现在就可以登录；如果是在重置密码，请在这里重新申请一个链接。',
   },
 
   setPassword: {
@@ -88,6 +89,7 @@ export const zh: Strings = {
     speechLang: 'zh-CN',
     offlineQueued: '离线中——已保存，恢复联网后会自动发送。',
     somethingWrong: (err: string) => `出了点问题：${err}`,
+    aiDailyLimit: '今天的消息次数已用完。直接点按仍然可用，明天会重置。',
     cantReachAi: (err: string) => `无法连接 AI：${err}`,
     noMatch: '没有匹配到——试试直接说出任务名，或把它记成提醒。',
     didYouMean: '你是指：',

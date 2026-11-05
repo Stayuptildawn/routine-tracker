@@ -51,6 +51,7 @@ export const ar: Strings = {
     forgotPassword: 'نسيت كلمة المرور؟',
     toSignUp: 'أول مرة؟ أنشئ حسابًا',
     toSignIn: 'لديك حساب؟ سجّل الدخول',
+    linkOtherBrowser: 'روابط رسائلنا تُفتح فقط في المتصفح الذي طلبها. إن كنت تؤكد حسابًا جديدًا فيمكنك تسجيل الدخول الآن، وإن كنت تعيد تعيين كلمة المرور فاطلب رابطًا جديدًا من هنا.',
   },
 
   setPassword: {
@@ -89,6 +90,7 @@ export const ar: Strings = {
     speechLang: 'ar-SA',
     offlineQueued: 'بلا اتصال — حُفظ وسيُرسل عند عودة الشبكة.',
     somethingWrong: (err: string) => `حدث خطأ ما: ${err}`,
+    aiDailyLimit: 'وصلت إلى حد الرسائل لهذا اليوم. النقر المباشر ما زال يعمل، ويتجدد الحد غدًا.',
     cantReachAi: (err: string) => `تعذّر الوصول إلى الذكاء الاصطناعي: ${err}`,
     noMatch: 'لا يوجد تطابق — جرّب ذكر اسم المهمة، أو أضفها كتذكير.',
     didYouMean: 'هل تقصد:',

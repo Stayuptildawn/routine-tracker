@@ -51,6 +51,7 @@ export const fr: Strings = {
     forgotPassword: 'Mot de passe oublié ?',
     toSignUp: 'Première visite ? Créez un compte',
     toSignIn: 'Déjà un compte ? Connectez-vous',
+    linkOtherBrowser: 'Les liens de nos e-mails ne s’ouvrent que dans le navigateur qui les a demandés. Vous confirmiez un nouveau compte ? Vous pouvez vous connecter. Vous réinitialisiez votre mot de passe ? Demandez un nouveau lien ici.',
   },
 
   setPassword: {
@@ -91,6 +92,7 @@ export const fr: Strings = {
     speechLang: 'fr-FR',
     offlineQueued: 'Hors ligne — enregistré, envoi au retour du réseau.',
     somethingWrong: (err: string) => `Un problème est survenu : ${err}`,
+    aiDailyLimit: 'Vous avez atteint la limite de messages du jour. Les cases à toucher marchent toujours, et la limite repart demain.',
     cantReachAi: (err: string) => `Impossible de joindre l’IA : ${err}`,
     noMatch: 'Rien ne correspond — nommez la tâche, ou ajoutez-la comme rappel.',
     didYouMean: 'Vouliez-vous dire :',

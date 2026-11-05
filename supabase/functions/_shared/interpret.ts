@@ -346,6 +346,7 @@ User message: "${text}"`
         const { data: openSets } = await supabase
           .from('planned_sets')
           .select('id, exercise')
+          .eq('user_id', userId)
           .eq('session_id', openSession.id)
           .is('logged_at', null)
           .order('sort_order')
@@ -359,16 +360,18 @@ User message: "${text}"`
               .from('planned_sets')
               .update({ logged_weight: action.sets[i].kg, logged_reps: action.sets[i].reps, logged_at: new Date().toISOString() })
               .eq('id', matching[i].id)
+              .eq('user_id', userId)
             if (!error) filled.push(matching[i].id)
           }
           if (filled.length > 0) {
             const { count } = await supabase
               .from('planned_sets')
               .select('id', { count: 'exact', head: true })
+              .eq('user_id', userId)
               .eq('session_id', openSession.id)
               .is('logged_at', null)
             if ((count ?? 1) === 0) {
-              await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', openSession.id)
+              await supabase.from('planned_sessions').update({ completed_at: new Date().toISOString() }).eq('id', openSession.id).eq('user_id', userId)
             }
             applied.push({
               type: 'log_workout',
@@ -531,7 +534,7 @@ User message: "${text}"`
       const { error } = await supabase
         .from('daily_state')
         .upsert({ user_id: userId, date, energy: action.level }, { onConflict: 'user_id,date' })
-      if (!error) applied.push({ type: 'set_energy', level: action.level })
+      if (!error) applied.push({ type: 'set_energy', level: action.level, log_date: date })
     } else if (action.type === 'query_last_done') {
       const task = taskById.get(action.task_id)
       if (!task) continue

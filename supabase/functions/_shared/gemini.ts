@@ -11,6 +11,10 @@ export const GEMINI_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite
 
 const RETRYABLE = [503, 429, 404]
 
+// A hung upstream must not hold the caller: the cron functions walk every
+// user in one invocation, and pg_net gives them 20 s in total.
+const CALL_TIMEOUT_MS = 15_000
+
 type ModelResult =
   | { ok: true; text: string }
   | { ok: false; fatal: boolean; error: string }
@@ -27,9 +31,14 @@ async function callModel(
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')! },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
+        signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
       },
     )
-    if (!res.ok) return { ok: false, fatal: !RETRYABLE.includes(res.status), error: `HTTP ${res.status}: ${await res.text()}` }
+    if (!res.ok) {
+      // the upstream body can echo request details - log it, keep it out of replies
+      console.error(`gemini ${model} HTTP ${res.status}:`, (await res.text()).slice(0, 500))
+      return { ok: false, fatal: !RETRYABLE.includes(res.status), error: `HTTP ${res.status}` }
+    }
     const data = await res.json()
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
     if (!text) return { ok: false, fatal: false, error: 'empty reply' }

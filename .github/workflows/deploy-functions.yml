@@ -13,16 +13,21 @@ on:
     paths: ['supabase/functions/**']
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ vars.SUPABASE_PROJECT_REF != '' }}
+    # the access token is handed only to the deploy step below - npm ci, the
+    # tests and the CLI download never see it
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      HAS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
       PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -31,21 +36,23 @@ jobs:
       - run: npm test
       # the functions are Deno code - typecheck them as Deno sees them
       # (the flags keep deno away from the frontend's package.json)
-      - uses: denoland/setup-deno@v2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: v2.x
       - name: Typecheck functions
         working-directory: supabase/functions
         run: deno check --no-config --node-modules-dir=none */index.ts
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         with:
-          version: latest
+          version: 2.109.0
       - name: Skip when the access token is missing
-        if: env.SUPABASE_ACCESS_TOKEN == ''
+        if: env.HAS_TOKEN != 'true'
         run: |
           echo "SUPABASE_ACCESS_TOKEN secret not set - skipping deploy (see workflow header)"
       - name: Deploy functions
-        if: env.SUPABASE_ACCESS_TOKEN != ''
+        if: env.HAS_TOKEN == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy interpret-message --project-ref "$PROJECT_REF"
           supabase functions deploy refresh-coach --project-ref "$PROJECT_REF"

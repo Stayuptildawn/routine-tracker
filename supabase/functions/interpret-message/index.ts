@@ -10,8 +10,13 @@
 // The actual interpret+apply logic lives in ../_shared/interpret.ts. This
 // wrapper handles CORS + browser auth (RLS client).
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.110.0'
 import { interpretAndApply } from '../_shared/interpret.ts'
+import { claimAiCall } from '../_shared/aiBudget.ts'
+
+// matches MAX_LEN.message in src/lib/limits.ts - the client caps the composer,
+// this is the same rule enforced where it can't be skipped
+const MAX_TEXT = 2000
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +35,13 @@ Deno.serve(async (req) => {
 
   try {
     const { text, date, weekday, time, lang } = await req.json()
-    if (!text || !date || !weekday) return json({ error: 'text, date and weekday are required' }, 400)
+    if (typeof text !== 'string' || !text.trim() || !date || !weekday) {
+      return json({ error: 'text, date and weekday are required' }, 400)
+    }
+    if (text.length > MAX_TEXT) return json({ error: 'message too long' }, 413)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(weekday) || weekday < 1 || weekday > 7) {
+      return json({ error: 'bad date or weekday' }, 400)
+    }
     const localTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(time ?? '') ? time : undefined
 
     const supabase = createClient(
@@ -40,10 +51,12 @@ Deno.serve(async (req) => {
     )
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user) return json({ error: 'not authenticated' }, 401)
+    if (!(await claimAiCall(supabase, 'interpret'))) return json({ error: 'daily limit reached' }, 429)
 
     const result = await interpretAndApply(supabase, auth.user.id, text, date, weekday, localTime, lang)
     return json(result, result.error ? 502 : 200)
   } catch (err) {
-    return json({ error: String(err) }, 500)
+    console.error('interpret-message error:', err)
+    return json({ error: 'internal error' }, 500)
   }
 })

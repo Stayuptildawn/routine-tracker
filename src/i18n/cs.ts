@@ -52,6 +52,7 @@ export const cs: Strings = {
     forgotPassword: 'Zapomněl jsi heslo?',
     toSignUp: 'Poprvé tady? Vytvoř si účet',
     toSignIn: 'Už máš účet? Přihlas se',
+    linkOtherBrowser: 'Odkazy z našich e-mailů se otevřou jen v prohlížeči, který si je vyžádal. Potvrzoval jsi nový účet? Teď se můžeš přihlásit. Obnovoval jsi heslo? Vyžádej si tady nový odkaz.',
   },
 
   setPassword: {
@@ -90,6 +91,7 @@ export const cs: Strings = {
     speechLang: 'cs-CZ',
     offlineQueued: 'Offline — uloženo, odešle se, až bude síť.',
     somethingWrong: (err: string) => `Něco se pokazilo: ${err}`,
+    aiDailyLimit: 'Dnešní limit zpráv je vyčerpaný. Ťukání dál funguje a zítra se limit obnoví.',
     cantReachAi: (err: string) => `Nepodařilo se spojit s AI: ${err}`,
     noMatch: 'Nic se neshodlo — zkus úkol pojmenovat, nebo ho přidej jako připomenutí.',
     didYouMean: 'Myslel jsi:',

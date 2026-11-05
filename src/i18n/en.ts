@@ -62,6 +62,7 @@ export const en = {
     forgotPassword: 'Forgot your password?',
     toSignUp: 'First time? Create an account',
     toSignIn: 'Have an account? Sign in',
+    linkOtherBrowser: 'Links from our emails only open in the browser that asked for them. Confirming a new account? You can sign in now. Resetting your password? Ask for a new link here.',
   },
 
   setPassword: {
@@ -106,6 +107,7 @@ export const en = {
     speechLang: 'en-US',
     offlineQueued: 'Offline — saved, will send when back online.',
     somethingWrong: (err: string) => `Something went wrong: ${err}`,
+    aiDailyLimit: 'You’ve reached today’s message limit. Tapping still works, and it resets tomorrow.',
     cantReachAi: (err: string) => `Couldn't reach the AI: ${err}`,
     noMatch: 'Nothing matched — try naming the task, or add it as a reminder.',
     didYouMean: 'Did you mean:',
