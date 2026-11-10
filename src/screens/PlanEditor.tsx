@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { PlannedSession, TrainingBlock, WorkoutPlan } from '../lib/types'
 import { t } from '../i18n'
-import Icon from '../components/Icon'
+import { Button, Chips, IconButton } from '../components/ui'
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
 import { MAX_LEN } from '../lib/limits'
 
@@ -249,123 +249,135 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
   }
 
   return (
-    <div className="edit-panel">
-      <div className="edit-task-row plan-edit-actions">
-        <button className="save" onClick={save} disabled={saving}>
-          {saving ? t.planEditor.saving : <><Icon name="check" /> {t.planEditor.saveChanges}</>}
-        </button>
-        <button className="cancel" onClick={onCancel} disabled={saving}>
-          <Icon name="x" /> {t.common.cancel}
-        </button>
+    <div className="stack">
+      <div className="actions actions--stretch plan-editor__actions">
+        <Button variant="primary" icon="check" busy={saving} onClick={save}>
+          {saving ? t.planEditor.saving : t.planEditor.saveChanges}
+        </Button>
+        <Button icon="x" onClick={onCancel} disabled={saving}>
+          {t.common.cancel}
+        </Button>
       </div>
-      <p className="gentle">{t.planEditor.note}</p>
+      <p className="hint">{t.planEditor.note}</p>
 
-      <div className="energy-row plan-row">
-        <span className="energy-label">{t.planEditor.sessionLabel}</span>
-        {tabs.map((s) => (
-          <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
-            {s}
-          </button>
-        ))}
+      <div className="field">
+        <span className="field__label">{t.planEditor.sessionLabel}</span>
+        <Chips label={t.planEditor.sessionLabel} value={split} onChange={setSplit} options={tabs.map((s) => ({ value: s, label: s }))} />
       </div>
 
       {splitRows.map((r) => {
         if (r.deleted) {
           return (
-            <div key={r.key} className="edit-task-row plan-deleted">
-              <span className="plan-deleted-name">{r.exercise}</span>
-              <button className="link" onClick={() => patch(r.key, { deleted: false })}>
+            <div key={r.key} className="field-row">
+              <span className="grow plan-editor__deleted">{r.exercise}</span>
+              <Button variant="ghost" size="sm" onClick={() => patch(r.key, { deleted: false })}>
                 {t.common.restore}
-              </button>
+              </Button>
             </div>
           )
         }
         const pos = visibleSplitKeys.indexOf(r.key)
         return (
-          <div key={r.key} className="edit-task">
-            <div className="edit-task-row">
-              <ExerciseAutocomplete
-                value={r.exercise}
-                onChange={(exercise) => patch(r.key, { exercise })}
-                onPick={(exercise, muscle) => patch(r.key, { exercise, muscle })}
-              />
-              <select value={r.muscle} onChange={(e) => patch(r.key, { muscle: e.target.value })}>
+          <div key={r.key} className="card edit-item">
+            <ExerciseAutocomplete
+              value={r.exercise}
+              onChange={(exercise) => patch(r.key, { exercise })}
+              onPick={(exercise, muscle) => patch(r.key, { exercise, muscle })}
+            />
+            <div className="field-row field-row--tight">
+              <select className="grow" value={r.muscle} aria-label={r.exercise} onChange={(e) => patch(r.key, { muscle: e.target.value })}>
                 {MUSCLE_GROUPS.map((m) => (
-                  <option key={m} value={m}>{muscleLabel(m)}</option>
+                  <option key={m} value={m}>
+                    {muscleLabel(m)}
+                  </option>
                 ))}
               </select>
-              <button className="danger" disabled={pos === 0} onClick={() => move(r.key, -1)} aria-label={t.planEditor.moveUp}>
-                <Icon name="arrow-up" />
-              </button>
-              <button
-                className="danger"
+              <IconButton icon="arrow-up" label={t.planEditor.moveUp} disabled={pos === 0} onClick={() => move(r.key, -1)} />
+              <IconButton
+                icon="arrow-down"
+                label={t.planEditor.moveDown}
                 disabled={pos === visibleSplitKeys.length - 1}
                 onClick={() => move(r.key, 1)}
-                aria-label={t.planEditor.moveDown}
-              >
-                <Icon name="arrow-down" />
-              </button>
-              <button className="danger" title={t.planEditor.removeTitle} onClick={() => remove(r.key)} aria-label={t.planEditor.remove}>
-                <Icon name="x" />
-              </button>
-            </div>
-            <div className="edit-task-row scheme-row">
-              {PHASE_KEYS.map((k) => {
-                const parsed = parseScheme(r.schemes[k] ?? '')
-                return (
-                  <div key={k} className="scheme-field">
-                    <span className="scheme-wk">{t.planEditor.wk(k)}</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={10}
-                      placeholder={t.planEditor.zeroPh}
-                      value={parsed.sets}
-                      onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(e.target.value, parsed.reps) } })}
-                    />
-                    <span className="scheme-x">{t.planEditor.setsX}</span>
-                    <input
-                      placeholder={t.planEditor.repsPh}
-                      value={parsed.reps}
-                      maxLength={MAX_LEN.reps}
-                      onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(parsed.sets, e.target.value) } })}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-            <div className="edit-task-row">
-              <input
-                value={r.note}
-                maxLength={MAX_LEN.note}
-                placeholder={t.planEditor.notePh}
-                onChange={(e) => patch(r.key, { note: e.target.value })}
               />
+              <IconButton icon="x" label={t.planEditor.removeTitle} className="icon-btn--danger" onClick={() => remove(r.key)} />
             </div>
+            {PHASE_KEYS.map((k) => {
+              const parsed = parseScheme(r.schemes[k] ?? '')
+              return (
+                <div key={k} className="field-row field-row--tight">
+                  <span className="hint plan-editor__wk">{t.planEditor.wk(k)}</span>
+                  <input
+                    className="input--num"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={10}
+                    aria-label={`${t.planEditor.wk(k)} ${t.planEditor.setsX}`}
+                    placeholder={t.planEditor.zeroPh}
+                    value={parsed.sets}
+                    onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(e.target.value, parsed.reps) } })}
+                  />
+                  <span className="hint">{t.planEditor.setsX}</span>
+                  <input
+                    className="grow"
+                    aria-label={`${t.planEditor.wk(k)} ${t.planEditor.repsPh}`}
+                    placeholder={t.planEditor.repsPh}
+                    value={parsed.reps}
+                    maxLength={MAX_LEN.reps}
+                    onChange={(e) => patch(r.key, { schemes: { ...r.schemes, [k]: composeScheme(parsed.sets, e.target.value) } })}
+                  />
+                </div>
+              )
+            })}
+            <input
+              value={r.note}
+              maxLength={MAX_LEN.note}
+              placeholder={t.planEditor.notePh}
+              aria-label={t.planEditor.notePh}
+              onChange={(e) => patch(r.key, { note: e.target.value })}
+            />
           </div>
         )
       })}
 
       {split && (
-        <div className="add-task">
-          <input
-            value={cardioBySplit[split] ?? ''}
-            maxLength={MAX_LEN.label}
-            onChange={(e) => setCardioBySplit({ ...cardioBySplit, [split]: e.target.value })}
-            placeholder={t.planEditor.cardioPh}
-          />
-        </div>
+        <input
+          value={cardioBySplit[split] ?? ''}
+          maxLength={MAX_LEN.label}
+          onChange={(e) => setCardioBySplit({ ...cardioBySplit, [split]: e.target.value })}
+          placeholder={t.planEditor.cardioPh}
+          aria-label={t.planEditor.cardioPh}
+        />
       )}
 
-      <div className="add-task">
+      <div className="field-row">
+        <ExerciseAutocomplete
+          value={newEx.name}
+          onChange={(name) => setNewEx({ ...newEx, name })}
+          onPick={(name, muscle) => setNewEx({ ...newEx, name, muscle })}
+          onEnter={addExercise}
+          placeholder={t.planEditor.newExercisePh(split ?? '…')}
+        />
+        <select value={newEx.muscle} aria-label={t.planEditor.newExercisePh(split ?? '…')} onChange={(e) => setNewEx({ ...newEx, muscle: e.target.value })}>
+          {MUSCLE_GROUPS.map((m) => (
+            <option key={m} value={m}>
+              {muscleLabel(m)}
+            </option>
+          ))}
+        </select>
+        <Button onClick={addExercise}>{t.common.add}</Button>
+      </div>
+
+      <div className="field-row">
         <input
+          className="grow"
           value={newSession}
           maxLength={MAX_LEN.name}
           onChange={(e) => setNewSession(e.target.value)}
           placeholder={t.planEditor.newSessionPh}
+          aria-label={t.planEditor.newSessionPh}
         />
-        <button
+        <Button
           onClick={() => {
             const v = newSession.trim()
             if (!v) return
@@ -374,22 +386,7 @@ export default function PlanEditor({ origin, planBlock, activeBlock, sessions, i
           }}
         >
           {t.planEditor.addSession}
-        </button>
-      </div>
-      <div className="add-task">
-        <ExerciseAutocomplete
-          value={newEx.name}
-          onChange={(name) => setNewEx({ ...newEx, name })}
-          onPick={(name, muscle) => setNewEx({ ...newEx, name, muscle })}
-          onEnter={addExercise}
-          placeholder={t.planEditor.newExercisePh(split ?? '…')}
-        />
-        <select value={newEx.muscle} onChange={(e) => setNewEx({ ...newEx, muscle: e.target.value })}>
-          {MUSCLE_GROUPS.map((m) => (
-            <option key={m} value={m}>{muscleLabel(m)}</option>
-          ))}
-        </select>
-        <button onClick={addExercise}>{t.common.add}</button>
+        </Button>
       </div>
     </div>
   )

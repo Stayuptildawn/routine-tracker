@@ -7,7 +7,7 @@ import { composeFlexSession, composeFlexWeek, createFlexSession, createFlexWeek,
 import type { FlexComposition, FlexFocus, FlexLength, FlexWeekPlan, MuscleNeed } from '../lib/flexSession'
 import { seedWorkoutTemplate } from '../lib/workoutTemplate'
 import { DEFAULT_BASE_KM } from '../lib/cardioPlan'
-import { t } from '../i18n'
+import { t, locale } from '../i18n'
 import Session from './Session'
 import { usePresence } from '../lib/overlay'
 import { useCardioTracking } from '../lib/cardioTracking'
@@ -17,6 +17,8 @@ import type { BlockApplyDiff } from './PlanEditor'
 import Skeleton from '../components/Skeleton'
 import ConfirmButton from '../components/ConfirmButton'
 import Icon from '../components/Icon'
+import { Button, Card, Chips, Dialog, Disclosure, EmptyState, ErrorState, Notice, ProgressBar, ScreenHeader, Segmented, cx } from '../components/ui'
+import type { ChoiceOption } from '../components/ui'
 import ExerciseAutocomplete from '../components/ExerciseAutocomplete'
 import { MAX_LEN } from '../lib/limits'
 import InjuryCard from './InjuryCard'
@@ -32,6 +34,9 @@ const PHASES: { key: string; name: string; maxWeek: number }[] = [
 ]
 
 const muscleLabel = (m: string) => t.muscles[m] ?? m
+
+/** The Workout screen's four views: do, plan, look back, cardio. */
+type GymView = 'train' | 'plan' | 'progress' | 'cardio'
 
 /** The volume picture's "last month" window: four whole weeks. */
 const MONTH_DAYS = 28
@@ -52,7 +57,7 @@ function weekFromStart(start: string): number {
   return Math.max(1, Math.floor(days / 7) + 1)
 }
 
-export default function Gym({ visible }: { visible: boolean; onOpenSettings: () => void }) {
+export default function Gym({ visible, onOpenSettings }: { visible: boolean; onOpenSettings: () => void }) {
   const [logs, setLogs] = useState<WorkoutLog[]>([])
   const [plans, setPlans] = useState<WorkoutPlan[]>([])
   const [block, setBlock] = useState<TrainingBlock | null>(null)
@@ -77,12 +82,14 @@ export default function Gym({ visible }: { visible: boolean; onOpenSettings: () 
   const [planBlock, setPlanBlock] = useState(1) // which block the plan card shows
   const [editingPlan, setEditingPlan] = useState(false)
   const [cardioBase, setCardioBase] = useState<number | null>(null) // null=loading
-  // always opens on Strength - the primary view - rather than remembering
-  // whichever was open last
-  const [pickedView, setView] = useState<'strength' | 'cardio'>('strength')
-  // cardio logging switched off in Settings (a watch tracks it): strength only
+  // always opens on Train - the view you came to do something in - rather
+  // than remembering whichever was open last
+  const [pickedView, setView] = useState<GymView>('train')
+  // cardio logging switched off in Settings (a watch tracks it): no Cardio view
   const cardioOn = useCardioTracking()
-  const view = cardioOn ? pickedView : 'strength'
+  const view: GymView = !cardioOn && pickedView === 'cardio' ? 'train' : pickedView
+  const [loadError, setLoadError] = useState(false)
+  const loadedRef = useRef(false)
 
   const [scratch, setScratch] = useState({ session: '', exercise: '', muscle: 'Other', sets: '3', reps: '10-12' })
   const [settingUp, setSettingUp] = useState(false)
@@ -142,6 +149,14 @@ export default function Gym({ visible }: { visible: boolean; onOpenSettings: () 
         .gte('created_at', tuneSince),
       supabase.from('plan_tunings').select('muscle_group, created_at').gte('created_at', tuneSince),
     ])
+    // a failed first load must not pass for "no plan yet"; a failed refresh
+    // keeps what is already on screen
+    if (plansRes.error) {
+      if (!loadedRef.current) setLoadError(true)
+      return
+    }
+    setLoadError(false)
+    loadedRef.current = true
     setMonthSets(monthRes.data ?? [])
     setTuneCheckins((checkinRes.data as TuningCheckin[]) ?? [])
     const tuned = new Map<string, string>()
@@ -631,6 +646,7 @@ export default function Gym({ visible }: { visible: boolean; onOpenSettings: () 
       })
       await load()
       setSplit(session)
+      setView('plan')
       setEditingPlan(true)
     } finally {
       setSettingUp(false)
@@ -760,381 +776,628 @@ export default function Gym({ visible }: { visible: boolean; onOpenSettings: () 
   const splitPlans = blockPlans.filter((p) => p.split_day === split)
   const splitCardio = splitPlans.find((p) => p.cardio)?.cardio
 
-  return (
-    <div className="gym">
-      <h1>{t.gym.title}</h1>
-      {cardioOn && (
-        <div className="energy-row seg-row">
-          <button
-            className={view === 'strength' ? 'energy-btn active' : 'energy-btn'}
-            aria-pressed={view === 'strength'}
-            onClick={() => setView('strength')}
-          >
-            <Icon name="dumbbell" /> {t.gym.strength}
-          </button>
-          <button
-            className={view === 'cardio' ? 'energy-btn active' : 'energy-btn'}
-            aria-pressed={view === 'cardio'}
-            onClick={() => setView('cardio')}
-          >
-            <Icon name="run" /> {t.gym.cardio}
-          </button>
+  const blockWeek = block ? Math.min(weekFromStart(block.start_date), block.total_weeks) : 1
+  const upNext = gridSessions.find((s) => !s.completed_at)
+  const fmtDay = (iso: string) =>
+    new Date(iso + 'T00:00:00').toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+
+  const viewOptions: ChoiceOption<GymView>[] = [
+    { value: 'train', label: t.gym.tabTrain },
+    { value: 'plan', label: t.gym.tabPlan },
+    { value: 'progress', label: t.gym.tabProgress },
+    ...(cardioOn ? [{ value: 'cardio' as const, label: t.gym.cardio }] : []),
+  ]
+
+  /** One row that opens a flex session, with its two-tap delete. */
+  const flexRow = (s: PlannedSession, done: boolean) => (
+    <div key={s.id} className="field-row field-row--tight">
+      <Button className="grow gym__session-btn" icon={done ? 'check' : 'play'} onClick={() => setActive(s)}>
+        {done ? '' : `${s.date ? t.gym.continue : t.gym.start} `}
+        {s.split_day}
+        <span className="meta">{t.gym.weekTag(s.week_number)}</span>
+      </Button>
+      <ConfirmButton
+        iconOnly
+        label={<Icon name="x" />}
+        confirmLabel={t.gym.flex.deleteConfirm}
+        title={t.gym.flex.deleteTitle(s.split_day)}
+        onConfirm={() => deleteFlexSession(s)}
+      />
+    </div>
+  )
+
+  /** A composed session's exercises, as a quiet list. */
+  const pickRows = (picks: { exercise: string; target_scheme: string | null; muscle_group: string }[]) => (
+    <div className="rows">
+      {picks.map((p, i) => (
+        <div key={i} className="row gym__entry">
+          <span className="row__main">
+            <strong>{p.exercise}</strong> <span className="mono">{p.target_scheme}</span>
+          </span>
+          <span className="badge">{muscleLabel(p.muscle_group)}</span>
         </div>
-      )}
-      {view === 'strength' && (
-        <p className="gentle">
-          {t.gym.strengthHint}
-          <em>{t.gym.strengthHintExample}</em>.
-        </p>
+      ))}
+    </div>
+  )
+
+  const injuryNote = injuries.length > 0 && (
+    <p className="hint">
+      <Icon name="shield" /> {t.injuries.flexAround(injuryList(injuries))}
+    </p>
+  )
+
+  /** "Start Block N", asked twice: generating six weeks of sessions is not a stray tap. */
+  const startBlockControl = (blockNumber: number, label: string) =>
+    confirmBlock === blockNumber ? (
+      <div className="stack">
+        {block && !gridSessions.every((s) => s.completed_at) && <p className="hint">{t.gym.currentBlockUnfinished(block.name)}</p>}
+        <div className="actions">
+          <Button
+            variant="primary"
+            busy={starting}
+            onClick={() => {
+              setConfirmBlock(null)
+              beginBlock(blockNumber)
+            }}
+          >
+            {starting ? t.gym.generating : t.gym.yesGenerate(blockNumber)}
+          </Button>
+          <Button variant="ghost" onClick={() => setConfirmBlock(null)}>
+            {t.common.cancel}
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <Button block busy={starting} onClick={() => setConfirmBlock(blockNumber)}>
+        {starting ? t.gym.generating : label}
+      </Button>
+    )
+
+  const setupCard = (
+    <Card title={t.gym.setupTitle}>
+      <p className="hint">{t.gym.setupSubtitle}</p>
+      <Button variant="primary" block busy={settingUp} onClick={useTemplate}>
+        {settingUp ? t.gym.settingUp : t.gym.useStarter}
+      </Button>
+      <p className="hint">{t.gym.starterDesc}</p>
+      <p className="hint gym__or">{t.gym.orBuildOwn}</p>
+      <input
+        placeholder={t.gym.firstSessionPh}
+        aria-label={t.gym.firstSessionPh}
+        value={scratch.session}
+        maxLength={MAX_LEN.name}
+        onChange={(e) => setScratch({ ...scratch, session: e.target.value })}
+      />
+      <div className="field-row">
+        <ExerciseAutocomplete
+          placeholder={t.gym.firstExercisePh}
+          value={scratch.exercise}
+          onChange={(exercise) => setScratch({ ...scratch, exercise })}
+          onPick={(exercise, muscle) => setScratch({ ...scratch, exercise, muscle })}
+        />
+        <select value={scratch.muscle} aria-label={t.gym.firstExercisePh} onChange={(e) => setScratch({ ...scratch, muscle: e.target.value })}>
+          {MUSCLE_GROUPS.map((m) => (
+            <option key={m} value={m}>
+              {muscleLabel(m)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field-row field-row--tight">
+        <input
+          className="input--num"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={10}
+          aria-label={t.gym.setsX}
+          value={scratch.sets}
+          onChange={(e) => setScratch({ ...scratch, sets: e.target.value })}
+        />
+        <span className="hint">{t.gym.setsX}</span>
+        <input
+          className="grow"
+          placeholder={t.gym.repsPh}
+          aria-label={t.gym.repsPh}
+          value={scratch.reps}
+          maxLength={MAX_LEN.reps}
+          onChange={(e) => setScratch({ ...scratch, reps: e.target.value })}
+        />
+      </div>
+      <Button block busy={settingUp} onClick={createOwnPlan} disabled={!scratch.session.trim() || !scratch.exercise.trim()}>
+        {t.gym.createMyPlan}
+      </Button>
+      <p className="hint">{t.gym.addMoreAfter}</p>
+    </Card>
+  )
+
+  const flexToolsOpen = flexOpen || !!flexPreview || !!flexWeekPreview
+
+  return (
+    <div className="screen gym">
+      <ScreenHeader title={t.gym.title} onOpenSettings={onOpenSettings} />
+      <Segmented options={viewOptions} value={view} onChange={setView} label={t.gym.title} />
+
+      {loadError && !loaded && <ErrorState onRetry={load} />}
+      {!loaded && !loadError && <Skeleton cards={2} />}
+
+      {applyResult && (
+        <Notice tone="good" onDismiss={() => setApplyResult(null)}>
+          {applyResult}
+        </Notice>
       )}
 
-      {view === 'strength' && block && sessions.length > 0 && (() => {
-        const blockWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
-        const upNext = gridSessions.find((s) => !s.completed_at)
-        const weeks = Array.from({ length: block.total_weeks }, (_, i) => i + 1)
-        const dayRows = gridSessions.filter((s) => s.week_number === 1)
-        return (
-          <section className="gym-day block-card">
-            <h2>
-              {block.name}
-              <span className="routine-progress">{t.gym.weekOf(blockWeek, block.total_weeks)}</span>
-            </h2>
-            <div className="weeks-grid" role="grid" aria-label={t.gym.blockSessionsAria}>
-              <div className="weeks-row weeks-head">
-                <span className="weeks-label"></span>
-                {weeks.map((w) => (
-                  <span key={w} className={w === blockWeek ? 'weeks-num now' : 'weeks-num'}>
+      {view === 'train' && loaded && (
+        <>
+          {plans.length === 0 && setupCard}
+
+          {block && upNext && !blockDone && (
+            <Card tone="feature" className="upnext">
+              <p className="eyebrow upnext__label">
+                {t.now.upNext} ·{t.gym.weekTag(upNext.week_number)}
+              </p>
+              <p className="upnext__task">{upNext.split_day}</p>
+              <Button variant="primary" block icon="play" onClick={() => setActive(upNext)}>
+                {upNext.date && !upNext.completed_at ? t.gym.continue : t.gym.start} {upNext.split_day}
+              </Button>
+            </Card>
+          )}
+
+          {block && blockDone && (
+            <Card
+              tone="good"
+              title={
+                <>
+                  {block.name}
+                  {t.gym.wrapped} <Icon name="check" />
+                </>
+              }
+            >
+              <p className="hint">
+                {t.gym.wrapSummary(doneSessionCount, gridSessions.length, loggedSets.filter((s) => s.logged_reps != null).length)}
+                {doneSessionCount < gridSessions.length && t.gym.openSessionsStay}
+              </p>
+              <p className="hint">{nextTweaks ? t.gym.tweaksFromCheckins(nextTweaks) : t.gym.checkinsAllRight}</p>
+              {confirmBlock === nextBlockNumber ? (
+                <div className="actions">
+                  <Button
+                    variant="primary"
+                    busy={starting}
+                    onClick={() => {
+                      setConfirmBlock(null)
+                      beginBlock(nextBlockNumber)
+                    }}
+                  >
+                    {starting ? t.gym.generating : t.gym.yesGenerate(nextBlockNumber)}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setConfirmBlock(null)}>
+                    {t.common.cancel}
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="primary" block busy={starting} onClick={() => setConfirmBlock(nextBlockNumber)}>
+                  {starting
+                    ? t.gym.generating
+                    : t.gym.startBlockLong(nextBlockNumber, nextBlockNumber === 2, nextBlockNumber === (block.block ?? 1))}
+                </Button>
+              )}
+            </Card>
+          )}
+
+          {!block && blockPlans.length > 0 && startBlockControl(planBlock, t.gym.startBlockFromPlan(planBlock))}
+
+          {block && sessions.length > 0 && (
+            <Card title={block.name} meta={t.gym.weekOf(blockWeek, block.total_weeks)}>
+              <div
+                className="block-grid"
+                role="group"
+                aria-label={t.gym.blockSessionsAria}
+                style={{ gridTemplateColumns: `minmax(0, 5.5rem) repeat(${block.total_weeks}, minmax(0, 1fr))` }}
+              >
+                <span />
+                {Array.from({ length: block.total_weeks }, (_, i) => i + 1).map((w) => (
+                  <span key={w} className={w === blockWeek ? 'block-grid__week is-now' : 'block-grid__week'}>
                     {w}
                   </span>
                 ))}
+                {gridSessions
+                  .filter((s) => s.week_number === 1)
+                  .map((day) => (
+                    <div key={day.day_number} className="block-grid__row">
+                      <span className="block-grid__label">{day.split_day}</span>
+                      {Array.from({ length: block.total_weeks }, (_, i) => i + 1).map((w) => {
+                        const s = sessions.find((x) => x.week_number === w && x.day_number === day.day_number)
+                        if (!s) return <span key={w} />
+                        return (
+                          <button
+                            key={w}
+                            type="button"
+                            className={cx('block-grid__cell', s.completed_at && 'is-done', upNext?.id === s.id && 'is-next')}
+                            title={t.gym.sessionCellTitle(s.split_day, w, !!s.completed_at)}
+                            aria-label={t.gym.sessionCellTitle(s.split_day, w, !!s.completed_at)}
+                            onClick={() => setActive(s)}
+                          >
+                            {s.completed_at ? <Icon name="check" /> : ''}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ))}
               </div>
-              {dayRows.map((day) => (
-                <div key={day.day_number} className="weeks-row">
-                  <span className="weeks-label">{day.split_day}</span>
-                  {weeks.map((w) => {
-                    const s = sessions.find((x) => x.week_number === w && x.day_number === day.day_number)
-                    if (!s) return <span key={w} className="weeks-cell empty" />
-                    const cls = s.completed_at
-                      ? 'weeks-cell done'
-                      : upNext?.id === s.id
-                        ? 'weeks-cell next'
-                        : 'weeks-cell'
-                    return (
-                      <button
-                        key={w}
-                        className={cls}
-                        title={t.gym.sessionCellTitle(s.split_day, w, !!s.completed_at)}
-                        onClick={() => setActive(s)}
-                      >
-                        {s.completed_at ? <Icon name="check" /> : ''}
-                      </button>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-            <p className="gentle">{t.gym.tapCellHint}</p>
-            {upNext && !blockDone && (
-              <button className="start-session" onClick={() => setActive(upNext)}>
-                <Icon name="play" /> {upNext.date && !upNext.completed_at ? t.gym.continue : t.gym.start} {upNext.split_day}
-                <span className="routine-progress">{t.gym.weekTag(upNext.week_number)}</span>
-              </button>
-            )}
-          </section>
-        )
-      })()}
+              <p className="hint">{t.gym.tapCellHint}</p>
+            </Card>
+          )}
 
-      {view === 'strength' && block && sessions.length > 0 && !blockDone && (
-        <section className="gym-day flex-card">
-          <h2>
-            {t.gym.flex.title}
-            <span className="routine-progress">{t.gym.flex.sub}</span>
-          </h2>
-          {pendingFlex.length > 0 && (
-            <>
-              <p className="gentle">{t.gym.flex.open}</p>
-              {pendingFlex.map((s) => (
-                <div key={s.id} className="flex-open-row">
-                  <button className="start-session" onClick={() => setActive(s)}>
-                    <Icon name="play" /> {s.date ? t.gym.continue : t.gym.start} {s.split_day}
-                    <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
-                  </button>
-                  <ConfirmButton
-                    className="danger"
-                    label={<Icon name="x" />}
-                    confirmLabel={t.gym.flex.deleteConfirm}
-                    title={t.gym.flex.deleteTitle(s.split_day)}
-                    onConfirm={() => deleteFlexSession(s)}
-                  />
+          {block && sessions.length > 0 && !blockDone && (
+            <Card title={t.gym.flex.title} meta={t.gym.flex.sub}>
+              {pendingFlex.length > 0 && (
+                <div className="stack stack--tight">
+                  <p className="hint">{t.gym.flex.open}</p>
+                  {pendingFlex.map((s) => flexRow(s, false))}
                 </div>
-              ))}
-            </>
-          )}
-          {doneFlex.length > 0 && (
-            <div className="training-history">
-              <button className="link" onClick={() => setShowPastFlex((v) => !v)}>
-                <Icon name={showPastFlex ? 'arrow-up' : 'arrow-down'} /> {t.gym.flex.past(doneFlex.length)}
-              </button>
-              {showPastFlex &&
-                doneFlex.map((s) => (
-                  <div key={s.id} className="flex-open-row">
-                    <button className="start-session flex-done" onClick={() => setActive(s)}>
-                      <Icon name="check" /> {s.split_day}
-                      <span className="routine-progress">{t.gym.weekTag(s.week_number)}</span>
-                    </button>
-                    <ConfirmButton
-                      className="danger"
-                      label={<Icon name="x" />}
-                      confirmLabel={t.gym.flex.deleteConfirm}
-                      title={t.gym.flex.deleteTitle(s.split_day)}
-                      onConfirm={() => deleteFlexSession(s)}
-                    />
-                  </div>
-                ))}
-            </div>
-          )}
-          {(() => {
-            const toolsOpen = flexOpen || !!flexPreview || !!flexWeekPreview
-            return (
-              <button
-                className="link"
-                onClick={() => {
-                  if (toolsOpen) {
-                    setFlexOpen(false)
+              )}
+              {doneFlex.length > 0 && (
+                <Disclosure label={t.gym.flex.past(doneFlex.length)} open={showPastFlex} onToggle={setShowPastFlex}>
+                  <div className="stack stack--tight">{doneFlex.map((s) => flexRow(s, true))}</div>
+                </Disclosure>
+              )}
+              <Disclosure
+                label={t.gym.flex.generate}
+                open={flexToolsOpen}
+                onToggle={(open) => {
+                  setFlexOpen(open)
+                  if (!open) {
                     setFlexPreview(null)
                     setFlexWeekPreview(null)
                     setFlexWeekDays(null)
-                  } else {
-                    setFlexOpen(true)
                   }
                 }}
               >
-                <Icon name={toolsOpen ? 'arrow-up' : 'arrow-down'} /> {toolsOpen ? t.common.close : t.gym.flex.generate}
-              </button>
-            )
-          })()}
-          {!(flexOpen || flexPreview || flexWeekPreview) ? null : !flexPreview ? (
-            <>
-              <p className="gentle">{t.gym.flex.subtitle}</p>
-              <div className="energy-row plan-row">
-                {(['upper', 'lower', 'full'] as FlexFocus[]).map((f) => (
-                  <button
-                    key={f}
-                    className={flexFocus === f ? 'energy-btn active' : 'energy-btn'}
-                    aria-pressed={flexFocus === f}
-                    onClick={() => setFlexFocus(f)}
-                  >
-                    {f === 'full' ? t.gym.flex.fullBody : t.gym.flex[f]}
-                  </button>
-                ))}
-              </div>
-              <div className="energy-row plan-row">
-                {(['short', 'full'] as FlexLength[]).map((l) => (
-                  <button
-                    key={l}
-                    className={flexLength === l ? 'energy-btn active' : 'energy-btn'}
-                    aria-pressed={flexLength === l}
-                    onClick={() => setFlexLength(l)}
-                  >
-                    {l === 'short' ? t.gym.flex.short : t.gym.flex.long}
-                  </button>
-                ))}
-              </div>
-              <button className="start-session" onClick={() => generateFlex(0)} disabled={flexBusy}>
-                {flexBusy ? t.gym.flex.generating : t.gym.flex.generate}
-              </button>
-            </>
-          ) : (
-            <>
-              {flexPreview.needs.length > 0 && (
-                <p className="gentle">
-                  {t.gym.flex.weekSoFar(
-                    flexPreview.needs
-                      .map((n) => t.gym.flex.needPart(muscleLabel(n.muscle), n.done, n.weeklyTarget))
-                      .join(' · '),
-                  )}
-                </p>
-              )}
-              {flexPreview.maintenance && flexPreview.picks.length > 0 && (
-                <p className="gentle">{t.gym.flex.maintenanceNote}</p>
-              )}
-              {injuries.length > 0 && (
-                <p className="gentle">
-                  <Icon name="shield" /> {t.injuries.flexAround(injuryList(injuries))}
-                </p>
-              )}
-              {flexPreview.picks.length === 0 ? (
-                <p className="gentle">{t.gym.flex.nothingFits}</p>
-              ) : (
-                flexPreview.picks.map((p, i) => (
-                  <div key={i} className="gym-entry">
-                    <span className="gym-exercise">{p.exercise}</span>
-                    <span className="gym-sets">{p.target_scheme}</span>
-                    <span className="gym-notes">{muscleLabel(p.muscle_group)}</span>
-                  </div>
-                ))
-              )}
-              {flexPreview.picks.length > 0 && (
-                <button className="start-session" onClick={startFlex} disabled={flexBusy}>
-                  {flexBusy ? t.gym.flex.generating : t.gym.flex.startIt}
-                </button>
-              )}
-              <div className="energy-row plan-row">
-                <button className="link" onClick={() => generateFlex(flexVariant + 1)} disabled={flexBusy}>
-                  {t.gym.flex.anotherMix}
-                </button>
-                <button className="link" onClick={() => setFlexPreview(null)} disabled={flexBusy}>
-                  {t.gym.flex.discard}
-                </button>
-              </div>
-            </>
-          )}
-          {(flexOpen || flexWeekPreview) && !flexPreview && (
-            <>
-              <p className="gentle setup-or">{t.gym.flex.orWeek}</p>
-              <div className="energy-row plan-row">
-                <span className="energy-label">{t.gym.flex.daysLabel}</span>
-                {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-                  <button
-                    key={d}
-                    className={flexWeekDays === d ? 'energy-btn active' : 'energy-btn'}
-                    aria-pressed={flexWeekDays === d}
-                    onClick={() => generateFlexWeek(d)}
-                    disabled={flexBusy}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-              {flexWeekDays === 0 && <p className="gentle">{t.gym.flex.weekNote0}</p>}
-              {flexWeekDays === 6 && <p className="gentle">{t.gym.flex.weekNote6}</p>}
-              {flexWeekPreview && (
-                <>
-                  {flexWeekPreview.needs.length > 0 && (
-                    <p className="gentle">
-                      {t.gym.flex.weekSoFar(
-                        flexWeekPreview.needs
-                          .map((n) => t.gym.flex.needPart(muscleLabel(n.muscle), n.done, n.weeklyTarget))
-                          .join(' · '),
-                      )}
-                    </p>
-                  )}
-                  <p className="gentle">{t.gym.flex.weekWhy}</p>
-                  {injuries.length > 0 && (
-                    <p className="gentle">
-                      <Icon name="shield" /> {t.injuries.flexAround(injuryList(injuries))}
-                    </p>
-                  )}
-                  {flexWeekPreview.sessions.map((s, i) => (
-                    <div key={i} className="flex-week-day">
-                      <p className="flex-day-head">
-                        {t.gym.flex.dayHeading(i + 1, focusLabel(s.focus))}
-                        <span className="routine-progress">
-                          {' '}
-                          {t.gym.flex.sets(s.picks.reduce((a, p) => a + p.sets, 0))}
-                        </span>
+                {!flexPreview ? (
+                  <>
+                    <p className="hint">{t.gym.flex.subtitle}</p>
+                    <Chips
+                      label={t.gym.flex.title}
+                      value={flexFocus}
+                      onChange={setFlexFocus}
+                      options={(['upper', 'lower', 'full'] as FlexFocus[]).map((f) => ({ value: f, label: focusLabel(f) }))}
+                    />
+                    <Chips
+                      value={flexLength}
+                      onChange={setFlexLength}
+                      options={(['short', 'full'] as FlexLength[]).map((l) => ({
+                        value: l,
+                        label: l === 'short' ? t.gym.flex.short : t.gym.flex.long,
+                      }))}
+                    />
+                    <Button block busy={flexBusy} onClick={() => generateFlex(0)}>
+                      {flexBusy ? t.gym.flex.generating : t.gym.flex.generate}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {flexPreview.needs.length > 0 && (
+                      <p className="hint">
+                        {t.gym.flex.weekSoFar(
+                          flexPreview.needs.map((n) => t.gym.flex.needPart(muscleLabel(n.muscle), n.done, n.weeklyTarget)).join(' · '),
+                        )}
                       </p>
-                      {s.picks.map((p, j) => (
-                        <div key={j} className="gym-entry">
-                          <span className="gym-exercise">{p.exercise}</span>
-                          <span className="gym-sets">{p.target_scheme}</span>
-                          <span className="gym-notes">{muscleLabel(p.muscle_group)}</span>
-                        </div>
-                      ))}
+                    )}
+                    {flexPreview.maintenance && flexPreview.picks.length > 0 && <p className="hint">{t.gym.flex.maintenanceNote}</p>}
+                    {injuryNote}
+                    {flexPreview.picks.length === 0 ? <p className="hint">{t.gym.flex.nothingFits}</p> : pickRows(flexPreview.picks)}
+                    <div className="actions">
+                      {flexPreview.picks.length > 0 && (
+                        <Button variant="primary" busy={flexBusy} onClick={startFlex}>
+                          {flexBusy ? t.gym.flex.generating : t.gym.flex.startIt}
+                        </Button>
+                      )}
+                      <Button variant="ghost" onClick={() => generateFlex(flexVariant + 1)} disabled={flexBusy}>
+                        {t.gym.flex.anotherMix}
+                      </Button>
+                      <Button variant="ghost" onClick={() => setFlexPreview(null)} disabled={flexBusy}>
+                        {t.gym.flex.discard}
+                      </Button>
                     </div>
-                  ))}
-                  <button className="start-session" onClick={startFlexWeek} disabled={flexBusy}>
-                    {flexBusy ? t.gym.flex.generating : t.gym.flex.createWeek(flexWeekPreview.sessions.length)}
-                  </button>
-                  {/* same button row the single-session preview uses - a bare
-                      link here sat flush against the button above it */}
-                  <div className="energy-row plan-row">
-                    <button
-                      className="link"
-                      onClick={() => {
-                        setFlexWeekPreview(null)
-                        setFlexWeekDays(null)
-                      }}
-                      disabled={flexBusy}
-                    >
-                      {t.gym.flex.discard}
-                    </button>
+                  </>
+                )}
+                {!flexPreview && (
+                  <>
+                    <p className="hint gym__or">{t.gym.flex.orWeek}</p>
+                    <div className="field">
+                      <span className="field__label">{t.gym.flex.daysLabel}</span>
+                      <Chips
+                        label={t.gym.flex.daysLabel}
+                        value={flexWeekDays}
+                        onChange={generateFlexWeek}
+                        disabled={flexBusy}
+                        options={[0, 1, 2, 3, 4, 5, 6].map((d) => ({ value: d, label: d }))}
+                      />
+                    </div>
+                    {flexWeekDays === 0 && <p className="hint">{t.gym.flex.weekNote0}</p>}
+                    {flexWeekDays === 6 && <p className="hint">{t.gym.flex.weekNote6}</p>}
+                    {flexWeekPreview && (
+                      <>
+                        {flexWeekPreview.needs.length > 0 && (
+                          <p className="hint">
+                            {t.gym.flex.weekSoFar(
+                              flexWeekPreview.needs
+                                .map((n) => t.gym.flex.needPart(muscleLabel(n.muscle), n.done, n.weeklyTarget))
+                                .join(' · '),
+                            )}
+                          </p>
+                        )}
+                        <p className="hint">{t.gym.flex.weekWhy}</p>
+                        {injuryNote}
+                        {flexWeekPreview.sessions.map((s, i) => (
+                          <div key={i} className="stack stack--tight">
+                            <h3>
+                              {t.gym.flex.dayHeading(i + 1, focusLabel(s.focus))}{' '}
+                              <span className="meta">{t.gym.flex.sets(s.picks.reduce((a, p) => a + p.sets, 0))}</span>
+                            </h3>
+                            {pickRows(s.picks)}
+                          </div>
+                        ))}
+                        <div className="actions">
+                          <Button variant="primary" busy={flexBusy} onClick={startFlexWeek}>
+                            {flexBusy ? t.gym.flex.generating : t.gym.flex.createWeek(flexWeekPreview.sessions.length)}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            disabled={flexBusy}
+                            onClick={() => {
+                              setFlexWeekPreview(null)
+                              setFlexWeekDays(null)
+                            }}
+                          >
+                            {t.gym.flex.discard}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </Disclosure>
+            </Card>
+          )}
+
+          {(review || injuries.length > 0) && (
+            <Card title={t.gym.coachTitle} meta={review ? t.gym.coachSub : undefined}>
+              {injuries.length > 0 && (
+                <p>
+                  <Icon name="shield" /> {t.injuries.coachWorkingAround(injuryList(injuries))}
+                </p>
+              )}
+              {review && <p className="gym__advice">{review.advice}</p>}
+            </Card>
+          )}
+
+          <InjuryCard injuries={injuries} block={block} plans={plans} onChanged={load} />
+        </>
+      )}
+
+      {view === 'plan' && loaded && (
+        <>
+          {plans.length === 0 ? (
+            setupCard
+          ) : (
+            <Card
+              title={t.gym.thePlan}
+              meta={phase ? phase.name : week !== null && week > 6 ? t.gym.deloadSoon : undefined}
+              action={
+                !editingPlan && (
+                  <Button size="sm" onClick={() => setEditingPlan(true)}>
+                    {t.common.Edit}
+                  </Button>
+                )
+              }
+            >
+              {availableBlocks.length > 1 && (
+                <div title={editingPlan ? t.gym.saveEditFirst : undefined}>
+                  <Chips
+                    label={t.gym.thePlan}
+                    value={planBlock}
+                    disabled={editingPlan}
+                    onChange={(b) => {
+                      setPlanBlock(b)
+                      setSplit(plans.find((p) => p.block === b)?.split_day ?? null)
+                    }}
+                    options={availableBlocks.map((b) => ({ value: b, label: t.gym.blockBtn(b) }))}
+                  />
+                </div>
+              )}
+              {!block && (
+                <div className="field">
+                  <span className="field__label">{t.gym.weekLabel}</span>
+                  <Chips
+                    label={t.gym.weekLabel}
+                    value={week === null ? null : Math.min(week, 7)}
+                    onChange={pickWeek}
+                    options={[1, 2, 3, 4, 5, 6, 7].map((w) => ({ value: w, label: w === 7 ? '7+' : w }))}
+                  />
+                </div>
+              )}
+              {!editingPlan && (
+                <>
+                  <div className="field">
+                    <span className="field__label">{t.gym.sessionLabel}</span>
+                    <Chips
+                      label={t.gym.sessionLabel}
+                      value={split}
+                      onChange={setSplit}
+                      options={(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => ({ value: s, label: s }))}
+                    />
                   </div>
+                  <div className="rows">
+                    {splitPlans.map((p) => (
+                      <div key={p.id} className="row gym__entry">
+                        <div className="row__main">
+                          <strong>{p.exercise}</strong>{' '}
+                          <span className="mono">{(phase && p.schemes?.[phase.key]) ?? p.schemes?.['1-2'] ?? ''}</span>
+                          {p.safety_note && (
+                            <p className="hint">
+                              <Icon name="shield" /> {p.safety_note}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {splitCardio && <p className="hint">{t.gym.planCardio(splitCardio)}</p>}
                 </>
               )}
-            </>
+              {editingPlan && (
+                <PlanEditor
+                  origin={blockPlans}
+                  planBlock={planBlock}
+                  activeBlock={block}
+                  sessions={sessions}
+                  initialSplit={split}
+                  onCancel={() => setEditingPlan(false)}
+                  onSaved={(editSplit, diff) => {
+                    setEditingPlan(false)
+                    if (editSplit) setSplit(editSplit)
+                    if (diff) setBlockApply(diff)
+                    load()
+                  }}
+                />
+              )}
+            </Card>
           )}
-        </section>
+          {blockPlans.length > 0 && !editingPlan && (!block || block.block !== planBlock) && startBlockControl(planBlock, t.gym.startBlockFromPlan(planBlock))}
+        </>
       )}
 
-      {view === 'strength' && block && blockDone && (
-        <section className="gym-day wrapup-card">
-          <h2>
-            {block.name}{t.gym.wrapped}
-            <span className="routine-progress"> <Icon name="check" /></span>
-          </h2>
-          <p className="gentle">
-            {t.gym.wrapSummary(doneSessionCount, gridSessions.length, loggedSets.filter((s) => s.logged_reps != null).length)}
-            {doneSessionCount < gridSessions.length && t.gym.openSessionsStay}
-          </p>
-          <p className="gentle">
-            {nextTweaks
-              ? t.gym.tweaksFromCheckins(nextTweaks)
-              : t.gym.checkinsAllRight}
-          </p>
-          {confirmBlock === nextBlockNumber ? (
-            <>
-              <button
-                className="start-session"
-                onClick={() => {
-                  setConfirmBlock(null)
-                  beginBlock(nextBlockNumber)
-                }}
-                disabled={starting}
-              >
-                {starting ? t.gym.generating : t.gym.yesGenerate(nextBlockNumber)}
-              </button>
-              <button className="link" onClick={() => setConfirmBlock(null)}>
-                {t.common.cancel}
-              </button>
-            </>
-          ) : (
-            <button className="start-session" onClick={() => setConfirmBlock(nextBlockNumber)} disabled={starting}>
-              {starting
-                ? t.gym.generating
-                : t.gym.startBlockLong(nextBlockNumber, nextBlockNumber === 2, nextBlockNumber === (block.block ?? 1))}
-            </button>
+      {view === 'progress' && loaded && (
+        <>
+          {((block && volume.size > 0) || showMonth || tuning.changes.length > 0) && (
+            <Card title={t.gym.volumePicture} meta={t.gym.hardSetsPerWeek}>
+              {block && volume.size > 0 && (
+                <div className="volume-grid">
+                  {[...volume.entries()].map(([mg, weeks]) => {
+                    const max = Math.max(1, ...weeks)
+                    const past = weeks.slice(0, blockWeek)
+                    const avg = past.length ? Math.round((past.reduce((a, b) => a + b, 0) / past.length) * 10) / 10 : 0
+                    return (
+                      <div key={mg} className="stack stack--tight">
+                        <p className="volume__head">
+                          <span className="eyebrow">{muscleLabel(mg)}</span> <span className="meta">{t.gym.avg(avg)}</span>
+                        </p>
+                        <div className="bars bars--dense" style={{ ['--bars-h' as string]: '44px' }}>
+                          {weeks.map((n, i) => {
+                            const isNow = i + 1 === blockWeek
+                            const future = i + 1 > blockWeek
+                            return (
+                              <div key={i} className="bars__col" title={t.gym.volumeColTitle(i + 1, n)}>
+                                <span className="bars__value">{future ? '' : n}</span>
+                                <div className="bars__track volume__track">
+                                  <div
+                                    className={cx('bars__bar', !isNow && 'bars__bar--muted')}
+                                    style={{ height: `${(n / max) * 100}%` }}
+                                  />
+                                </div>
+                                <span className={isNow ? 'bars__label bars__label--now' : 'bars__label'}>{i + 1}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {showMonth && (
+                <div className="stack stack--tight volume__section">
+                  <h3>{t.gym.lastFourWeeks}</h3>
+                  <ol className="rank">
+                    {monthVolume.map(([mg, n]) => {
+                      // ties share the tag; a flat month (all equal) gets none
+                      const tag = monthMax === monthMin ? null : n === monthMax ? 'most' : n === monthMin ? 'least' : null
+                      return (
+                        <li key={mg} className="rank__row">
+                          <span className="rank__label">
+                            {muscleLabel(mg)}
+                            {tag && (
+                              <span className={tag === 'most' ? 'badge badge--good' : 'badge badge--accent'}>
+                                {tag === 'most' ? t.gym.mostTrained : t.gym.leastTrained}
+                              </span>
+                            )}
+                          </span>
+                          <ProgressBar value={n / monthMax} tone={tag === 'least' ? 'accent' : 'good'} className="progress--thick" />
+                          <span className="meta">{t.gym.monthSets(n)}</span>
+                          <span className="meta">{t.gym.monthPerWeek(Math.round((n / 4) * 10) / 10)}</span>
+                        </li>
+                      )
+                    })}
+                  </ol>
+                </div>
+              )}
+              {(tuning.changes.length > 0 || behind.length > 0) && (
+                <div className="stack volume__section">
+                  {tuning.changes.length > 0 && (
+                    <Disclosure label={t.gym.tune.toggle(tuning.changes.length)} open={showTune} onToggle={setShowTune}>
+                      <div className="rows">
+                        {tuning.changes.map((c) => (
+                          <div key={c.plan.id} className="row tune">
+                            <p>
+                              <strong>{c.plan.exercise}</strong> <span className="meta">{c.plan.split_day}</span>{' '}
+                              <span className={c.delta < 0 ? 'badge badge--accent' : 'badge badge--good'}>
+                                {t.gym.tune.change(c.fromSets, c.toSets)}
+                              </span>
+                            </p>
+                            <p className="hint">
+                              {c.delta < 0
+                                ? t.gym.tune.tooMuch(muscleLabel(c.muscle), c.answers)
+                                : t.gym.tune.room(muscleLabel(c.muscle), c.answers, c.perWeek, c.target)}
+                            </p>
+                            <div className="actions">
+                              <Button variant="primary" size="sm" onClick={() => applyTuning(c)} disabled={tuningBusy}>
+                                {t.gym.tune.apply}
+                              </Button>
+                              <Button size="sm" onClick={() => dismissTuning(c)} disabled={tuningBusy}>
+                                {t.gym.tune.dismiss}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="hint">{t.gym.tune.footnote}</p>
+                    </Disclosure>
+                  )}
+                  {behind.length > 0 && (
+                    <p className="hint">
+                      {allBehind
+                        ? t.gym.tune.allBehind
+                        : t.gym.tune.behind(behind.map((b) => `${muscleLabel(b.muscle)} ${b.perWeek}/${b.target}`).join(' · '))}
+                    </p>
+                  )}
+                </div>
+              )}
+            </Card>
           )}
-        </section>
-      )}
 
-      {view === 'strength' && loaded && blockPlans.length > 0 && (!block || block.block !== planBlock) && (
-        confirmBlock === planBlock ? (
-          <div className="start-block-confirm">
-            {block && !gridSessions.every((s) => s.completed_at) && (
-              <p className="gentle">
-                {t.gym.currentBlockUnfinished(block.name)}
-              </p>
-            )}
-            <button
-              className="start-session lone"
-              onClick={() => {
-                setConfirmBlock(null)
-                beginBlock(planBlock)
-              }}
-              disabled={starting}
-            >
-              {starting ? t.gym.generating : t.gym.yesGenerate(planBlock)}
-            </button>
-            <button className="link" onClick={() => setConfirmBlock(null)}>
-              {t.common.cancel}
-            </button>
-          </div>
-        ) : (
-          <button className="start-session lone" onClick={() => setConfirmBlock(planBlock)} disabled={starting}>
-            {starting ? t.gym.generating : t.gym.startBlockFromPlan(planBlock)}
-          </button>
-        )
+          <p className="hint">
+            {t.gym.strengthHint}
+            <em>{t.gym.strengthHintExample}</em>.
+          </p>
+
+          {[...byDate.entries()].map(([date, entries]) => (
+            <Card key={date} title={fmtDay(date)} meta={entries[0]?.split_day ?? undefined}>
+              <div className="rows">
+                {entries.map((log) => (
+                  <div key={log.id} className="row gym__entry">
+                    <div className="row__main">
+                      <strong>{log.exercise}</strong>{' '}
+                      <span className="mono">{log.sets?.map((s) => `${s.kg}kg×${s.reps}`).join('  ') ?? ''}</span>
+                      {log.notes && <p className="hint">{log.notes}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+          {logs.length === 0 && <EmptyState icon="dumbbell">{t.gym.noFreeform}</EmptyState>}
+        </>
       )}
 
       {view === 'cardio' && loaded && (
@@ -1149,330 +1412,45 @@ export default function Gym({ visible }: { visible: boolean; onOpenSettings: () 
         />
       )}
 
-      {view === 'strength' && (review || injuries.length > 0) && (
-        <section className="gym-day training-card">
-          <h2>
-            {t.gym.coachTitle}
-            {review && <span className="routine-progress">{t.gym.coachSub}</span>}
-          </h2>
-          {injuries.length > 0 && (
-            <p className="training-body coach-injury">
-              <Icon name="shield" />{' '}
-              {t.injuries.coachWorkingAround(injuryList(injuries))}
-            </p>
-          )}
-          {review && <p className="training-body">{review.advice}</p>}
-        </section>
-      )}
-
-      {view === 'strength' && loaded && (
-        <InjuryCard injuries={injuries} block={block} plans={plans} onChanged={load} />
-      )}
-
-      {view === 'strength' && ((block && volume.size > 0) || showMonth || tuning.changes.length > 0) && (
-        <section className="gym-day volume-card">
-          <h2>
-            {t.gym.volumePicture}
-            <span className="routine-progress">{t.gym.hardSetsPerWeek}</span>
-          </h2>
-          {block && volume.size > 0 && <div className="volume-grid">
-            {[...volume.entries()].map(([mg, weeks]) => {
-              const max = Math.max(1, ...weeks)
-              const currentWeek = Math.min(weekFromStart(block.start_date), block.total_weeks)
-              const past = weeks.slice(0, currentWeek)
-              const avg = past.length ? Math.round((past.reduce((a, b) => a + b, 0) / past.length) * 10) / 10 : 0
-              return (
-                <div key={mg} className="volume-muscle">
-                  <div className="volume-head">
-                    <span className="volume-label">{muscleLabel(mg)}</span>
-                    <span className="volume-avg">{t.gym.avg(avg)}</span>
-                  </div>
-                  <div className="volume-bars">
-                    {weeks.map((n, i) => {
-                      const state = i + 1 === currentWeek ? 'now' : i + 1 > currentWeek ? 'future' : ''
-                      return (
-                        <div key={i} className="volume-col" title={t.gym.volumeColTitle(i + 1, n)}>
-                          <span className={`volume-count ${state}`}>{n}</span>
-                          <div className="volume-bar-wrap">
-                            <div className={`volume-bar ${state}`} style={{ height: `${(n / max) * 100}%` }} />
-                          </div>
-                          <span className={`volume-date ${state}`}>{i + 1}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>}
-          {showMonth && (
-            <div className="volume-month">
-              <h3 className="volume-month-title">{t.gym.lastFourWeeks}</h3>
-              <ol className="volume-rank">
-                {monthVolume.map(([mg, n]) => {
-                  // ties share the tag; a flat month (all equal) gets none
-                  const tag = monthMax === monthMin ? null : n === monthMax ? 'most' : n === monthMin ? 'least' : null
-                  return (
-                    <li key={mg} className={tag ? `volume-rank-row ${tag}` : 'volume-rank-row'}>
-                      <span className="volume-label">
-                        {muscleLabel(mg)}
-                        {tag && <span className={`volume-tag ${tag}`}>{tag === 'most' ? t.gym.mostTrained : t.gym.leastTrained}</span>}
-                      </span>
-                      <div className="volume-rank-track">
-                        <div className="volume-rank-fill" style={{ width: `${(n / monthMax) * 100}%` }} />
-                      </div>
-                      <span className="volume-rank-count">{t.gym.monthSets(n)}</span>
-                      <span className="volume-rank-count">{t.gym.monthPerWeek(Math.round((n / 4) * 10) / 10)}</span>
-                    </li>
-                  )
-                })}
-              </ol>
-            </div>
-          )}
-          {(tuning.changes.length > 0 || behind.length > 0) && (
-            <div className="volume-month volume-tune">
-              {tuning.changes.length > 0 && (
-                <button className="link tune-toggle" aria-expanded={showTune} onClick={() => setShowTune((v) => !v)}>
-                  <Icon name={showTune ? 'arrow-up' : 'arrow-down'} /> {t.gym.tune.toggle(tuning.changes.length)}
-                </button>
-              )}
-              {showTune && tuning.changes.map((c) => (
-                <div key={c.plan.id} className="tune-row">
-                  <p className="tune-change">
-                    <strong>{c.plan.exercise}</strong> <span className="tune-split">{c.plan.split_day}</span>{' '}
-                    <span className={c.delta < 0 ? 'tune-sets less' : 'tune-sets more'}>{t.gym.tune.change(c.fromSets, c.toSets)}</span>
-                  </p>
-                  <p className="gentle tune-why">
-                    {c.delta < 0
-                      ? t.gym.tune.tooMuch(muscleLabel(c.muscle), c.answers)
-                      : t.gym.tune.room(muscleLabel(c.muscle), c.answers, c.perWeek, c.target)}
-                  </p>
-                  <div className="sign-out-actions tune-actions">
-                    <button className="save" onClick={() => applyTuning(c)} disabled={tuningBusy}>
-                      {t.gym.tune.apply}
-                    </button>
-                    <button className="energy-btn" onClick={() => dismissTuning(c)} disabled={tuningBusy}>
-                      {t.gym.tune.dismiss}
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {showTune && tuning.changes.length > 0 && <p className="gentle tune-foot">{t.gym.tune.footnote}</p>}
-              {behind.length > 0 && (
-                <p className="gentle tune-behind">
-                  {allBehind
-                    ? t.gym.tune.allBehind
-                    : t.gym.tune.behind(behind.map((b) => `${muscleLabel(b.muscle)} ${b.perWeek}/${b.target}`).join(' · '))}
-                </p>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      {view === 'strength' && loaded && plans.length === 0 && (
-        <section className="gym-day setup-card">
-          <h2>{t.gym.setupTitle}</h2>
-          <p className="gentle">{t.gym.setupSubtitle}</p>
-          <button className="start-session" onClick={useTemplate} disabled={settingUp}>
-            {settingUp ? t.gym.settingUp : t.gym.useStarter}
-          </button>
-          <p className="gentle">
-            {t.gym.starterDesc}
-          </p>
-          <p className="gentle setup-or">{t.gym.orBuildOwn}</p>
-          <div className="add-task">
-            <input
-              placeholder={t.gym.firstSessionPh}
-              value={scratch.session}
-              maxLength={MAX_LEN.name}
-              onChange={(e) => setScratch({ ...scratch, session: e.target.value })}
-            />
-          </div>
-          <div className="add-task">
-            <ExerciseAutocomplete
-              placeholder={t.gym.firstExercisePh}
-              value={scratch.exercise}
-              onChange={(exercise) => setScratch({ ...scratch, exercise })}
-              onPick={(exercise, muscle) => setScratch({ ...scratch, exercise, muscle })}
-            />
-            <select value={scratch.muscle} onChange={(e) => setScratch({ ...scratch, muscle: e.target.value })}>
-              {MUSCLE_GROUPS.map((m) => (
-                <option key={m} value={m}>{muscleLabel(m)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="add-task scheme-field">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={10}
-              value={scratch.sets}
-              onChange={(e) => setScratch({ ...scratch, sets: e.target.value })}
-            />
-            <span className="scheme-x">{t.gym.setsX}</span>
-            <input
-              placeholder={t.gym.repsPh}
-              value={scratch.reps}
-              maxLength={MAX_LEN.reps}
-              onChange={(e) => setScratch({ ...scratch, reps: e.target.value })}
-            />
-          </div>
-          <button
-            className="start-session"
-            onClick={createOwnPlan}
-            disabled={settingUp || !scratch.session.trim() || !scratch.exercise.trim()}
-          >
-            {settingUp ? '…' : t.gym.createMyPlan}
-          </button>
-          <p className="gentle">{t.gym.addMoreAfter}</p>
-        </section>
-      )}
-
-      {view === 'strength' && plans.length > 0 && (
-        <section className="gym-day plan-card">
-          <div className="routine-header">
-            <h2>
-              {t.gym.thePlan}
-              <span className="routine-progress">{phase ? ` ${phase.name}` : week !== null && week > 6 ? t.gym.deloadSoon : ''}</span>
-            </h2>
-            {!editingPlan && (
-              <button className="energy-btn" onClick={() => setEditingPlan(true)}>
-                {t.common.Edit}
-              </button>
-            )}
-          </div>
-          {availableBlocks.length > 1 && (
-            <div className="energy-row plan-row">
-              {availableBlocks.map((b) => (
-                <button
-                  key={b}
-                  className={b === planBlock ? 'energy-btn active' : 'energy-btn'}
-                  disabled={editingPlan}
-                  title={editingPlan ? t.gym.saveEditFirst : undefined}
-                  onClick={() => {
-                    setPlanBlock(b)
-                    const firstSplit = plans.find((p) => p.block === b)?.split_day ?? null
-                    setSplit(firstSplit)
-                  }}
-                >
-                  {t.gym.blockBtn(b)}
-                </button>
-              ))}
-            </div>
-          )}
-          {!block && (
-            <div className="energy-row plan-row">
-              <span className="energy-label">{t.gym.weekLabel}</span>
-              {[1, 2, 3, 4, 5, 6, 7].map((w) => (
-                <button
-                  key={w}
-                  className={week === w || (w === 7 && week !== null && week > 6) ? 'energy-btn active' : 'energy-btn'}
-                  onClick={() => pickWeek(w)}
-                >
-                  {w === 7 ? '7+' : w}
-                </button>
-              ))}
-            </div>
-          )}
-          {!editingPlan && (
-            <div className="energy-row plan-row">
-              <span className="energy-label">{t.gym.sessionLabel}</span>
-              {(split && !rotation.includes(split) ? [...rotation, split] : rotation).map((s) => (
-                <button key={s} className={s === split ? 'energy-btn active' : 'energy-btn'} onClick={() => setSplit(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-          {!editingPlan &&
-            splitPlans.map((p) => (
-              <div key={p.id} className="gym-entry">
-                <span className="gym-exercise">{p.exercise}</span>
-                <span className="gym-sets">{(phase && p.schemes?.[phase.key]) ?? p.schemes?.['1-2'] ?? ''}</span>
-                {p.safety_note && <span className="gym-notes"><Icon name="shield" /> {p.safety_note}</span>}
-              </div>
-            ))}
-          {editingPlan && (
-            <PlanEditor
-              origin={blockPlans}
-              planBlock={planBlock}
-              activeBlock={block}
-              sessions={sessions}
-              initialSplit={split}
-              onCancel={() => setEditingPlan(false)}
-              onSaved={(editSplit, diff) => {
-                setEditingPlan(false)
-                if (editSplit) setSplit(editSplit)
-                if (diff) setBlockApply(diff)
-                load()
-              }}
-            />
-          )}
-          {splitCardio && !editingPlan && <p className="gentle plan-cardio">{t.gym.planCardio(splitCardio)}</p>}
-        </section>
-      )}
-
-      {view === 'strength' && applyResult && (
-        <button className="notice vol-suggestion apply-result" onClick={() => setApplyResult(null)}>
-          {applyResult}
-        </button>
-      )}
-
-      {view === 'strength' && blockApply && block && (() => {
-        // new split days whose exercises carry no set counts (a rest day):
-        // they get no sessions - say so instead of silently doing nothing
-        const restSplits = [...new Set(blockApply.added.map((a) => a.split_day))].filter(
-          (sd) =>
-            !sessions.some((s) => s.split_day === sd) &&
-            !blockApply.added.some((a) => a.split_day === sd && setCount(a.schemes?.['1-2']) > 0),
-        )
-        return (
-          <div className="install-help-backdrop" onClick={() => !applying && setBlockApply(null)}>
-            <div className="install-help" role="dialog" aria-label={t.gym.applyToBlock} onClick={(e) => e.stopPropagation()}>
-              <p className="install-title">
-                {[
-                  blockApply.added.length > 0 ? t.gym.addedList(blockApply.added.map((a) => a.exercise).join(', ')) : null,
-                  blockApply.removed.length > 0 ? t.gym.removedList(blockApply.removed.map((r) => r.exercise).join(', ')) : null,
-                  blockApply.changed.length > 0 ? t.gym.changedList(blockApply.changed.map((c) => c.exercise).join(', ')) : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-                {t.gym.applyPrompt(block.name)}
-              </p>
-              <p className="install-body">{t.gym.applyKeepLogs}</p>
-              {restSplits.length > 0 && <p className="install-body">{t.gym.noLoggableNote(restSplits.join(', '))}</p>}
-              <div className="install-actions">
-                <button className="start-session" onClick={applyToRunningBlock} disabled={applying}>
+      {blockApply &&
+        block &&
+        (() => {
+          // new split days whose exercises carry no set counts (a rest day):
+          // they get no sessions - say so instead of silently doing nothing
+          const restSplits = [...new Set(blockApply.added.map((a) => a.split_day))].filter(
+            (sd) =>
+              !sessions.some((s) => s.split_day === sd) &&
+              !blockApply.added.some((a) => a.split_day === sd && setCount(a.schemes?.['1-2']) > 0),
+          )
+          return (
+            <Dialog
+              title={
+                <>
+                  {[
+                    blockApply.added.length > 0 ? t.gym.addedList(blockApply.added.map((a) => a.exercise).join(', ')) : null,
+                    blockApply.removed.length > 0 ? t.gym.removedList(blockApply.removed.map((r) => r.exercise).join(', ')) : null,
+                    blockApply.changed.length > 0 ? t.gym.changedList(blockApply.changed.map((c) => c.exercise).join(', ')) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  {t.gym.applyPrompt(block.name)}
+                </>
+              }
+              onClose={() => !applying && setBlockApply(null)}
+            >
+              <p className="hint">{t.gym.applyKeepLogs}</p>
+              {restSplits.length > 0 && <p className="hint">{t.gym.noLoggableNote(restSplits.join(', '))}</p>}
+              <div className="actions">
+                <Button variant="primary" busy={applying} onClick={applyToRunningBlock}>
                   {applying ? t.gym.applying : t.gym.applyToBlock}
-                </button>
-                <button className="link" onClick={() => setBlockApply(null)} disabled={applying}>
+                </Button>
+                <Button variant="ghost" onClick={() => setBlockApply(null)} disabled={applying}>
                   {t.gym.nextBlockOnly}
-                </button>
+                </Button>
               </div>
-            </div>
-          </div>
-        )
-      })()}
-
-      {view === 'strength' &&
-        [...byDate.entries()].map(([date, entries]) => (
-          <section key={date} className="gym-day">
-            <h2>{date}{entries[0]?.split_day ? ` — ${entries[0].split_day}` : ''}</h2>
-            {entries.map((log) => (
-              <div key={log.id} className="gym-entry">
-                <span className="gym-exercise">{log.exercise}</span>
-                <span className="gym-sets">
-                  {log.sets?.map((s) => `${s.kg}kg×${s.reps}`).join('  ') ?? ''}
-                </span>
-                {log.notes && <span className="gym-notes">{log.notes}</span>}
-              </div>
-            ))}
-          </section>
-        ))}
-      {!loaded && <Skeleton cards={2} />}
-      {view === 'strength' && loaded && logs.length === 0 && <p className="gentle">{t.gym.noFreeform}</p>}
+            </Dialog>
+          )
+        })()}
 
       {sessionOverlay.mounted && (active ?? lastActive.current) && (
         <Session

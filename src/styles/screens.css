@@ -480,3 +480,402 @@ span.cell:not(.cell--off, .cell--done, .cell--partial, .cell--skipped) {
   padding-inline: 0;
   font-size: var(--fs-xs);
 }
+
+/* ---------- workout ---------- */
+.gym__session-btn {
+  justify-content: flex-start;
+  text-align: start;
+}
+
+/* "- or -" between two ways of doing the same thing */
+.gym__or {
+  text-align: center;
+}
+
+.gym__advice {
+  white-space: pre-line; /* advice arrives as "- " lines */
+}
+
+.gym__entry .mono {
+  color: var(--text-dim);
+}
+
+/* the block at a glance: one row per session, one column per week */
+.block-grid {
+  display: grid;
+  gap: var(--sp-1);
+  align-items: center;
+}
+
+.block-grid__row {
+  display: contents;
+}
+
+.block-grid__week {
+  text-align: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.block-grid__week.is-now {
+  color: var(--accent);
+}
+
+.block-grid__label {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.block-grid__cell {
+  display: grid;
+  place-items: center;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  color: var(--good);
+  font-size: var(--fs-sm);
+}
+
+.block-grid__cell:hover {
+  border-color: var(--border-strong);
+}
+
+.block-grid__cell.is-done {
+  background: var(--good-soft);
+}
+
+.block-grid__cell.is-next {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* volume picture */
+.volume-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--sp-4);
+}
+
+.volume__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.volume__track {
+  background: var(--surface-2);
+  border-radius: 3px;
+}
+
+.volume__section {
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+/* one grid for the whole ranking, rows on its subgrid: the two count
+   columns size to their widest entry, so every bar shares one scale and
+   both numbers line up down the list */
+.rank {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto auto;
+  gap: var(--sp-2);
+}
+
+.rank__row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.rank__label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.rank__row .meta {
+  text-align: end;
+  font-size: var(--fs-xs);
+}
+
+.tune {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+  padding-block: var(--sp-3);
+}
+
+/* ---------- session ---------- */
+.exercise--current {
+  border-color: var(--accent);
+}
+
+.exercise--done {
+  opacity: 0.65;
+}
+
+.exercise__target {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+
+/* a form cue: read it before the set, not after */
+.cue {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2);
+  border-inline-start: 3px solid var(--accent-strong);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+[dir='rtl'] .cue {
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+
+/* the cue of an injury report outranks the safety note of the plan */
+.cue--injury {
+  border-inline-start-color: var(--good);
+  color: var(--text);
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.set-row__num {
+  width: 1.4rem;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.set-row__logged {
+  flex: 1;
+  color: var(--good);
+}
+
+.set-row .input--num {
+  width: 5.5rem;
+}
+
+.session__skip,
+.session__back {
+  align-self: flex-start;
+}
+
+.session__edit {
+  align-self: center;
+}
+
+.checkin__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-block: var(--sp-4);
+  text-align: center;
+}
+
+.checkin__check {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--r-full);
+  background: var(--good-soft);
+  color: var(--good);
+  font-size: var(--fs-lg);
+}
+
+.checkin__muscle {
+  align-self: flex-start;
+}
+
+/* ---------- plan editor ---------- */
+/* the two decisions that matter stay in view while the list scrolls */
+.plan-editor__actions {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding-block: var(--sp-2);
+  background: var(--surface);
+}
+
+.plan-editor__wk {
+  min-width: 4.2rem;
+  white-space: nowrap;
+}
+
+.plan-editor__deleted {
+  padding: var(--sp-2);
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+/* exercise-name autocomplete: an input plus a floating suggestion list */
+.exercise-ac {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.field-row > .exercise-ac {
+  flex: 1 1 10rem;
+}
+
+.exercise-ac input {
+  width: 100%;
+}
+
+.exercise-ac-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  /* anchored to the start edge of the input but allowed to grow past a
+     narrow one, so suggestions stay readable wherever the field ends up */
+  inset-inline-start: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(88vw, 26rem);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-float);
+}
+
+.exercise-ac-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+  border-radius: 0;
+}
+
+.exercise-ac-item:hover,
+.exercise-ac-item.active {
+  background: var(--accent-soft);
+}
+
+.exercise-ac-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exercise-ac-muscle {
+  flex: none;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- cardio ---------- */
+.cardio__phase {
+  color: var(--accent);
+}
+
+.cardio__log .input--num {
+  flex: 1 1 4rem;
+}
+
+/* when the row wraps on a phone, Log takes the whole second line */
+.cardio__log > .btn {
+  flex: 1 1 6rem;
+}
+
+.cardio__entries {
+  gap: 0;
+  padding-block: var(--sp-2);
+}
+
+.cardio__edit > .stack {
+  flex: 1;
+  padding-block: var(--sp-2);
+}
+
+.bars__stack {
+  width: 62%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+
+/* a day with nothing logged keeps a baseline so the row reads as a chart */
+.bars__stack:empty {
+  height: 2px;
+  background: var(--surface-3);
+}
+
+.kind {
+  width: 100%;
+  min-height: 2px;
+  background: var(--neutral);
+}
+
+.kind--run {
+  background: var(--cardio-run);
+}
+
+.kind--walk {
+  background: var(--cardio-walk);
+}
+
+.kind--cycle {
+  background: var(--cardio-cycle);
+}
+
+.kind--swim {
+  background: var(--cardio-swim);
+}
+
+.kind--dot {
+  width: 8px;
+  height: 8px;
+  min-height: 0;
+  border-radius: var(--r-full);
+}
+
+.cardio__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- injuries ---------- */
+.injury__open {
+  align-self: flex-start;
+}
+
+.injury__preview {
+  margin: 0;
+  padding-inline-start: var(--sp-5);
+  font-size: var(--fs-sm);
+}

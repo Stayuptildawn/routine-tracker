@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useOverlay } from '../lib/overlay'
 import { runOp } from '../lib/offline'
 import { localDate } from '../lib/types'
 import type { PlannedSession, PlannedSet, WorkoutLog, WorkoutPlan } from '../lib/types'
 import { t, locale } from '../i18n'
 import Icon from '../components/Icon'
+import { Button, Chips, IconButton, Sheet, cx } from '../components/ui'
 
 interface Props {
   session: PlannedSession
@@ -191,7 +191,6 @@ export default function Session({ session, plans, onExit, closing }: Props) {
   // Escape and the installed-PWA back button leave the same safe way.
   const leaveRef = useRef<() => void>(onExit)
   leaveRef.current = allDone ? saveAndClose : onExit
-  const trapRef = useOverlay<HTMLDivElement>(() => leaveRef.current())
 
   function draftFor(set: PlannedSet): Draft {
     return drafts.get(set.id) ?? { weight: '', reps: '' }
@@ -279,48 +278,41 @@ export default function Session({ session, plans, onExit, closing }: Props) {
   }
 
   return (
-    <div
-      ref={trapRef}
-      className="player session"
-      data-closing={closing || undefined}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t.session.aria(session.split_day)}
+    <Sheet
+      title={t.session.header(session.week_number, session.split_day, handled, sets.length)}
+      label={t.session.aria(session.split_day)}
+      onClose={() => leaveRef.current()}
+      closeLabel={t.session.exit}
+      closing={closing}
+      progress={sets.length ? handled / sets.length : 0}
     >
-      <div className="player-rail" aria-hidden="true">
-        <div className="player-rail-fill" style={{ transform: `scaleX(${sets.length ? handled / sets.length : 0})` }} />
-      </div>
-      <div className="player-inner">
-        <div className="player-top">
-          <span className="eyebrow">
-            {t.session.header(session.week_number, session.split_day, handled, sets.length)}
+      <div className="sheet__body">
+        <div className="field field--inline">
+          <span className="field__label">
+            <Icon name="calendar" /> {t.session.workoutDate}
           </span>
-          <button className="link" onClick={() => leaveRef.current()}>
-            {t.session.exit}
-          </button>
-        </div>
-
-        <div className="session-date">
-          <span><Icon name="calendar" /> {t.session.workoutDate}</span>
           {handled > 0 ? (
-            <input type="date" value={sessionDate} onChange={(e) => updateSessionDate(e.target.value)} />
+            <input
+              type="date"
+              value={sessionDate}
+              aria-label={t.session.workoutDate}
+              onChange={(e) => updateSessionDate(e.target.value)}
+            />
           ) : (
-            <span className="session-date-today">{fmtDate(localDate())}</span>
+            <strong>{fmtDate(localDate())}</strong>
           )}
         </div>
 
         {/* the grey numbers are last time's, and the tick logs them as-is -
             obvious once you know, invisible on a first session */}
-        {loaded && handled === 0 && lastTime.size > 0 && (
-          <p className="gentle session-hint">{t.session.placeholderHint}</p>
-        )}
+        {loaded && handled === 0 && lastTime.size > 0 && <p className="hint">{t.session.placeholderHint}</p>}
 
         {!loaded ? null : !allDone || reviewing ? (
-          <div className="session-list">
+          <>
             {allDone && reviewing && (
-              <button className="link session-review-back" onClick={() => setReviewing(false)}>
+              <Button variant="ghost" className="session__back" onClick={() => setReviewing(false)}>
                 {t.session.doneEditingBack}
-              </button>
+              </Button>
             )}
             {exercises.map((exercise) => {
               const exSets = sets.filter((s) => s.exercise === exercise)
@@ -329,34 +321,38 @@ export default function Session({ session, plans, onExit, closing }: Props) {
               const exDone = exSets.every((s) => s.logged_at)
               const isCurrent = exercise === currentExercise
               const muscle = exSets[0]?.muscle_group ?? plan?.muscle_group
+              // an injury report's cue outranks the plan's own safety note
+              const injuryNote = exSets.find((s) => s.injury_note && !s.logged_at)?.injury_note
               return (
-                <div key={exercise} className={`exercise-card${exDone ? ' done' : ''}${isCurrent ? ' current' : ''}`}>
-                  <div className="exercise-head">
-                    {muscle && <span className="muscle-badge">{muscleLabel(muscle)}</span>}
-                    <span className="session-target">{displayTarget(exSets)}</span>
+                <section key={exercise} className={cx('card exercise', exDone && 'exercise--done', isCurrent && 'exercise--current')}>
+                  <div className="card__head">
+                    {muscle ? <span className="badge badge--caps">{muscleLabel(muscle)}</span> : <span />}
+                    <span className="exercise__target">{displayTarget(exSets)}</span>
                   </div>
                   <h2>{exercise}</h2>
-                  {(() => {
-                    // an injury report's cue outranks the plan's own safety note
-                    const injuryNote = exSets.find((s) => s.injury_note && !s.logged_at)?.injury_note
-                    return injuryNote ? <p className="session-cue injury-cue"><Icon name="shield" /> {injuryNote}</p> : null
-                  })()}
-                  {plan?.safety_note && !exDone && <p className="session-cue"><Icon name="shield" /> {plan.safety_note}</p>}
-                  {prev && prev.length > 0 && !exDone && (
-                    <p className="session-last">
-                      {t.session.lastTime(prev.map((p) => `${p.weight ?? '–'}×${p.reps ?? '–'}`).join('  '))}
+                  {injuryNote && (
+                    <p className="cue cue--injury">
+                      <Icon name="shield" /> {injuryNote}
                     </p>
                   )}
-                  <div className="set-rows">
+                  {plan?.safety_note && !exDone && (
+                    <p className="cue">
+                      <Icon name="shield" /> {plan.safety_note}
+                    </p>
+                  )}
+                  {prev && prev.length > 0 && !exDone && (
+                    <p className="mono hint">{t.session.lastTime(prev.map((p) => `${p.weight ?? '–'}×${p.reps ?? '–'}`).join('  '))}</p>
+                  )}
+                  <div className="stack stack--tight">
                     {exSets.map((set) => {
                       const done = !!set.logged_at
                       const draft = draftFor(set)
                       const ph = placeholderFor(set)
                       return (
-                        <div key={set.id} className={done ? 'set-row done' : 'set-row'}>
-                          <span className="set-num">{set.set_number}</span>
+                        <div key={set.id} className={done ? 'set-row set-row--done' : 'set-row'}>
+                          <span className="set-row__num">{set.set_number}</span>
                           {done ? (
-                            <span className="set-logged">
+                            <span className="set-row__logged mono">
                               {set.logged_weight != null || set.logged_reps != null
                                 ? t.session.kgReps(String(set.logged_weight ?? '–'), String(set.logged_reps ?? '–'))
                                 : t.session.skipped}
@@ -364,111 +360,95 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                           ) : (
                             <>
                               <input
+                                className="input--num"
                                 type="number"
                                 inputMode="decimal"
                                 aria-label={t.session.kgPh}
                                 placeholder={ph.weight || t.session.kgPh}
                                 value={draft.weight}
-                                onChange={(e) =>
-                                  setDrafts(new Map(drafts).set(set.id, { ...draft, weight: e.target.value }))
-                                }
+                                onChange={(e) => setDrafts(new Map(drafts).set(set.id, { ...draft, weight: e.target.value }))}
                               />
-                              <span className="set-x">×</span>
+                              <span className="hint">×</span>
                               <input
+                                className="input--num"
                                 type="number"
                                 inputMode="numeric"
                                 aria-label={t.session.repsPh}
                                 placeholder={ph.reps || t.session.repsPh}
                                 value={draft.reps}
-                                onChange={(e) =>
-                                  setDrafts(new Map(drafts).set(set.id, { ...draft, reps: e.target.value }))
-                                }
+                                onChange={(e) => setDrafts(new Map(drafts).set(set.id, { ...draft, reps: e.target.value }))}
                               />
                             </>
                           )}
-                          <button
-                            className={done ? 'set-check done' : 'set-check'}
+                          <IconButton
+                            icon={done ? 'pencil' : 'check'}
+                            variant={done ? 'plain' : 'filled'}
+                            className="push-end"
+                            label={done ? t.session.editSet : t.session.logSet}
                             onClick={() => toggleSet(set)}
-                            aria-label={done ? t.session.editSet : t.session.logSet}
-                            title={done ? t.session.editSet : t.session.logSet}
-                          >
-                            <Icon name={done ? 'pencil' : 'check'} />
-                          </button>
+                          />
                         </div>
                       )
                     })}
                   </div>
                   {!exDone && (
-                    <button className="link session-skip" onClick={() => skipExercise(exercise)}>
+                    <Button variant="ghost" size="sm" className="session__skip" onClick={() => skipExercise(exercise)}>
                       {t.session.skipExercise}
-                    </button>
+                    </Button>
                   )}
-                </div>
+                </section>
               )
             })}
-          </div>
+          </>
         ) : (
           (() => {
             const trained = [...new Set(sets.filter((s) => s.logged_reps != null).map((s) => s.muscle_group))].filter(
               Boolean,
             ) as string[]
             return (
-              <div className="session-body checkin">
-                <div className="checkin-head">
-                  <span className="checkin-check"><Icon name="check" /></span>
+              <>
+                <div className="checkin__head">
+                  <span className="checkin__check">
+                    <Icon name="check" />
+                  </span>
                   <h2>{t.session.doneGoodWork(session.split_day)}</h2>
-                  {trained.length > 0 && (
-                    <p className="gentle">
-                      {hadSaved ? t.session.earlierAnswers : t.session.quickCheckin}
-                    </p>
-                  )}
+                  {trained.length > 0 && <p className="hint">{hadSaved ? t.session.earlierAnswers : t.session.quickCheckin}</p>}
                 </div>
 
                 {trained.map((muscle) => {
                   const draft = checkin.get(muscle) ?? {}
                   return (
-                    <div key={muscle} className="checkin-muscle">
-                      <span className="muscle-badge">{muscleLabel(muscle)}</span>
+                    <section key={muscle} className="card">
+                      <span className="badge badge--caps checkin__muscle">{muscleLabel(muscle)}</span>
                       {CHECKIN_FIELDS.map((field) => (
-                        <div key={field} className="checkin-q">
-                          <span className="energy-label">{t.session.questions[field].label}</span>
-                          <div className="checkin-pills">
-                            {Object.entries(t.session.questions[field].options).map(([value, label]) => (
-                              <button
-                                key={value}
-                                className={draft[field] === value ? 'energy-btn active' : 'energy-btn'}
-                                onClick={() =>
-                                  setCheckin(
-                                    new Map(checkin).set(muscle, {
-                                      ...draft,
-                                      [field]: draft[field] === value ? undefined : value,
-                                    }),
-                                  )
-                                }
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
+                        <div key={field} className="field">
+                          <span className="field__label">{t.session.questions[field].label}</span>
+                          <Chips
+                            label={t.session.questions[field].label}
+                            value={draft[field] ?? null}
+                            // a second tap on the chosen answer clears it
+                            onChange={(value) =>
+                              setCheckin(new Map(checkin).set(muscle, { ...draft, [field]: draft[field] === value ? undefined : value }))
+                            }
+                            options={Object.entries(t.session.questions[field].options).map(([value, label]) => ({ value, label }))}
+                          />
                         </div>
                       ))}
-                    </div>
+                    </section>
                   )
                 })}
 
-                <div className="player-buttons checkin-buttons">
-                  <button className="player-done" onClick={saveAndClose} disabled={saving}>
-                    {saving ? '…' : t.session.saveClose}
-                  </button>
-                  <button className="link" onClick={() => setReviewing(true)}>
-                    <Icon name="pencil" /> {t.session.editLoggedSet}
-                  </button>
-                </div>
-              </div>
+                <Button variant="primary" size="lg" block busy={saving} onClick={saveAndClose}>
+                  {t.session.saveClose}
+                </Button>
+                <Button variant="ghost" icon="pencil" className="session__edit" onClick={() => setReviewing(true)}>
+                  {t.session.editLoggedSet}
+                </Button>
+              </>
             )
           })()
         )}
       </div>
-    </div>
+    </Sheet>
   )
 }
