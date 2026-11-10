@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#1a1714" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#171411" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <title>Routine Tracker</title>
     <script>
@@ -22,18 +22,18 @@
          app's own background, plus a single lamplight dot. React clears
          #root on mount, so this vanishes the moment the app is ready. */
       html {
-        background: #f3efe7;
+        background: #f5f0e6;
       }
       @media (prefers-color-scheme: dark) {
         html:not([data-theme='light']) {
-          background: #1a1714;
+          background: #171411;
         }
       }
       html[data-theme='dark'] {
-        background: #1a1714;
+        background: #171411;
       }
       html[data-theme='light'] {
-        background: #f3efe7;
+        background: #f5f0e6;
       }
       .boot {
         position: fixed;
@@ -45,16 +45,16 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #a9702c;
+        background: #c98a3d;
         animation: boot-pulse 1.2s ease-in-out infinite;
       }
       @media (prefers-color-scheme: dark) {
         html:not([data-theme='light']) .boot-dot {
-          background: #e0a458;
+          background: #e6a959;
         }
       }
       html[data-theme='dark'] .boot-dot {
-        background: #e0a458;
+        background: #e6a959;
       }
       @keyframes boot-pulse {
         0%,

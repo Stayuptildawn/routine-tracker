@@ -1,0 +1,157 @@
+/* ============================================================
+   LAMPLIGHT — design tokens
+   Warm paper by day, lamplight at night. One amber for the action that
+   matters on a screen, sage for done, neutral for skips. Nothing shouts.
+   Every colour pair used for text meets WCAG AA (4.5:1); control outlines
+   meet 3:1. Check with a contrast tool before changing a value.
+   ============================================================ */
+
+:root {
+  /* surfaces, light (paper) */
+  --bg: #f5f0e6;
+  --surface: #fffdf8;
+  --surface-2: #ebe4d6; /* fields, tracks, quiet fills */
+  --surface-3: #ddd4c2; /* hover on a quiet fill */
+  --border: #e5dccb; /* hairlines between rows and around cards */
+  --border-strong: #8f8470; /* outlines of things you can type in or tick */
+
+  /* ink */
+  --text: #2a241c;
+  --text-dim: #655c4e;
+  --neutral: #7d7464; /* skipped, never red */
+
+  /* the one accent */
+  --accent: #8a5412; /* amber as text and icons */
+  --accent-strong: #c98a3d; /* amber as a fill */
+  --accent-soft: #fbecd2; /* amber wash behind the featured thing */
+  --on-accent: #241a0d;
+
+  /* states */
+  --good: #4f6e38;
+  --good-soft: #e3ead5;
+  --on-good: #fffdf8;
+  --danger: #a8442f;
+  --danger-soft: #f6e0d9;
+  --on-danger: #ffffff;
+  --scrim: rgb(30 24 16 / 0.45);
+
+  /* cardio kinds: muted, distinct, same warmth family */
+  --cardio-run: #c98a3d;
+  --cardio-walk: #5f7d46;
+  --cardio-cycle: #5f7d9e;
+  --cardio-swim: #4f8f8b;
+
+  /* type */
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-display: 'Bitter Variable', Georgia, serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --fs-xs: 0.75rem; /* 12px: the floor, nothing renders smaller */
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+
+  /* spacing, 4px scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* shape */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-full: 999px;
+  --tap: 2.75rem; /* 44px thumb floor, grows with font scaling */
+
+  /* layout */
+  --tabbar-h: 4rem;
+  --content-w: 680px;
+
+  /* motion */
+  --speed: 160ms;
+  --speed-press: 140ms; /* button press feedback */
+  --speed-panel: 240ms; /* full-screen overlays entering */
+  --speed-exit: 150ms; /* anything leaving: faster than it arrived */
+  --ease: cubic-bezier(0.25, 0.6, 0.35, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* entrances, releases */
+  --ease-panel: cubic-bezier(0.32, 0.72, 0, 1); /* iOS-drawer curve for big surfaces */
+
+  /* three stacked translucent layers (contact / near / ambient) read as
+     real depth where one flat shadow reads as a smudge */
+  --shadow: 0 1px 1px rgb(50 44 36 / 0.04), 0 2px 6px rgb(50 44 36 / 0.05),
+    0 8px 24px rgb(50 44 36 / 0.05);
+  --shadow-float: 0 2px 4px rgb(50 44 36 / 0.08), 0 12px 32px rgb(50 44 36 / 0.16);
+}
+
+/* dark palette applies via system preference OR the manual toggle; keep
+   the two dark blocks identical when touching tokens */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #171411;
+    --surface: #221d18;
+    --surface-2: #2e2721;
+    --surface-3: #3b322a;
+    --border: #38302a;
+    --border-strong: #7a6e60;
+    --text: #efe9df;
+    --text-dim: #a59b8d;
+    --neutral: #8f8577;
+    --accent: #e6a959;
+    --accent-strong: #e6a959;
+    --accent-soft: #33281a;
+    --on-accent: #241a0d;
+    --good: #a8b98a;
+    --good-soft: #2c3323;
+    --on-good: #171411;
+    --danger: #e58a73;
+    --danger-soft: #3d2219;
+    --on-danger: #241a0d;
+    --scrim: rgb(0 0 0 / 0.6);
+    --cardio-run: #e6a959;
+    --cardio-walk: #a8b98a;
+    --cardio-cycle: #8fa9c9;
+    --cardio-swim: #7fb5b0;
+    --shadow: 0 1px 1px rgb(0 0 0 / 0.22), 0 3px 8px rgb(0 0 0 / 0.22), 0 10px 28px rgb(0 0 0 / 0.2);
+    --shadow-float: 0 2px 4px rgb(0 0 0 / 0.3), 0 14px 36px rgb(0 0 0 / 0.45);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #171411;
+  --surface: #221d18;
+  --surface-2: #2e2721;
+  --surface-3: #3b322a;
+  --border: #38302a;
+  --border-strong: #7a6e60;
+  --text: #efe9df;
+  --text-dim: #a59b8d;
+  --neutral: #8f8577;
+  --accent: #e6a959;
+  --accent-strong: #e6a959;
+  --accent-soft: #33281a;
+  --on-accent: #241a0d;
+  --good: #a8b98a;
+  --good-soft: #2c3323;
+  --on-good: #171411;
+  --danger: #e58a73;
+  --danger-soft: #3d2219;
+  --on-danger: #241a0d;
+  --scrim: rgb(0 0 0 / 0.6);
+  --cardio-run: #e6a959;
+  --cardio-walk: #a8b98a;
+  --cardio-cycle: #8fa9c9;
+  --cardio-swim: #7fb5b0;
+  --shadow: 0 1px 1px rgb(0 0 0 / 0.22), 0 3px 8px rgb(0 0 0 / 0.22), 0 10px 28px rgb(0 0 0 / 0.2);
+  --shadow-float: 0 2px 4px rgb(0 0 0 / 0.3), 0 14px 36px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}

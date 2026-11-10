@@ -54,8 +54,8 @@ export default defineConfig(({ mode }) => {
         name: 'Routine Tracker',
         short_name: 'Routines',
         description: 'A routine tracker that works with your brain — conversational check-off, ADHD-friendly by design',
-        theme_color: '#1a1714',
-        background_color: '#1a1714',
+        theme_color: '#171411',
+        background_color: '#171411',
         display: 'standalone',
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
         // Android: share text into the installed PWA (iOS has no share target)

@@ -4,7 +4,9 @@ import '@fontsource/atkinson-hyperlegible/400.css'
 import '@fontsource/atkinson-hyperlegible/700.css'
 import '@fontsource-variable/bitter'
 import App from './App'
-import './index.css'
+import './styles/tokens.css'
+import './styles/base.css'
+import './styles/legacy.css'
 import './lib/pwaInstall' // register the beforeinstallprompt capture as early as possible
 import { armViewportFix } from './lib/viewportFix'
 
