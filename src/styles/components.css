@@ -244,7 +244,6 @@
 .chip[aria-pressed='true'] {
   background: var(--accent-soft);
   border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
   font-weight: 700;
 }
 
@@ -278,6 +277,15 @@
 
 .field-row > .grow {
   flex: 1 1 10rem;
+}
+
+/* a row that must stay on one line: the text field gives way instead */
+.field-row--tight {
+  flex-wrap: nowrap;
+}
+
+.field-row--tight > .grow {
+  flex-basis: 0;
 }
 
 .input--num {

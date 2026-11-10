@@ -75,14 +75,6 @@
   border-radius: var(--r-md);
 }
 
-.week-routine.paused {
-  opacity: 0.55;
-}
-
-.week-routine.paused:hover {
-  opacity: 0.8;
-}
-
 .energy-btn.activate {
   font-weight: 700;
   color: var(--text);
@@ -398,25 +390,6 @@
   background: var(--surface-3);
   color: var(--text);
   font-weight: 700;
-}
-
-.anchor-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--fs-sm);
-  color: var(--text-dim);
-}
-
-.anchor-row input[type='time'] {
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-.anchor-hint {
-  margin: 0;
 }
 
 /* ---------- reflection card ---------- */
@@ -1423,187 +1396,6 @@
   font-size: var(--fs-sm);
 }
 
-/* ---------- week grid ---------- */
-.week-routine {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-4);
-  margin-top: var(--sp-3);
-  box-shadow: var(--shadow);
-}
-
-.week-grid-wrap {
-  overflow-x: auto;
-}
-
-.week-grid {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: var(--fs-sm);
-}
-
-.week-grid th {
-  color: var(--text-dim);
-  font-weight: 400;
-  font-size: var(--fs-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: var(--sp-1) var(--sp-1);
-}
-
-.week-grid th.today {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.week-grid .task-name {
-  text-align: left;
-  padding: var(--sp-1) var(--sp-2) var(--sp-1) 0;
-  white-space: nowrap;
-  max-width: 12rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tier-dot {
-  color: var(--accent);
-  margin-left: var(--sp-1);
-}
-
-.week-grid .cell {
-  text-align: center;
-  /* the cells are the tab's primary tap target - keep them thumb-sized */
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-}
-
-.week-grid .cell.done {
-  color: var(--good);
-  background: var(--good-soft);
-}
-
-.week-grid .cell.skipped {
-  color: var(--neutral);
-}
-
-.week-grid .cell.unscheduled {
-  background: var(--bg);
-  border-color: transparent;
-}
-
-.week-grid .cell.today {
-  outline: 1.5px solid var(--accent);
-  outline-offset: -1.5px;
-}
-
-/* phones: the full week must fit without sideways scrolling - the task
-   name gives way (ellipsis), never the days */
-@media (max-width: 600px) {
-  .week-routine {
-    padding: var(--sp-3);
-  }
-
-  .week-grid .task-name {
-    /* the name gives way further so 7 thumb-sized cells still fit at 375px */
-    max-width: 22vw;
-    font-size: var(--fs-xs);
-  }
-
-  .week-grid th {
-    font-size: 0.58rem;
-    letter-spacing: 0.02em;
-    padding: var(--sp-1) 0;
-  }
-
-  .week-grid .cell {
-    /* was 1.7 x 1.8rem (~27px) - too small for the tab's primary tap target */
-    width: 2.25rem;
-    height: 2.25rem;
-    font-size: var(--fs-xs);
-  }
-}
-
-/* past + today cells can be tapped to fix the record */
-.week-grid .cell.tappable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.week-grid .cell.tappable:hover {
-  outline: 1.5px solid var(--neutral);
-  outline-offset: -1.5px;
-}
-
-.week-grid .cell.tappable:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-/* tapped but not yet saved - the Save bar below confirms or discards */
-.week-grid .cell.draft {
-  outline: 2px dashed var(--accent);
-  outline-offset: -2px;
-}
-
-/* the fixed bar must never hide the last card or "+ Add routine" */
-.week.has-savebar {
-  padding-bottom: 120px;
-}
-
-/* floats above the mobile tab bar so Save/Cancel stay reachable while
-   scrolling through routines */
-.week-savebar {
-  position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 68px);
-  left: 50%;
-  transform: translate(-50%, 0);
-  transition: opacity var(--speed-panel) var(--ease-out),
-    transform var(--speed-panel) var(--ease-out);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-4);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-full);
-  box-shadow: var(--shadow);
-  z-index: 21;
-  white-space: nowrap;
-}
-
-@starting-style {
-  .week-savebar {
-    opacity: 0;
-    transform: translate(-50%, 12px);
-  }
-}
-
-.week-savebar[data-closing] {
-  opacity: 0;
-  transform: translate(-50%, 12px);
-  transition-duration: var(--speed-exit);
-  pointer-events: none;
-}
-
-.week-savebar span {
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
-}
-
-.week-savebar .energy-btn {
-  border-color: var(--border);
-}
-
-@media (min-width: 900px) {
-  /* the tab bar is a left rail here - the bottom edge is free */
-  .week-savebar {
-    bottom: var(--sp-5);
-  }
-}
-
 /* ---------- routine editing ---------- */
 .routine-header {
   display: flex;
@@ -1614,21 +1406,6 @@
 
 .routine-header h2 {
   margin: 0;
-}
-
-.rename-row {
-  display: flex;
-  gap: var(--sp-2);
-  flex: 1;
-}
-
-.rename-row input {
-  flex: 1;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  font-weight: 700;
 }
 
 .edit-panel {
@@ -1670,12 +1447,6 @@
   .add-task > .exercise-ac:first-child {
     flex: 1 1 100%;
   }
-}
-
-.edit-task-row input:hover,
-.rename-row input:hover,
-.add-task input:hover {
-  border-color: var(--neutral);
 }
 
 .edit-task-row select {
@@ -1783,42 +1554,6 @@
   color: var(--text-dim);
 }
 
-.delete-routine {
-  align-self: flex-start;
-  font-size: var(--fs-sm);
-}
-
-.day-picker {
-  display: flex;
-  gap: var(--sp-1);
-}
-
-.day-picker .day {
-  flex: 1;
-  max-width: 2.7rem;
-  /* seven toggles in a row measured 27px tall - the row is the whole point
-     of the edit panel, so give each one a real target */
-  min-height: 2.75rem;
-  padding: var(--sp-1) 0;
-  border-radius: var(--r-full);
-  background: var(--surface-2);
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  border: 1px solid transparent;
-}
-
-.day-picker .day:hover {
-  background: var(--surface-3);
-  color: var(--text);
-}
-
-.day-picker .day.on {
-  background: var(--accent-soft);
-  color: var(--text);
-  border-color: var(--accent);
-}
-
 .add-task {
   display: flex;
   gap: var(--sp-2);
@@ -1911,14 +1646,6 @@
   padding: var(--sp-2) var(--sp-3);
   min-height: 2.75rem;
   font-weight: 700;
-}
-
-.add-routine {
-  min-height: 2.75rem;
-  margin-top: var(--sp-4);
-  /* keep the row clear of the tab bar + mobile keyboard */
-  margin-bottom: var(--sp-7);
-  scroll-margin-bottom: 120px;
 }
 
 .add-task input {
@@ -2028,14 +1755,6 @@
   margin-top: var(--sp-3);
   font-size: var(--fs-xs);
   color: var(--text-dim);
-}
-
-/* Undo is the whole promise of the AI log - it must be easy to hit */
-.ai-meta .link,
-.anchor-row .link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
 }
 
 /* ---------- reminders ---------- */

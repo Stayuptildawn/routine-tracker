@@ -243,3 +243,240 @@
     transform: translateY(8px);
   }
 }
+
+/* ---------- week: one table for the record ---------- */
+.week-table-wrap {
+  /* full bleed: the seven day columns need every pixel on a phone */
+  margin-inline: calc(-1 * var(--sp-2));
+}
+
+.week-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  table-layout: fixed;
+  font-size: var(--fs-sm);
+}
+
+/* the day names stay in view while the routines scroll under them */
+.week-table thead th,
+.week-table thead td {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  padding-block: var(--sp-2);
+}
+
+.week-table thead th {
+  width: 2.25rem;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.week-table thead th.is-today {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.week-table__group th {
+  padding: var(--sp-4) 0 0;
+  text-align: start;
+}
+
+.week-table__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-inline-start: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.week-table td.hint {
+  padding: var(--sp-2);
+}
+
+.week-table__task {
+  padding-inline: var(--sp-2) var(--sp-1);
+  font-weight: 400;
+  text-align: start;
+  line-height: 1.25;
+}
+
+/* long names give way (two lines, then an ellipsis), never the days */
+.week-table__task > span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.tier-dot {
+  color: var(--accent);
+}
+
+.week-table td {
+  padding: 0;
+}
+
+/* a day's mark: the cells are this screen's main tap target */
+.cell {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 2.5rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+button.cell:hover {
+  border-color: var(--border-strong);
+}
+
+.cell--done,
+.cell--partial {
+  background: var(--good-soft);
+  border-color: transparent;
+  color: var(--good);
+}
+
+.cell--skipped {
+  background: var(--surface-2);
+  border-color: transparent;
+  color: var(--neutral);
+}
+
+/* not scheduled that day */
+.cell--off {
+  background: none;
+  border-color: transparent;
+}
+
+.cell.is-today:not(.cell--off) {
+  border-color: var(--accent);
+}
+
+/* days that haven't come yet can't be marked: outline only */
+span.cell:not(.cell--off, .cell--done, .cell--partial, .cell--skipped) {
+  background: none;
+}
+
+/* tapped but not yet saved - the save bar confirms or discards */
+.cell--draft {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+@media (max-width: 359px) {
+  /* seven thumb-sized cells no longer fit beside a readable name */
+  .week-table-wrap {
+    overflow-x: auto;
+  }
+
+  .week-table {
+    min-width: 22.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .week-table thead th {
+    width: 2rem;
+    letter-spacing: 0;
+  }
+}
+
+.week__paused {
+  padding-block: var(--sp-1);
+}
+
+.week__add {
+  align-self: flex-start;
+  /* keep the row clear of the mobile keyboard */
+  scroll-margin-bottom: 120px;
+}
+
+.field-row.week__add {
+  align-self: stretch;
+}
+
+/* the fixed bar must never hide the last rows */
+.week--has-savebar {
+  padding-bottom: 5rem;
+}
+
+/* floats above the tab bar so Save and Cancel stay in reach while scrolling */
+.savebar {
+  position: fixed;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--sp-3));
+  left: 50%;
+  transform: translate(-50%, 0);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-float);
+  z-index: 21;
+  white-space: nowrap;
+  transition: opacity var(--speed-panel) var(--ease-out), transform var(--speed-panel) var(--ease-out);
+}
+
+@starting-style {
+  .savebar {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.savebar[data-closing] {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
+}
+
+.savebar .btn {
+  border-radius: var(--r-full);
+}
+
+@media (min-width: 900px) {
+  /* the tab bar is a side rail here - the bottom edge is free */
+  .savebar {
+    bottom: var(--sp-5);
+  }
+}
+
+/* ---------- editors: one editable thing per box ---------- */
+.edit-item {
+  padding: var(--sp-3);
+}
+
+.routine-editor__name {
+  font-weight: 700;
+}
+
+.routine-editor__delete {
+  align-self: flex-start;
+}
+
+/* seven day toggles always fit one row */
+.chips--days {
+  flex-wrap: nowrap;
+  gap: var(--sp-1);
+}
+
+.chips--days .chip {
+  flex: 1;
+  min-width: 0;
+  max-width: 3rem;
+  padding-inline: 0;
+  font-size: var(--fs-xs);
+}

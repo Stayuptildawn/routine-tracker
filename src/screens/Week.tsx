@@ -8,6 +8,7 @@ import { t } from '../i18n'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
+import { Button, Disclosure, ErrorState, ScreenHeader, Sheet, cx } from '../components/ui'
 import type { ReactNode } from 'react'
 import { MAX_LEN } from '../lib/limits'
 
@@ -41,14 +42,15 @@ const NEXT_STATUS: Record<string, LogStatus> = {
   skipped: 'pending',
 }
 
-export default function Week({ visible }: { visible: boolean; onOpenSettings: () => void }) {
+const sortedTasks = (routine: Routine) => [...(routine.tasks ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+
+export default function Week({ visible, onOpenSettings }: { visible: boolean; onOpenSettings: () => void }) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<TaskLog[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const loadedRef = useRef(false)
   const [editing, setEditing] = useState<string | null>(null)
-  const [nameDraft, setNameDraft] = useState('')
-  const [newTaskFor, setNewTaskFor] = useState<string | null>(null)
-  const [newLabel, setNewLabel] = useState('')
   const [newRoutine, setNewRoutine] = useState('')
   const [addingRoutine, setAddingRoutine] = useState(false)
   // cell taps land here first, keyed `${taskId}|${date}` - nothing is
@@ -65,6 +67,14 @@ export default function Week({ visible }: { visible: boolean; onOpenSettings: ()
         .order('sort_order'),
       supabase.from('task_logs').select('*').in('date', currentWeekDates()),
     ])
+    // a failed first load must not pass for an empty week; a failed refresh
+    // keeps what is already on screen
+    if (routinesRes.error) {
+      if (!loadedRef.current) setLoadError(true)
+      return
+    }
+    setLoadError(false)
+    loadedRef.current = true
     setRoutines((routinesRes.data as Routine[]) ?? [])
     let rows = (logsRes.data as TaskLog[]) ?? []
     // marks still waiting on a bad connection win over the server's older answer
@@ -87,10 +97,10 @@ export default function Week({ visible }: { visible: boolean; onOpenSettings: ()
   const logIndex = new Map(logs.map((l) => [`${l.task_id}|${l.date}`, l]))
   const logFor = (taskId: string, date: string) => logIndex.get(`${taskId}|${date}`)
 
-  // On narrow phones the grid scrolls sideways and starts at Monday, so from
-  // Thursday on, today - the column people came to tick - opens off-screen.
-  // A stable callback ref, so this runs when a grid mounts and never fights
-  // the user's own scrolling on later renders.
+  // On the narrowest phones the table scrolls sideways and starts at Monday,
+  // so from Thursday on, today - the column people came to tick - opens
+  // off-screen. A stable callback ref, so this runs when the table mounts
+  // and never fights the user's own scrolling on later renders.
   const startAtToday = useCallback((wrap: HTMLDivElement | null) => {
     if (!wrap) return
     const todayIdx = (new Date().getDay() + 6) % 7 // 0 = Mon … 6 = Sun
@@ -145,14 +155,12 @@ export default function Week({ visible }: { visible: boolean; onOpenSettings: ()
     if (results.some((r) => r.status === 'rejected' || r.value === 'saved')) load()
   }
 
-  async function addTask(routineId: string) {
-    const label = newLabel.trim()
+  async function addTask(routineId: string, text: string) {
+    const label = text.trim()
     if (!label) return
     const routine = routines.find((r) => r.id === routineId)
     const maxOrder = Math.max(0, ...(routine?.tasks ?? []).map((task) => task.sort_order ?? 0))
     await supabase.from('tasks').insert({ routine_id: routineId, label, sort_order: maxOrder + 1 })
-    setNewLabel('')
-    setNewTaskFor(null)
     load()
   }
 
@@ -166,10 +174,9 @@ export default function Week({ visible }: { visible: boolean; onOpenSettings: ()
     load()
   }
 
-  async function renameRoutine(id: string) {
-    const name = nameDraft.trim()
+  async function renameRoutine(id: string, text: string) {
+    const name = text.trim()
     if (name) await supabase.from('routines').update({ name }).eq('id', id)
-    setEditing(null)
     load()
   }
 
@@ -207,240 +214,346 @@ export default function Week({ visible }: { visible: boolean; onOpenSettings: ()
     load()
   }
 
+  const active = routines.filter((r) => r.active !== false)
+  const paused = routines.filter((r) => r.active === false)
+
+  // the editor keeps showing its routine while the exit transition plays
+  const editor = usePresence(editing !== null)
+  const lastEditing = useRef(editing)
+  if (editing) lastEditing.current = editing
+  const editingRoutine = routines.find((r) => r.id === (editing ?? lastEditing.current))
+
   return (
-    <div className={draftCount > 0 ? 'week has-savebar' : 'week'}>
-      <h1>{t.week.title}</h1>
-      <p className="gentle">{t.week.subtitle}</p>
-      {!loaded && <Skeleton cards={4} />}
-      {routines.map((routine) => {
-        const tasks = (routine.tasks ?? []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        const isEditing = editing === routine.id
-        const paused = routine.active === false
-        return (
-          <section key={routine.id} className={paused ? 'week-routine paused' : 'week-routine'}>
-            <div className="routine-header">
-              {isEditing ? (
-                // the name is the only draft state here (task edits below save
-                // as you type), so the pair is Save (commit + close) and
-                // Cancel (discard + close) - never two buttons that both close
-                <div className="rename-row">
-                  <input
-                    value={nameDraft}
-                    maxLength={MAX_LEN.name}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') renameRoutine(routine.id)
-                      if (e.key === 'Escape') setEditing(null)
-                    }}
-                    autoFocus
-                  />
-                  <button className="save" onClick={() => renameRoutine(routine.id)} disabled={!nameDraft.trim()}>
-                    {t.common.save}
-                  </button>
-                  <button className="energy-btn" onClick={() => setEditing(null)}>
-                    {t.common.cancel}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <h2>
-                    {routine.name}
-                    {paused && <span className="routine-progress">{t.week.paused}</span>}
-                  </h2>
-                  <button
-                    className={paused ? 'energy-btn activate' : 'energy-btn'}
-                    onClick={() => setActive(routine.id, paused)}
-                    title={paused ? t.week.activateTitle : t.week.pauseTitle}
-                  >
-                    {paused ? t.week.activate : t.week.pause}
-                  </button>
-                  <button
-                    className="energy-btn"
-                    onClick={() => {
-                      setEditing(routine.id)
-                      setNameDraft(routine.name)
-                    }}
-                  >
-                    {t.common.Edit}
-                  </button>
-                </>
-              )}
-            </div>
+    <div className={cx('screen week', draftCount > 0 && 'week--has-savebar')}>
+      <ScreenHeader title={t.week.title} lede={t.week.subtitle} onOpenSettings={onOpenSettings} />
 
-            {isEditing ? (
-              <div className="edit-panel">
-                <div className="anchor-row">
-                  <label htmlFor={`anchor-${routine.id}`}>{t.week.anchorTime}</label>
-                  <input
-                    id={`anchor-${routine.id}`}
-                    type="time"
-                    value={routine.anchor_time?.slice(0, 5) ?? ''}
-                    onChange={(e) => setAnchor(routine.id, e.target.value)}
-                    title={t.week.anchorTitle}
-                  />
-                  {routine.anchor_time ? (
-                    <button className="link" onClick={() => setAnchor(routine.id, '')}>
-                      {t.common.clear}
-                    </button>
-                  ) : (
-                    <span className="gentle anchor-hint">{t.week.anchorHint}</span>
-                  )}
-                </div>
-                {tasks.map((task) => (
-                  <div key={task.id} className="edit-task">
-                    <div className="edit-task-row">
-                      <input
-                        defaultValue={task.label}
-                        maxLength={MAX_LEN.label}
-                        onBlur={(e) => {
-                          const label = e.target.value.trim()
-                          if (label && label !== task.label) updateTask(task.id, { label })
-                        }}
-                      />
-                      <select
-                        value={task.tier}
-                        onChange={(e) => updateTask(task.id, { tier: e.target.value as Tier })}
-                        title={t.week.tierTitle}
-                      >
-                        {TIERS.map((tier) => (
-                          <option key={tier} value={tier}>
-                            {t.tiers[tier]}
-                          </option>
-                        ))}
-                      </select>
-                      <ConfirmButton
-                        className="danger"
-                        label={<Icon name="x" />}
-                        confirmLabel={t.week.deleteTaskConfirm}
-                        title={t.week.deleteTaskTitle(task.label)}
-                        onConfirm={() => deleteTask(task)}
-                      />
-                    </div>
-                    <div className="day-picker">
-                      {DAY_NAMES.map((d, i) => (
-                        <button
-                          key={d}
-                          className={task.scheduled_days.includes(i + 1) ? 'day on' : 'day'}
-                          onClick={() => toggleDay(task, i + 1)}
-                          title={task.scheduled_days.includes(i + 1) ? t.week.scheduledDay(d) : t.week.notScheduledDay(d)}
-                        >
-                          {t.week.dayNamesShort[i]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+      {loadError && !loaded && <ErrorState onRetry={load} />}
+      {!loaded && !loadError && <Skeleton cards={4} />}
+
+      {loaded && active.length > 0 && (
+        <div className="week-table-wrap" ref={startAtToday}>
+          <table className="week-table">
+            <thead>
+              <tr>
+                <td />
+                {DAY_NAMES.map((d, i) => (
+                  <th key={d} scope="col" className={weekDates[i] === today ? 'is-today' : undefined}>
+                    {d}
+                  </th>
                 ))}
-                <div className="add-task">
-                  <input
-                    value={newTaskFor === routine.id ? newLabel : ''}
-                    maxLength={MAX_LEN.label}
-                    onFocus={() => setNewTaskFor(routine.id)}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addTask(routine.id)}
-                    placeholder={t.week.newTaskPh}
-                  />
-                  <button onClick={() => addTask(routine.id)}>{t.common.add}</button>
-                </div>
-                <ConfirmButton
-                  className="danger delete-routine"
-                  label={t.week.deleteRoutine}
-                  confirmLabel={t.week.deleteRoutineConfirm}
-                  onConfirm={() => deleteRoutine(routine)}
-                />
-              </div>
-            ) : tasks.length > 0 ? (
-              <div className="week-grid-wrap" ref={startAtToday}>
-                <table className="week-grid">
-                  <thead>
+              </tr>
+            </thead>
+            {active.map((routine) => {
+              const tasks = sortedTasks(routine)
+              return (
+                <tbody key={routine.id}>
+                  <tr className="week-table__group">
+                    <th colSpan={8} scope="rowgroup">
+                      <div className="week-table__group-head">
+                        <h2>{routine.name}</h2>
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(routine.id)}>
+                          {t.common.Edit}
+                        </Button>
+                      </div>
+                    </th>
+                  </tr>
+                  {tasks.length === 0 && (
                     <tr>
-                      <th></th>
-                      {DAY_NAMES.map((d, i) => (
-                        <th key={d} className={weekDates[i] === today ? 'today' : ''}>
-                          {d}
-                        </th>
-                      ))}
+                      <td colSpan={8} className="hint">
+                        {t.week.noDailyTasks}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {tasks.map((task) => (
-                      <tr key={task.id}>
-                        <td className="task-name">
+                  )}
+                  {tasks.map((task) => (
+                    <tr key={task.id}>
+                      <th scope="row" className="week-table__task">
+                        <span>
                           {task.label}
-                          {task.tier === 'core' && <span className="tier-dot" title={t.week.coreDot}>•</span>}
-                        </td>
-                        {weekDates.map((date, i) => {
-                          const scheduled = task.scheduled_days.includes(i + 1)
-                          const draft = drafts[`${task.id}|${date}`]
-                          const status = draft ?? logFor(task.id, date)?.status ?? 'pending'
-                          const tappable = scheduled && date <= today
-                          return (
-                            <td
-                              key={date}
-                              className={`cell ${status} ${scheduled ? '' : 'unscheduled'} ${date === today ? 'today' : ''} ${tappable ? 'tappable' : ''} ${draft ? 'draft' : ''}`}
-                              role={tappable ? 'button' : undefined}
-                              tabIndex={tappable ? 0 : undefined}
-                              title={tappable ? t.week.cellTitle(task.label, DAY_NAMES[i]) : undefined}
-                              onClick={tappable ? () => cycleCell(task, date) : undefined}
-                              onKeyDown={
-                                tappable
-                                  ? (e) => {
-                                      if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault()
-                                        cycleCell(task, date)
-                                      }
-                                    }
-                                  : undefined
-                              }
-                            >
-                              {scheduled ? STATUS_GLYPH[status] : ''}
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="gentle">{t.week.noDailyTasks}</p>
-            )}
-          </section>
-        )
-      })}
-
-      {addingRoutine ? (
-        <div className="add-task add-routine">
-          <input
-            value={newRoutine}
-            maxLength={MAX_LEN.name}
-            onChange={(e) => setNewRoutine(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addRoutine()}
-            onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-            placeholder={t.week.newRoutinePh}
-            autoFocus
-          />
-          <button onClick={addRoutine}>{t.common.add}</button>
-          <button className="link" onClick={() => setAddingRoutine(false)}>
-            {t.common.cancel}
-          </button>
+                          {task.tier === 'core' && (
+                            <span className="tier-dot" title={t.week.coreDot}>
+                              {' '}
+                              •
+                            </span>
+                          )}
+                        </span>
+                      </th>
+                      {weekDates.map((date, i) => {
+                        const scheduled = task.scheduled_days.includes(i + 1)
+                        const draft = drafts[`${task.id}|${date}`]
+                        const status = draft ?? logFor(task.id, date)?.status ?? 'pending'
+                        const tappable = scheduled && date <= today
+                        const cls = cx(
+                          'cell',
+                          scheduled ? `cell--${status}` : 'cell--off',
+                          date === today && 'is-today',
+                          draft && 'cell--draft',
+                        )
+                        return (
+                          <td key={date}>
+                            {tappable ? (
+                              <button
+                                type="button"
+                                className={cls}
+                                title={t.week.cellTitle(task.label, DAY_NAMES[i])}
+                                aria-label={t.week.cellTitle(task.label, DAY_NAMES[i])}
+                                onClick={() => cycleCell(task, date)}
+                              >
+                                {STATUS_GLYPH[status]}
+                              </button>
+                            ) : (
+                              <span className={cls}>{scheduled ? STATUS_GLYPH[status] : ''}</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              )
+            })}
+          </table>
         </div>
-      ) : (
-        <button className="link add-routine" onClick={() => setAddingRoutine(true)}>
-          {t.week.addRoutine}
-        </button>
       )}
+
+      {loaded && paused.length > 0 && (
+        <Disclosure label={t.week.pausedGroup(paused.length)}>
+          <div className="card rows week__paused">
+            {paused.map((routine) => (
+              <div key={routine.id} className="row">
+                <span className="row__main">{routine.name}</span>
+                <div className="row__end">
+                  <Button size="sm" title={t.week.activateTitle} onClick={() => setActive(routine.id, true)}>
+                    {t.week.activate}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(routine.id)}>
+                    {t.common.Edit}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Disclosure>
+      )}
+
+      {loaded &&
+        (addingRoutine ? (
+          <div className="field-row week__add">
+            <input
+              className="grow"
+              value={newRoutine}
+              maxLength={MAX_LEN.name}
+              onChange={(e) => setNewRoutine(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addRoutine()}
+              onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+              placeholder={t.week.newRoutinePh}
+              aria-label={t.week.newRoutinePh}
+              autoFocus
+            />
+            <Button variant="primary" onClick={addRoutine} disabled={!newRoutine.trim()}>
+              {t.common.add}
+            </Button>
+            <Button variant="ghost" onClick={() => setAddingRoutine(false)}>
+              {t.common.cancel}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="ghost" className="week__add" onClick={() => setAddingRoutine(true)}>
+            {t.week.addRoutine}
+          </Button>
+        ))}
 
       {savebar.mounted && (
-        <div className="week-savebar" data-closing={savebar.closing || undefined} role="status">
-          <span>{t.week.unsavedChanges(shownCount)}</span>
-          <button className="save" onClick={saveDrafts}>
+        <div className="savebar" data-closing={savebar.closing || undefined} role="status">
+          <span className="hint">{t.week.unsavedChanges(shownCount)}</span>
+          <Button variant="primary" size="sm" onClick={saveDrafts}>
             {t.common.save}
-          </button>
-          <button className="energy-btn" onClick={() => setDrafts({})}>
+          </Button>
+          <Button size="sm" onClick={() => setDrafts({})}>
             {t.common.cancel}
-          </button>
+          </Button>
         </div>
       )}
+
+      {editor.mounted && editingRoutine && (
+        <RoutineEditor
+          key={editingRoutine.id}
+          routine={editingRoutine}
+          closing={editor.closing}
+          onClose={() => setEditing(null)}
+          onRename={(name) => renameRoutine(editingRoutine.id, name)}
+          onAnchor={(value) => setAnchor(editingRoutine.id, value)}
+          onActive={(on) => setActive(editingRoutine.id, on)}
+          onDelete={() => deleteRoutine(editingRoutine)}
+          onAddTask={(label) => addTask(editingRoutine.id, label)}
+          onUpdateTask={updateTask}
+          onToggleDay={toggleDay}
+          onDeleteTask={deleteTask}
+        />
+      )}
     </div>
+  )
+}
+
+interface EditorProps {
+  routine: Routine
+  closing: boolean
+  onClose: () => void
+  onRename: (name: string) => void
+  onAnchor: (value: string) => void
+  onActive: (active: boolean) => void
+  onDelete: () => void
+  onAddTask: (label: string) => void
+  onUpdateTask: (taskId: string, patch: Partial<Pick<Task, 'label' | 'tier' | 'scheduled_days'>>) => void
+  onToggleDay: (task: Task, day: number) => void
+  onDeleteTask: (task: Task) => void
+}
+
+/** Everything about one routine on a screen of its own: name, anchor time,
+ *  pause, its tasks (label, tier, days), and delete. The name is the only
+ *  draft (it has a Save button); every other control saves as you change it. */
+function RoutineEditor({
+  routine,
+  closing,
+  onClose,
+  onRename,
+  onAnchor,
+  onActive,
+  onDelete,
+  onAddTask,
+  onUpdateTask,
+  onToggleDay,
+  onDeleteTask,
+}: EditorProps) {
+  const [nameDraft, setNameDraft] = useState(routine.name)
+  const [newLabel, setNewLabel] = useState('')
+  const tasks = sortedTasks(routine)
+  const paused = routine.active === false
+  const nameDirty = nameDraft.trim() !== '' && nameDraft.trim() !== routine.name
+
+  function addTask() {
+    if (!newLabel.trim()) return
+    onAddTask(newLabel)
+    setNewLabel('')
+  }
+
+  return (
+    <Sheet title={t.common.Edit} label={`${t.common.Edit}: ${routine.name}`} onClose={onClose} closing={closing}>
+      <div className="sheet__body">
+        <div className="field-row">
+          <input
+            className="grow routine-editor__name"
+            value={nameDraft}
+            maxLength={MAX_LEN.name}
+            aria-label={t.week.newRoutinePh}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && nameDirty && onRename(nameDraft)}
+          />
+          <Button variant="primary" onClick={() => onRename(nameDraft)} disabled={!nameDirty}>
+            {t.common.save}
+          </Button>
+        </div>
+
+        <div className="field field--inline">
+          <label className="field__label" htmlFor={`anchor-${routine.id}`}>
+            {t.week.anchorTime}
+          </label>
+          <input
+            id={`anchor-${routine.id}`}
+            type="time"
+            value={routine.anchor_time?.slice(0, 5) ?? ''}
+            onChange={(e) => onAnchor(e.target.value)}
+            title={t.week.anchorTitle}
+          />
+          {routine.anchor_time ? (
+            <Button variant="ghost" size="sm" onClick={() => onAnchor('')}>
+              {t.common.clear}
+            </Button>
+          ) : (
+            <span className="hint">{t.week.anchorHint}</span>
+          )}
+        </div>
+
+        <div className="field field--inline">
+          <Button onClick={() => onActive(paused)}>{paused ? t.week.activate : t.week.pause}</Button>
+          <span className="hint">{paused ? t.week.activateTitle : t.week.pauseTitle}</span>
+        </div>
+
+        {tasks.map((task) => (
+          <div key={task.id} className="card edit-item">
+            <div className="field-row field-row--tight">
+              <input
+                className="grow"
+                defaultValue={task.label}
+                maxLength={MAX_LEN.label}
+                aria-label={t.week.newTaskPh}
+                onBlur={(e) => {
+                  const label = e.target.value.trim()
+                  if (label && label !== task.label) onUpdateTask(task.id, { label })
+                }}
+              />
+              <select
+                value={task.tier}
+                onChange={(e) => onUpdateTask(task.id, { tier: e.target.value as Tier })}
+                title={t.week.tierTitle}
+                aria-label={t.week.tierTitle}
+              >
+                {TIERS.map((tier) => (
+                  <option key={tier} value={tier}>
+                    {t.tiers[tier]}
+                  </option>
+                ))}
+              </select>
+              <ConfirmButton
+                iconOnly
+                label={<Icon name="x" />}
+                confirmLabel={t.week.deleteTaskConfirm}
+                title={t.week.deleteTaskTitle(task.label)}
+                onConfirm={() => onDeleteTask(task)}
+              />
+            </div>
+            <div className="chips chips--days">
+              {DAY_NAMES.map((d, i) => {
+                const on = task.scheduled_days.includes(i + 1)
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className="chip"
+                    aria-pressed={on}
+                    onClick={() => onToggleDay(task, i + 1)}
+                    title={on ? t.week.scheduledDay(d) : t.week.notScheduledDay(d)}
+                    aria-label={on ? t.week.scheduledDay(d) : t.week.notScheduledDay(d)}
+                  >
+                    {t.week.dayNamesShort[i]}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+
+        <div className="field-row">
+          <input
+            className="grow"
+            value={newLabel}
+            maxLength={MAX_LEN.label}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addTask()}
+            placeholder={t.week.newTaskPh}
+            aria-label={t.week.newTaskPh}
+          />
+          <Button onClick={addTask} disabled={!newLabel.trim()}>
+            {t.common.add}
+          </Button>
+        </div>
+
+        <ConfirmButton
+          className="routine-editor__delete"
+          label={t.week.deleteRoutine}
+          confirmLabel={t.week.deleteRoutineConfirm}
+          onConfirm={onDelete}
+        />
+      </div>
+    </Sheet>
   )
 }
