@@ -175,7 +175,7 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
   return (
     <div className="reminders">
       <button className="link back" onClick={onBack}>
-        {t.reminders.back}
+        {t.common.back}
       </button>
       <h1>{t.reminders.title}</h1>
       <p className="gentle">{t.reminders.subtitle}</p>

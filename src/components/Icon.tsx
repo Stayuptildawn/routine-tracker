@@ -190,6 +190,28 @@ const PATHS = {
       <path d="m19 12-7 7-7-7" />
     </>
   ),
+  'chevron-right': <path d="m9 18 6-6-6-6" />,
+  'chevron-left': <path d="m15 18-6-6 6-6" />,
+  'chevron-down': <path d="m6 9 6 6 6-6" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </>
+  ),
+  alert: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v5" />
+      <path d="M12 16h.01" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS

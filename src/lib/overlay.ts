@@ -3,7 +3,7 @@ import { onBackButton } from './backButton'
 import { useFocusTrap } from './focusTrap'
 
 /** How long exiting overlays stay mounted so their CSS exit transition can
- *  play — must cover --speed-exit in index.css. */
+ *  play — must cover --speed-exit in styles/tokens.css. */
 export const EXIT_MS = 180
 
 /** Presence with an exit phase: `mounted` lags `open` by EXIT_MS on close.
@@ -74,6 +74,8 @@ export function reanchorLocked() {
   return true
 }
 
+const escStack: { current: () => void }[] = []
+
 /** Everything a full-screen dialog needs to behave like one: focus stays
  *  trapped inside (and returns to the opener on close), the page behind it
  *  can't scroll, and both Escape and the installed-PWA back button call
@@ -86,7 +88,12 @@ export function useOverlay<T extends HTMLElement>(onClose: () => void) {
   useScrollLock()
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current()
+    // overlays stack (a dialog over Settings): Escape closes the top one only,
+    // the same way the back button already does
+    escStack.push(closeRef)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && escStack[escStack.length - 1] === closeRef) closeRef.current()
+    }
     window.addEventListener('keydown', onKey)
     const unregister = onBackButton(() => {
       closeRef.current()
@@ -95,6 +102,8 @@ export function useOverlay<T extends HTMLElement>(onClose: () => void) {
     return () => {
       window.removeEventListener('keydown', onKey)
       unregister()
+      const i = escStack.indexOf(closeRef)
+      if (i !== -1) escStack.splice(i, 1)
     }
   }, [])
 

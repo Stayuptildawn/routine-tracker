@@ -1,0 +1,875 @@
+/* ============================================================
+   Components: the reusable parts every screen is built from.
+   React side: src/components/ui. Screens compose these and add layout
+   only (screens.css), they never restyle a button or a box of their own.
+   ============================================================ */
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* flex drops the whitespace text node between an icon and its label */
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.chip:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled,
+.icon-btn:disabled,
+.chip:disabled,
+.seg__opt:disabled {
+  opacity: 0.5;
+}
+
+/* the one filled action of a view */
+.btn--primary {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.btn--ghost {
+  color: var(--accent);
+  padding-inline: var(--sp-2);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.btn--danger {
+  background: var(--surface);
+  color: var(--danger);
+  border-color: var(--border-strong);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+/* a two-tap destructive button after its first tap (ConfirmButton) */
+.btn--armed,
+.btn--armed:hover {
+  background: var(--danger);
+  color: var(--on-danger);
+  white-space: nowrap;
+}
+
+.btn--sm {
+  padding-inline: var(--sp-3);
+  font-size: var(--fs-sm);
+}
+
+.btn--lg {
+  min-height: 3.5rem;
+  padding: var(--sp-3) var(--sp-5);
+  font-size: var(--fs-md);
+  border-radius: var(--r-md);
+}
+
+.btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: var(--r-full);
+  color: var(--text-dim);
+  font-size: 1.15rem;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.icon-btn--filled {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.icon-btn--filled:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.icon-btn--primary,
+.icon-btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+.icon-btn--danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.icon-btn[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  outline: 2px solid var(--accent);
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: var(--r-full);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* a row of actions: the primary first, the way out after it */
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.actions--end {
+  justify-content: flex-end;
+}
+
+.actions--stretch > .btn {
+  flex: 1;
+}
+
+/* ---------- single choice: segmented switch and chips ---------- */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+
+.seg__opt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  min-height: calc(var(--tap) - 6px);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: calc(var(--r-md) - 3px);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+}
+
+.seg__opt:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.seg__opt[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgb(50 44 36 / 0.14);
+}
+
+/* a switch that sits beside its label instead of filling the row */
+.seg--inline {
+  display: inline-grid;
+  min-width: 9rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+  overflow-wrap: anywhere; /* chips can carry the user's own session names */
+}
+
+.chip:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 700;
+}
+
+/* a question with its answers under it */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* label and control side by side */
+.field--inline {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* fields in a row: text grows, numbers and pickers keep their size */
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.field-row > .grow {
+  flex: 1 1 10rem;
+}
+
+.input--num {
+  width: 5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- cards and rows ---------- */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+}
+
+.card--feature {
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+.card--good {
+  border-color: var(--good);
+}
+
+.card--good .card__title {
+  color: var(--good);
+}
+
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.card__title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  min-width: 0;
+}
+
+/* a card that holds one list: rows run edge to edge under the title */
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding-block: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+
+.rows > .row:first-child {
+  border-top: 0;
+}
+
+.row__main {
+  flex: 1;
+  min-width: 0; /* long text wraps; the controls never leave the row */
+}
+
+.row__end {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex: none;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 3.25rem;
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  text-align: start;
+}
+
+.list-row:hover {
+  border-color: var(--border-strong);
+}
+
+.list-row > .icon {
+  color: var(--text-dim);
+}
+
+.list-row__label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.list-row__chevron {
+  color: var(--text-dim);
+}
+
+/* ---------- small labels ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge--accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge--good {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.badge--caps {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- feedback ---------- */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  white-space: pre-line; /* answers can be multi-line */
+}
+
+.notice > .icon {
+  margin-top: 0.2em;
+  font-size: 1.1em;
+}
+
+.notice__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* the dismiss button is a full tap target without making the box taller */
+.notice > .icon-btn {
+  margin: calc(-1 * var(--sp-2)) calc(-1 * var(--sp-2)) calc(-1 * var(--sp-2)) 0;
+}
+
+.notice--good {
+  background: var(--good-soft);
+}
+
+.notice--good > .icon {
+  color: var(--good);
+}
+
+.notice--warn {
+  background: var(--accent-soft);
+}
+
+.notice--warn > .icon {
+  color: var(--accent);
+}
+
+.notice--error {
+  background: var(--danger-soft);
+}
+
+.notice--error > .icon {
+  color: var(--danger);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--sp-4);
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.empty > .icon {
+  font-size: 1.5rem;
+}
+
+.progress {
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+
+.progress__fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent-strong);
+  border-radius: var(--r-full);
+  /* scaleX, not width: the fill moves on every tap and transform stays off
+     the layout path */
+  transform-origin: left;
+  transition: transform 420ms var(--ease);
+}
+
+[dir='rtl'] .progress__fill {
+  transform-origin: right;
+}
+
+.progress--good .progress__fill {
+  background: var(--good);
+}
+
+.progress--thick {
+  height: 6px;
+}
+
+/* calm placeholder while a screen loads: slow pulse, no shimmer sweep */
+.skel-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.skel-card + .skel-card {
+  margin-top: var(--sp-3);
+}
+
+.skel {
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  animation: skel-pulse 1.8s ease-in-out infinite;
+}
+
+.skel-line {
+  height: 0.9rem;
+}
+
+.skel-line.w40 {
+  width: 40%;
+}
+
+.skel-line.w60 {
+  width: 60%;
+}
+
+.skel-line.w80 {
+  width: 80%;
+}
+
+@keyframes skel-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- fold ---------- */
+.disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.disclosure__toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding-inline: 0 var(--sp-2);
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: start;
+}
+
+.disclosure__chevron {
+  transition: transform var(--speed) var(--ease);
+  transform: rotate(-90deg);
+}
+
+[dir='rtl'] .disclosure__chevron {
+  transform: rotate(90deg);
+}
+
+.disclosure__toggle[aria-expanded='true'] .disclosure__chevron {
+  transform: none;
+}
+
+.disclosure__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  animation: fade-in 200ms var(--ease-out);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- full-screen sheet ---------- */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--bg);
+  /* slides up on open (via @starting-style), drops back out faster on
+     close (via [data-closing], see usePresence in lib/overlay.ts) */
+  transition: opacity var(--speed-panel) var(--ease-panel), transform var(--speed-panel) var(--ease-panel);
+}
+
+@starting-style {
+  .sheet {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.sheet[data-closing] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
+}
+
+.sheet__progress {
+  position: absolute;
+  inset: 0 0 auto;
+  border-radius: 0;
+}
+
+.sheet__inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: var(--content-w);
+  margin: 0 auto;
+  padding: calc(var(--sp-3) + env(safe-area-inset-top)) max(var(--sp-4), env(safe-area-inset-right))
+    env(safe-area-inset-bottom) max(var(--sp-4), env(safe-area-inset-left));
+}
+
+.sheet__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: none;
+}
+
+/* the scrolling part of a sheet */
+.sheet__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* a hard flick never drags the page behind */
+  /* overflow-y:auto also clips sideways, which would shave the focus ring
+     off fields at the edges: widen the clip box without moving the content */
+  margin-inline: calc(-1 * var(--sp-2));
+  padding: var(--sp-3) var(--sp-2) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* actions pinned under the scrolling part */
+.sheet__foot {
+  flex: none;
+  padding-block: var(--sp-3) var(--sp-4);
+}
+
+/* ---------- dialog: bottom sheet on phones, centred card when wider ---------- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  transition: opacity var(--speed-panel) var(--ease-panel);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: 30rem;
+  max-height: 85dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--shadow-float);
+  padding: var(--sp-5) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
+  transition: transform var(--speed-panel) var(--ease-panel);
+}
+
+.dialog__title {
+  font-size: var(--fs-md);
+}
+
+@starting-style {
+  .dialog-backdrop {
+    opacity: 0;
+  }
+
+  .dialog {
+    transform: translateY(24px);
+  }
+}
+
+.dialog-backdrop[data-closing] {
+  opacity: 0;
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
+}
+
+.dialog-backdrop[data-closing] .dialog {
+  transform: translateY(24px);
+  transition-duration: var(--speed-exit);
+}
+
+@media (min-width: 640px) {
+  .dialog-backdrop {
+    align-items: center;
+    padding: var(--sp-4);
+  }
+
+  .dialog {
+    border-radius: var(--r-lg);
+    padding: var(--sp-5);
+  }
+}
+
+/* ---------- toast: what just happened, with the way back ---------- */
+.toast {
+  position: fixed;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--sp-3));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 620px);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  box-shadow: var(--shadow-float);
+  z-index: 30;
+  /* transition, not keyframes: undo toasts can be replaced mid-flight and
+     transitions retarget smoothly where keyframes would restart from zero */
+  transition: opacity var(--speed-panel) var(--ease-out), transform var(--speed-panel) var(--ease-out);
+}
+
+@starting-style {
+  .toast {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+.toast[data-closing] {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition-duration: var(--speed-exit);
+  pointer-events: none;
+}
+
+.toast__body {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---------- bar charts ---------- */
+.bars {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-end;
+}
+
+.bars--dense {
+  gap: 2px;
+}
+
+.bars__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bars__track {
+  width: 100%;
+  height: var(--bars-h, 72px); /* definite height so percentages resolve */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bars__bar {
+  width: 62%;
+  min-height: 2px;
+  background: var(--accent-strong);
+  border-radius: 4px 4px 0 0;
+  transition: height 420ms var(--ease);
+}
+
+.bars--dense .bars__bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+}
+
+.bars__bar--muted {
+  background: var(--good);
+}
+
+.bars__bar--future {
+  background: var(--surface-3);
+}
+
+.bars__value,
+.bars__label {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-height: 1.1rem;
+}
+
+.bars__value {
+  color: var(--text);
+}
+
+.bars__label--now {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ---------- layout helpers ---------- */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.stack--tight {
+  gap: var(--sp-2);
+}
+
+.stack--loose {
+  gap: var(--sp-5);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.push-end {
+  margin-inline-start: auto;
+}

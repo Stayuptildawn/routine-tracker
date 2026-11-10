@@ -7,6 +7,7 @@ import App from './App'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/legacy.css'
+import './styles/components.css'
 import './lib/pwaInstall' // register the beforeinstallprompt capture as early as possible
 import { armViewportFix } from './lib/viewportFix'
 

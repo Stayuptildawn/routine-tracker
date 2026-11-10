@@ -28,7 +28,7 @@ import type { IconName } from './components/Icon'
 type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect' | 'reminders'
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: 'now', label: t.app.tabNow, icon: 'sun' },
+  { id: 'now', label: t.app.tabToday, icon: 'sun' },
   { id: 'week', label: t.app.tabWeek, icon: 'calendar' },
   { id: 'gym', label: t.app.tabWorkout, icon: 'dumbbell' },
   { id: 'history', label: t.app.tabAiLog, icon: 'bot' },
