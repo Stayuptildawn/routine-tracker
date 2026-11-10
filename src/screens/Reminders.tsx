@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import type { Reminder } from '../lib/types'
@@ -6,6 +6,7 @@ import { setReminderStatus } from '../lib/actions'
 import { t, locale } from '../i18n'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
+import { Button, Card, Disclosure, EmptyState, ErrorState, ScreenHeader } from '../components/ui'
 import { MAX_LEN } from '../lib/limits'
 
 interface Category {
@@ -63,10 +64,20 @@ export function shortTime(time: string): string {
   return time.slice(0, 5)
 }
 
-export default function Reminders({ visible, onBack }: { visible: boolean; onBack: () => void; onOpenSettings: () => void }) {
+export default function Reminders({
+  visible,
+  onBack,
+  onOpenSettings,
+}: {
+  visible: boolean
+  onBack: () => void
+  onOpenSettings: () => void
+}) {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const loadedRef = useRef(false)
   const [adding, setAdding] = useState<Draft>({ text: '', category: 'Other', due: '', dueTime: '' })
   const [editing, setEditing] = useState<(Draft & { id: string }) | null>(null)
   const [showCleared, setShowCleared] = useState(false)
@@ -77,6 +88,14 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
       supabase.from('reminders').select('*').order('created_at', { ascending: false }).limit(200),
       supabase.from('routines').select('id, name').order('sort_order'),
     ])
+    // a failed first load must not pass for "nothing here"; a failed
+    // refresh keeps what is already on screen
+    if (remindersRes.error) {
+      if (!loadedRef.current) setLoadError(true)
+      return
+    }
+    setLoadError(false)
+    loadedRef.current = true
     setReminders((remindersRes.data as Reminder[]) ?? [])
     setCategories([...(routinesRes.data ?? []), { id: null, name: 'Other' }])
     setLoaded(true)
@@ -172,126 +191,112 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
     }))
     .filter((g) => g.items.length > 0)
 
+  /** The category, date and time pickers shared by the add form and the edit form. */
+  const whenFields = (d: Draft, set: (patch: Partial<Draft>) => void) => (
+    <div className="field-row">
+      <select value={d.category} aria-label={t.reminders.title} onChange={(e) => set({ category: e.target.value })}>
+        {categories.map((c) => (
+          <option key={c.name} value={c.name}>
+            {displayCat(c.name)}
+          </option>
+        ))}
+      </select>
+      {/* the words "due" and "at" are the hint that these empty-looking
+          pickers exist (iOS renders a blank box for an unset date) */}
+      <label className="field field--inline" title={t.reminders.dueTitle}>
+        <span className="field__label">{t.reminders.due}</span>
+        <input type="date" value={d.due} onChange={(e) => set({ due: e.target.value })} />
+      </label>
+      <label className="field field--inline" title={t.reminders.atTitle}>
+        <span className="field__label">{t.reminders.at}</span>
+        <input type="time" value={d.dueTime} onChange={(e) => set({ dueTime: e.target.value })} />
+      </label>
+    </div>
+  )
+
   return (
-    <div className="reminders">
-      <button className="link back" onClick={onBack}>
-        {t.common.back}
-      </button>
-      <h1>{t.reminders.title}</h1>
-      <p className="gentle">{t.reminders.subtitle}</p>
+    <div className="screen reminders">
+      <ScreenHeader title={t.reminders.title} lede={t.reminders.subtitle} onBack={onBack} onOpenSettings={onOpenSettings} />
+
+      {loadError && !loaded && <ErrorState onRetry={load} />}
+      {!loaded && !loadError && <Skeleton cards={2} />}
 
       {loaded && (
-        <div className="add-task reminder-add">
+        <Card>
           <input
             value={adding.text}
             maxLength={MAX_TEXT}
             onChange={(e) => setAdding({ ...adding, text: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && addReminder()}
             placeholder={t.reminders.addPh}
+            aria-label={t.reminders.addPh}
           />
-          <select value={adding.category} onChange={(e) => setAdding({ ...adding, category: e.target.value })}>
-            {categories.map((c) => (
-              <option key={c.name} value={c.name}>{displayCat(c.name)}</option>
-            ))}
-          </select>
-          <label className="reminder-field" title={t.reminders.dueTitle}>
-            <span className="gentle-inline">{t.reminders.due}</span>
-            <input type="date" value={adding.due} onChange={(e) => setAdding({ ...adding, due: e.target.value })} />
-          </label>
-          <label className="reminder-field" title={t.reminders.atTitle}>
-            <span className="gentle-inline">{t.reminders.at}</span>
-            <input
-              type="time"
-              value={adding.dueTime}
-              onChange={(e) => setAdding({ ...adding, dueTime: e.target.value })}
-            />
-          </label>
-          <button onClick={addReminder} disabled={!adding.text.trim()}>
+          {whenFields(adding, (patch) => setAdding({ ...adding, ...patch }))}
+          <Button variant="primary" className="reminders__add" onClick={addReminder} disabled={!adding.text.trim()}>
             {t.common.add}
-          </button>
-        </div>
+          </Button>
+        </Card>
       )}
-
-      {!loaded && <Skeleton cards={2} />}
 
       {loaded &&
         groups.map(({ cat, items }) => (
-          <section key={cat.name} className="reminder-group">
-            <h2>{displayCat(cat.name)}</h2>
-            {items.map((r) => {
-              const due = r.due_date ? describeDue(r.due_date, today) : null
-              if (editing?.id === r.id) {
-                return (
-                  <div key={r.id} className="edit-task reminder-edit">
-                    <div className="edit-task-row">
+          <Card key={cat.name} title={displayCat(cat.name)}>
+            <div className="rows">
+              {items.map((r) => {
+                const due = r.due_date ? describeDue(r.due_date, today) : null
+                if (editing?.id === r.id) {
+                  return (
+                    <div key={r.id} className="row reminder">
                       <input
                         value={editing.text}
                         maxLength={MAX_TEXT}
+                        aria-label={t.reminders.addPh}
                         onChange={(e) => setEditing({ ...editing, text: e.target.value })}
                         onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
                         autoFocus
                       />
+                      {whenFields(editing, (patch) => setEditing({ ...editing, ...patch }))}
+                      {editing.dueTime && <p className="hint">{t.reminders.pushNote(editing.dueTime, !!editing.due)}</p>}
+                      <div className="actions">
+                        <Button variant="primary" size="sm" onClick={saveEdit} disabled={!editing.text.trim()}>
+                          {t.common.save}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                          {t.common.cancel}
+                        </Button>
+                        {(editing.due || editing.dueTime) && (
+                          <Button variant="ghost" size="sm" className="push-end" onClick={() => setEditing({ ...editing, due: '', dueTime: '' })}>
+                            {t.common.clear}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="edit-task-row">
-                      <select value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
-                        {categories.map((c) => (
-                          <option key={c.name} value={c.name}>{displayCat(c.name)}</option>
-                        ))}
-                      </select>
-                      <label className="reminder-field">
-                        <span className="gentle-inline">{t.reminders.due}</span>
-                        <input
-                          type="date"
-                          value={editing.due}
-                          onChange={(e) => setEditing({ ...editing, due: e.target.value })}
-                        />
-                      </label>
-                      <label className="reminder-field">
-                        <span className="gentle-inline">{t.reminders.at}</span>
-                        <input
-                          type="time"
-                          value={editing.dueTime}
-                          onChange={(e) => setEditing({ ...editing, dueTime: e.target.value })}
-                        />
-                      </label>
-                      {(editing.due || editing.dueTime) && (
-                        <button className="link" onClick={() => setEditing({ ...editing, due: '', dueTime: '' })}>
-                          {t.common.clear}
-                        </button>
-                      )}
-                    </div>
-                    {editing.dueTime && (
-                      <p className="gentle">
-                        {t.reminders.pushNote(editing.dueTime, !!editing.due)}
-                      </p>
-                    )}
-                    <div className="edit-task-row">
-                      <button className="save" onClick={saveEdit} disabled={!editing.text.trim()}>
-                        {t.common.save}
-                      </button>
-                      <button className="link" onClick={() => setEditing(null)}>
-                        {t.common.cancel}
-                      </button>
-                    </div>
-                  </div>
-                )
-              }
-              return (
-                <div key={r.id} className="reminder">
-                  <div className="reminder-main">
-                    <span className="reminder-text">{r.raw_text}</span>
-                    <div className="reminder-tags">
+                  )
+                }
+                return (
+                  <div key={r.id} className="row reminder">
+                    <p>{r.raw_text}</p>
+                    <div className="cluster">
                       {due && (
-                        <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
-                          <Icon name={due.overdue ? 'hourglass' : 'calendar'} />{' '}
-                          {due.label}
+                        <span className={due.overdue ? 'badge badge--accent' : 'badge'}>
+                          <Icon name={due.overdue ? 'hourglass' : 'calendar'} /> {due.label}
                           {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
                         </span>
                       )}
-                      {r.status === 'auto' && <span className="badge">{t.reminders.aiSorted}</span>}
-                      <span className="cat-pill">{displayCat(r.final_category ?? 'Other')}</span>
-                      <button
-                        className="link reminder-edit-link"
+                      {r.status === 'auto' && <span className="badge badge--accent">{t.reminders.aiSorted}</span>}
+                      <span className="badge">{displayCat(r.final_category ?? 'Other')}</span>
+                    </div>
+                    <div className="actions">
+                      <Button size="sm" onClick={() => clear(r, 'done')}>
+                        {t.common.done}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => clear(r, 'dismissed')}>
+                        {t.common.dismiss}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="push-end"
                         onClick={() =>
                           setEditing({
                             id: r.id,
@@ -302,51 +307,39 @@ export default function Reminders({ visible, onBack }: { visible: boolean; onBac
                           })
                         }
                       >
-                        {t.common.edit}
-                      </button>
+                        {t.common.Edit}
+                      </Button>
                     </div>
                   </div>
-                  <div className="task-buttons">
-                    <button className="do" onClick={() => clear(r, 'done')}>
-                      {t.common.done}
-                    </button>
-                    <button className="skip" onClick={() => clear(r, 'dismissed')}>
-                      {t.common.dismiss}
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </section>
+                )
+              })}
+            </div>
+          </Card>
         ))}
 
-      {loaded && pending.length === 0 && (
-        <p className="gentle">{t.reminders.nothingPending}</p>
-      )}
+      {loaded && pending.length === 0 && <EmptyState icon="bell">{t.reminders.nothingPending}</EmptyState>}
 
       {loaded && cleared.length > 0 && (
-        <div className="cleared-section">
-          <button className="link" onClick={() => setShowCleared(!showCleared)}>
-            {showCleared ? t.reminders.hideCleared : t.reminders.cleared(cleared.length)}
-          </button>
-          {showCleared &&
-            cleared.map((r) => (
-              <div key={r.id} className="reminder cleared">
-                <div className="reminder-main">
-                  <span className="reminder-text">{r.raw_text}</span>
-                  <div className="reminder-tags">
-                    <span className={r.status === 'done' ? 'badge confirmed' : 'badge undone'}>
+        <Disclosure label={t.reminders.cleared(cleared.length)} open={showCleared} onToggle={setShowCleared}>
+          <div className="card rows reminders__cleared">
+            {cleared.map((r) => (
+              <div key={r.id} className="row">
+                <div className="row__main">
+                  <p className="reminders__cleared-text">{r.raw_text}</p>
+                  <p className="cluster">
+                    <span className={r.status === 'done' ? 'badge badge--good' : 'badge'}>
                       {r.status === 'done' ? t.reminders.doneBadge : t.reminders.dismissedBadge}
                     </span>
-                    <span className="cleared-when">{clearedWhen(r.updated_at)}</span>
-                  </div>
+                    <span className="meta">{clearedWhen(r.updated_at)}</span>
+                  </p>
                 </div>
-                <button className="link" onClick={() => restore(r)}>
+                <Button variant="ghost" size="sm" onClick={() => restore(r)}>
                   {t.common.Restore}
-                </button>
+                </Button>
               </div>
             ))}
-        </div>
+          </div>
+        </Disclosure>
       )}
     </div>
   )

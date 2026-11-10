@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { localDate } from '../lib/types'
 import { useCardioTracking } from '../lib/cardioTracking'
-import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
 import { t, locale } from '../i18n'
 import Skeleton from '../components/Skeleton'
-import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
+import { Card, Disclosure, ListRow, ScreenHeader, Segmented } from '../components/ui'
 
 interface DayStat {
   date: string
@@ -101,7 +100,15 @@ interface MonthlyReflection {
   body: string
 }
 
-export default function Reflect({ visible }: { visible: boolean; onOpenSettings: () => void; onOpenLog: () => void }) {
+export default function Reflect({
+  visible,
+  onOpenSettings,
+  onOpenLog,
+}: {
+  visible: boolean
+  onOpenSettings: () => void
+  onOpenLog: () => void
+}) {
   const [days, setDays] = useState<DayStat[]>([])
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [training, setTraining] = useState<TrainingReview | null>(null) // latest weekly AI training review
@@ -211,107 +218,101 @@ export default function Reflect({ visible }: { visible: boolean; onOpenSettings:
   const max = Math.max(1, ...days.map((d) => d.done))
   const strongest = days.length ? days.reduce((a, b) => (b.done > a.done ? b : a)) : null
 
+  const exploreTotal = explore ? explore.values.reduce((a, b) => a + b, 0) : 0
+  const skipped = days.reduce((n, d) => n + d.skipped, 0)
+
   return (
-    <div className="reflect">
-      <h1>{t.reflect.title}</h1>
-      <p className="gentle">{t.reflect.subtitle}</p>
-      {reflection && (() => {
-        const monday = new Date()
-        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
-        const thisWeek = reflection.week_start === localDate(monday)
-        return (
-          <div className="reflection-card">
-            <p className="eyebrow">{thisWeek ? t.reflect.noticedThisWeek : t.reflect.noticedRecently}</p>
-            <p className="reflection-body">{reflection.body}</p>
-          </div>
-        )
-      })()}
+    <div className="screen reflect">
+      <ScreenHeader title={t.reflect.title} lede={t.reflect.subtitle} onOpenSettings={onOpenSettings} />
+
+      {reflection &&
+        (() => {
+          const monday = new Date()
+          monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+          const thisWeek = reflection.week_start === localDate(monday)
+          return (
+            <section className="card reflection">
+              <p className="eyebrow">{thisWeek ? t.reflect.noticedThisWeek : t.reflect.noticedRecently}</p>
+              <p className="reflection__body">{reflection.body}</p>
+            </section>
+          )
+        })()}
       {training && (
-        <div className="reflection-card">
+        <section className="card reflection">
           <p className="eyebrow">{t.reflect.trainingTitle}</p>
-          <p className="reflection-body">{training.body}</p>
-        </div>
+          <p className="reflection__body">{training.body}</p>
+        </section>
       )}
       {monthly.length > 0 && (
-        <div className="training-history">
-          <button className="link" onClick={() => setShowMonthly((v) => !v)}>
-            <Icon name={showMonthly ? 'arrow-up' : 'arrow-down'} /> {t.reflect.monthlyReflections(monthly.length)}
-          </button>
-          {showMonthly &&
-            monthly.map((m) => (
-              <div key={m.month_start} className="reflection-card">
-                <p className="eyebrow">
-                  {new Date(m.month_start + 'T00:00:00').toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
-                </p>
-                <p className="reflection-body">{m.body}</p>
-              </div>
-            ))}
-        </div>
-      )}
-      {!loaded && <Skeleton cards={1} />}
-      <div className="reflect-bars" style={loaded ? undefined : { display: 'none' }}>
-        {days.map((d) => (
-          <div key={d.date} className="reflect-day">
-            <div className="bar-wrap">
-              <div className="bar" style={{ transform: `scaleY(${Math.max(d.done / max, 0.02)})` }} />
-            </div>
-            <span className="bar-count">{d.done || ''}</span>
-            <span className="bar-day">{d.dayName}</span>
-          </div>
-        ))}
-      </div>
-      {!loaded ? null : totalDone > 0 ? (
-        <div className="reflect-notes">
-          <p>
-            {t.reflect.completedLead}
-            <strong>{totalDone}</strong>
-            {t.reflect.completedTail}
-            {strongest && strongest.done > 0 && <>{t.reflect.strongestDay(strongest.dayName)}</>}
-          </p>
-          {days.reduce((n, d) => n + d.skipped, 0) > 0 && (
-            <p>{t.reflect.skippedNote(days.reduce((n, d) => n + d.skipped, 0))}</p>
-          )}
-        </div>
-      ) : (
-        <p className="gentle">{t.reflect.nothingLogged}</p>
+        <Disclosure label={t.reflect.monthlyReflections(monthly.length)} open={showMonthly} onToggle={setShowMonthly}>
+          {monthly.map((m) => (
+            <section key={m.month_start} className="card reflection">
+              <p className="eyebrow">
+                {new Date(m.month_start + 'T00:00:00').toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+              </p>
+              <p className="reflection__body">{m.body}</p>
+            </section>
+          ))}
+        </Disclosure>
       )}
 
-      <section className="reflect-bars explore-card">
-        <div className="explore-inner">
-          <h2>
-            {t.reflect.explore}
-            <span className="routine-progress">
-              {' '}
-              {t.reflect.frames[frame]?.hint}
-              {explore
-                ? ` · ${metric === 'cardio' ? t.reflect.kmTotal(Math.round(explore.values.reduce((a, b) => a + b, 0) * 10) / 10) : t.reflect.total(Math.round(explore.values.reduce((a, b) => a + b, 0)))}`
-                : ''}
-            </span>
-          </h2>
-          <div className="energy-row explore-row">
-            {METRICS.filter((m) => cardioOn || m.id !== 'cardio').map((m) => (
-              <button key={m.id} className={metric === m.id ? 'energy-btn active' : 'energy-btn'} onClick={() => setMetric(m.id)}>
-                <Icon name={m.icon} /> {m.label}
-              </button>
+      {!loaded && <Skeleton cards={1} />}
+      {loaded && (
+        <Card>
+          <div className="bars" style={{ ['--bars-h' as string]: '96px' }}>
+            {days.map((d) => (
+              <div key={d.date} className="bars__col">
+                <span className="bars__value">{d.done || ''}</span>
+                <div className="bars__track">
+                  <div className="bars__bar" style={{ height: `${Math.max((d.done / max) * 100, 2)}%` }} />
+                </div>
+                <span className="bars__label">{d.dayName}</span>
+              </div>
             ))}
           </div>
-          <div className="energy-row explore-row">
-            {FRAMES.map((f) => (
-              // the single letters mean nothing until you've picked one, and
-              // touch has no hover to reveal it - carry the hint on the button
-              <button
-                key={f}
-                className={frame === f ? 'energy-btn active' : 'energy-btn'}
-                title={t.reflect.frames[f]?.hint}
-                aria-label={t.reflect.frames[f]?.hint}
-                onClick={() => setFrame(f)}
-              >
-                {t.reflect.frames[f]?.label}
-              </button>
-            ))}
-          </div>
-          {explore && (
-            <p className="gentle explore-stats">
+          {totalDone > 0 ? (
+            <>
+              <p>
+                {t.reflect.completedLead}
+                <strong>{totalDone}</strong>
+                {t.reflect.completedTail}
+                {strongest && strongest.done > 0 && <>{t.reflect.strongestDay(strongest.dayName)}</>}
+              </p>
+              {skipped > 0 && <p>{t.reflect.skippedNote(skipped)}</p>}
+            </>
+          ) : (
+            <p className="hint">{t.reflect.nothingLogged}</p>
+          )}
+        </Card>
+      )}
+
+      <Card
+        title={t.reflect.explore}
+        meta={
+          <>
+            {t.reflect.frames[frame]?.hint}
+            {explore
+              ? ` · ${metric === 'cardio' ? t.reflect.kmTotal(Math.round(exploreTotal * 10) / 10) : t.reflect.total(Math.round(exploreTotal))}`
+              : ''}
+          </>
+        }
+      >
+        <Segmented
+          label={t.reflect.explore}
+          value={metric}
+          onChange={setMetric}
+          options={METRICS.filter((m) => cardioOn || m.id !== 'cardio').map((m) => ({ value: m.id, label: m.label, icon: m.icon }))}
+        />
+        {/* the single letters mean nothing until you've picked one, and touch
+            has no hover to reveal it - each option carries its hint */}
+        <Segmented
+          value={frame}
+          onChange={setFrame}
+          options={FRAMES.map((f) => ({ value: f, label: t.reflect.frames[f]?.label, hint: t.reflect.frames[f]?.hint }))}
+        />
+        {explore ? (
+          <>
+            <p className="hint">
               {(() => {
                 const vs = explore.values
                 const f = (v: number) => Math.round(v * 10) / 10
@@ -323,55 +324,32 @@ export default function Reflect({ visible }: { visible: boolean; onOpenSettings:
                 )
               })()}
             </p>
-          )}
-          {explore ? (
-            <div className="explore-bars">
+            <div className={explore.slots.length > 12 ? 'bars bars--dense' : 'bars'} style={{ ['--bars-h' as string]: '110px' }}>
               {(() => {
-                const max = Math.max(1, ...explore.values)
+                const top = Math.max(1, ...explore.values)
                 return explore.slots.map((s, i) => {
                   const v = explore.values[i]
                   const shown = metric === 'cardio' ? Math.round(v * 10) / 10 : Math.round(v)
+                  const last = i === explore.slots.length - 1
                   return (
-                    <div key={s.key} className="explore-col" title={`${s.key}: ${shown}${metric === 'cardio' ? ' km' : ''}`}>
-                      <div className="bar-wrap explore-wrap">
-                        <div className={i === explore.slots.length - 1 ? 'bar explore-bar now' : 'bar explore-bar'} style={{ height: `${(v / max) * 100}%` }} />
+                    <div key={s.key} className="bars__col" title={`${s.key}: ${shown}${metric === 'cardio' ? ' km' : ''}`}>
+                      {explore.slots.length <= 12 && <span className="bars__value">{shown || ''}</span>}
+                      <div className="bars__track">
+                        <div className={last ? 'bars__bar' : 'bars__bar bars__bar--muted'} style={{ height: `${(v / top) * 100}%` }} />
                       </div>
-                      {explore.slots.length <= 12 && <span className="bar-count">{shown || ''}</span>}
-                      <span className="bar-day">{s.label}</span>
+                      <span className="bars__label">{s.label}</span>
                     </div>
                   )
                 })
               })()}
             </div>
-          ) : (
-            <p className="gentle">{t.common.loading}</p>
-          )}
-        </div>
-      </section>
-
-      <p className="gentle export-row">
-        {t.reflect.dataYours}
-        <button className="link" onClick={() => exportTaskLogs()}>
-          <Icon name="download" /> {t.reflect.csvTasks}
-        </button>
-        <button className="link" onClick={() => exportWorkoutLogs()}>
-          <Icon name="download" /> {t.reflect.csvWorkouts}
-        </button>
-        {cardioOn && (
-          <button className="link" onClick={() => exportCardioLogs()}>
-            <Icon name="download" /> {t.reflect.csvCardio}
-          </button>
+          </>
+        ) : (
+          <p className="hint">{t.common.loading}</p>
         )}
-        <button className="link" onClick={() => exportTrainingSets()}>
-          <Icon name="download" /> {t.reflect.csvTraining}
-        </button>
-        <button className="link" onClick={() => exportCheckins()}>
-          <Icon name="download" /> {t.reflect.csvCheckins}
-        </button>
-        <button className="link" onClick={() => exportReminders()}>
-          <Icon name="download" /> {t.reflect.csvReminders}
-        </button>
-      </p>
+      </Card>
+
+      <ListRow icon="bot" label={t.history.title} onClick={onOpenLog} />
     </div>
   )
 }

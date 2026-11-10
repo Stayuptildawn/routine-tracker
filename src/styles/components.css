@@ -165,10 +165,6 @@
   gap: var(--sp-2);
 }
 
-.actions--end {
-  justify-content: flex-end;
-}
-
 .actions--stretch > .btn {
   flex: 1;
 }
@@ -202,7 +198,7 @@
 }
 
 .seg__opt[aria-pressed='true'] {
-  background: var(--surface);
+  background: var(--raised);
   color: var(--text);
   font-weight: 700;
   box-shadow: 0 1px 2px rgb(50 44 36 / 0.14);
@@ -833,10 +829,6 @@
   background: var(--good);
 }
 
-.bars__bar--future {
-  background: var(--surface-3);
-}
-
 .bars__value,
 .bars__label {
   font-size: var(--fs-xs);
@@ -865,10 +857,6 @@
 
 .stack--tight {
   gap: var(--sp-2);
-}
-
-.stack--loose {
-  gap: var(--sp-5);
 }
 
 .cluster {

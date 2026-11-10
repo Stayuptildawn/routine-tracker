@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useOverlay } from '../lib/overlay'
 import { signOut } from '../lib/session'
 import { translateSeededContent } from '../lib/translateContent'
 import { saveCardioTracking, useCardioTracking } from '../lib/cardioTracking'
+import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
+import { exportCardioLogs, exportCheckins, exportReminders, exportTaskLogs, exportTrainingSets, exportWorkoutLogs } from '../lib/csv'
 import { t, locale, lang, availableLanguages, setLanguage } from '../i18n'
-import Icon from '../components/Icon'
-import type { IconName } from '../components/Icon'
+import { Button, Dialog, Notice, Segmented, Sheet } from '../components/ui'
+import type { ChoiceOption } from '../components/ui'
+import InstallSection from './InstallSection'
 
 export type Theme = 'auto' | 'light' | 'dark'
 
@@ -18,10 +20,15 @@ interface Props {
   closing?: boolean
 }
 
-const THEME_OPTIONS: [Theme, IconName, string][] = [
-  ['auto', 'circle-half', t.settings.themeAuto],
-  ['light', 'sun', t.settings.themeLight],
-  ['dark', 'moon', t.settings.themeDark],
+const THEME_OPTIONS: ChoiceOption<Theme>[] = [
+  { value: 'auto', label: t.settings.themeAuto, icon: 'circle-half' },
+  { value: 'light', label: t.settings.themeLight, icon: 'sun' },
+  { value: 'dark', label: t.settings.themeDark, icon: 'moon' },
+]
+
+const ON_OFF: ChoiceOption<boolean>[] = [
+  { value: true, label: t.settings.cardioOn },
+  { value: false, label: t.settings.cardioOff },
 ]
 
 const FALLBACK_ZONES = [
@@ -55,6 +62,9 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
   // app, so an accidental tap must never fire it)
   const [langDraft, setLangDraft] = useState(lang)
   const cardioOn = useCardioTracking()
+  // push nudges: 'unsupported' (no push here, or the demo) hides the switch
+  const [nudges, setNudges] = useState<'unknown' | 'on' | 'off' | 'unsupported'>('unknown')
+  const [nudgesBlocked, setNudgesBlocked] = useState(false)
   // set by Save just before the reload: the reopened Settings offers - once -
   // to also translate the seeded content into the fresh language
   const [offerTranslate, setOfferTranslate] = useState(() => sessionStorage.getItem('offer-translate') === '1')
@@ -75,6 +85,7 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
       setEmail(data.user?.email ?? '')
       setCreatedAt(data.user?.created_at ?? '')
     })
+    getNudgeState().then(setNudges)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveTz(value: string) {
@@ -83,6 +94,18 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
     await supabase
       .from('user_settings')
       .upsert({ timezone: value, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  }
+
+  async function switchNudges(on: boolean) {
+    setNudgesBlocked(false)
+    if (on) {
+      const result = await enableNudges()
+      if (result === 'on') setNudges('on')
+      else if (result === 'denied') setNudgesBlocked(true)
+    } else {
+      await disableNudges()
+      setNudges('off')
+    }
   }
 
   async function savePassword() {
@@ -103,257 +126,220 @@ export default function Settings({ theme, onTheme, onClose, closing }: Props) {
     setPwMsg(error ? error.message : t.settings.pwSaved)
   }
 
-  // Escape and the installed-PWA back button close Settings like the close link
-  const trapRef = useOverlay<HTMLDivElement>(onClose)
+  async function saveLanguage() {
+    // come back to Settings after the reload, not the Today tab - and offer
+    // the content translation there, once
+    sessionStorage.setItem('reopen-settings', '1')
+    sessionStorage.setItem('offer-translate', '1')
+    // the server needs to know too: the weekly reflection is written in this
+    // language and nudges use its strings
+    await supabase
+      .from('user_settings')
+      .upsert({ language: langDraft, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .then(
+        () => {},
+        () => {}, // offline: the UI still switches
+      )
+    setLanguage(langDraft)
+  }
+
+  const exports: [string, () => void][] = [
+    [t.reflect.csvTasks, exportTaskLogs],
+    [t.reflect.csvWorkouts, exportWorkoutLogs],
+    ...(cardioOn ? ([[t.reflect.csvCardio, exportCardioLogs]] as [string, () => void][]) : []),
+    [t.reflect.csvTraining, exportTrainingSets],
+    [t.reflect.csvCheckins, exportCheckins],
+    [t.reflect.csvReminders, exportReminders],
+  ]
 
   return (
-    <div
-      ref={trapRef}
-      className="player settings-screen"
-      data-closing={closing || undefined}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t.settings.title}
-    >
-      <div className="player-inner">
-        <div className="player-top">
-          <span className="eyebrow">{t.settings.title}</span>
-          <button className="link" onClick={onClose}>
-            {t.settings.close}
-          </button>
-        </div>
+    <Sheet title={t.settings.title} label={t.settings.title} onClose={onClose} closeLabel={t.settings.close} closing={closing}>
+      <div className="sheet__body settings">
+        <section className="settings__section">
+          <h2>{t.settings.theme}</h2>
+          <Segmented options={THEME_OPTIONS} value={theme} onChange={onTheme} label={t.settings.theme} />
+          <p className="hint">{t.settings.autoFollows}</p>
+        </section>
 
-        <div className="settings-body">
-          <section className="settings-section">
-            <h2>{t.settings.theme}</h2>
-            <div className="energy-row">
-              {THEME_OPTIONS.map(([value, icon, label]) => (
-                <button
-                  key={value}
-                  className={theme === value ? 'energy-btn active' : 'energy-btn'}
-                  aria-pressed={theme === value}
-                  onClick={() => onTheme(value)}
-                >
-                  <Icon name={icon} /> {label}
-                </button>
+        {availableLanguages.length > 1 && (
+          <section className="settings__section">
+            <h2>{t.settings.language}</h2>
+            <select value={langDraft} aria-label={t.settings.language} onChange={(e) => setLangDraft(e.target.value)}>
+              {availableLanguages.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
               ))}
-            </div>
-            <p className="gentle">{t.settings.autoFollows}</p>
+            </select>
+            {langDraft !== lang && (
+              <div className="actions">
+                <Button variant="primary" onClick={saveLanguage}>
+                  {t.common.save}
+                </Button>
+                <Button variant="ghost" onClick={() => setLangDraft(lang)}>
+                  {t.common.cancel}
+                </Button>
+              </div>
+            )}
           </section>
+        )}
 
-          {availableLanguages.length > 1 && (
-            <section className="settings-section">
-              <h2>{t.settings.language}</h2>
-              <select className="settings-tz" value={langDraft} onChange={(e) => setLangDraft(e.target.value)}>
-                {availableLanguages.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-              {langDraft !== lang && (
-                <div className="sign-out-actions lang-save-row">
-                  <button
-                    className="save"
-                    onClick={async () => {
-                      // come back to Settings after the reload, not the Now
-                      // tab - and offer the content translation there, once
-                      sessionStorage.setItem('reopen-settings', '1')
-                      sessionStorage.setItem('offer-translate', '1')
-                      // the server needs to know too: the weekly reflection is
-                      // written in this language and nudges use its strings
-                      await supabase
-                        .from('user_settings')
-                        .upsert({ language: langDraft, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-                        .then(() => {}, () => {}) // offline: the UI still switches
-                      setLanguage(langDraft)
-                    }}
-                  >
-                    {t.common.save}
-                  </button>
-                  <button className="energy-btn" onClick={() => setLangDraft(lang)}>
-                    {t.common.cancel}
-                  </button>
-                </div>
-              )}
-            </section>
+        <section className="settings__section">
+          <h2>{t.settings.notifications}</h2>
+          {(nudges === 'on' || nudges === 'off') && (
+            <div className="field field--inline">
+              <span className="field__label settings__grow">{nudges === 'on' ? t.now.nudgesOn : t.now.enableNudges}</span>
+              <Segmented className="seg--inline" options={ON_OFF} value={nudges === 'on'} onChange={switchNudges} label={t.settings.notifications} />
+            </div>
           )}
-
-          <section className="settings-section">
-            <h2>{t.settings.timezone}</h2>
+          {nudgesBlocked && <Notice tone="warn">{t.now.notifBlocked}</Notice>}
+          <div className="field">
+            <label className="field__label" htmlFor="settings-tz">
+              {t.settings.timezone}
+            </label>
             {tzSaved === null ? (
-              <p className="gentle">{t.common.loading}</p>
+              <p className="hint">{t.common.loading}</p>
             ) : (
               <>
-                <select className="settings-tz" value={tz} onChange={(e) => saveTz(e.target.value)}>
+                <select id="settings-tz" value={tz} onChange={(e) => saveTz(e.target.value)}>
                   {(zones.includes(tz) ? zones : [tz, ...zones]).map((z) => (
                     <option key={z} value={z}>
                       {z}
                     </option>
                   ))}
                 </select>
-                <p className="gentle">
+                <p className="hint">
                   {t.settings.tzNote}
                   {!tzSaved && t.settings.tzNotSaved(deviceTz)}
                   {tzSaved && t.settings.tzSaved}
                 </p>
-                {!tzSaved && (
-                  <button className="start-session" onClick={() => saveTz(deviceTz)}>
-                    {t.settings.useDeviceTz(deviceTz)}
-                  </button>
-                )}
+                {!tzSaved && <Button onClick={() => saveTz(deviceTz)}>{t.settings.useDeviceTz(deviceTz)}</Button>}
               </>
             )}
-          </section>
+          </div>
+        </section>
 
-          <section className="settings-section">
-            <h2>{t.settings.cardioTracking}</h2>
-            <div className="energy-row">
-              {([true, false] as const).map((on) => (
-                <button
-                  key={String(on)}
-                  className={cardioOn === on ? 'energy-btn active' : 'energy-btn'}
-                  aria-pressed={cardioOn === on}
-                  onClick={() => saveCardioTracking(on)}
-                >
-                  {on ? t.settings.cardioOn : t.settings.cardioOff}
-                </button>
-              ))}
-            </div>
-            <p className="gentle">{t.settings.cardioHint}</p>
-          </section>
+        <section className="settings__section">
+          <h2>{t.settings.cardioTracking}</h2>
+          <Segmented className="seg--inline" options={ON_OFF} value={cardioOn} onChange={saveCardioTracking} label={t.settings.cardioTracking} />
+          <p className="hint">{t.settings.cardioHint}</p>
+        </section>
 
-          <section className="settings-section">
-            <h2>{t.settings.account}</h2>
-            <dl className="account-info">
-              <dt>{t.settings.email}</dt>
-              <dd>{email || '…'}</dd>
-              {createdAt && (
-                <>
-                  <dt>{t.settings.memberSince}</dt>
-                  <dd>{new Date(createdAt).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })}</dd>
-                </>
-              )}
-            </dl>
+        <InstallSection />
 
-            <div className="settings-pw">
-              <input
-                type="password"
-                placeholder={t.settings.newPasswordPh}
-                value={pw}
-                onChange={(e) => setPw(e.target.value)}
-                minLength={6}
-                autoComplete="new-password"
-              />
-              <input
-                type="password"
-                placeholder={t.settings.repeatPasswordPh}
-                value={pw2}
-                onChange={(e) => setPw2(e.target.value)}
-                minLength={6}
-                autoComplete="new-password"
-                onKeyDown={(e) => e.key === 'Enter' && savePassword()}
-              />
-              <button
-                className="start-session"
-                onClick={savePassword}
-                disabled={pwBusy || pw.length < 6 || pw !== pw2}
-              >
-                {pwBusy ? '…' : t.settings.savePassword}
-              </button>
-            </div>
-            <p className="gentle">
-              {pwMsg ??
-                (pw && pw2 && pw !== pw2
-                  ? t.settings.pwMismatchYet
-                  : t.settings.invitedNote)}
-            </p>
+        <section className="settings__section">
+          <h2>{t.settings.data}</h2>
+          <p className="hint">{t.reflect.dataYours}</p>
+          <div className="cluster">
+            {exports.map(([label, run]) => (
+              <Button key={label} size="sm" icon="download" onClick={() => run()}>
+                {label}
+              </Button>
+            ))}
+          </div>
+        </section>
 
-            {confirmSignOut ? (
-              <div className="sign-out-confirm">
-                <p className="gentle">{t.settings.signOutQ(email)}</p>
-                <div className="sign-out-actions">
-                  <button className="sign-out" onClick={signOut}>
-                    {t.settings.yesSignOut}
-                  </button>
-                  <button className="link" onClick={() => setConfirmSignOut(false)}>
-                    {t.common.cancel}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button className="sign-out" onClick={() => setConfirmSignOut(true)}>
-                {t.settings.signOut}
-              </button>
+        <section className="settings__section">
+          <h2>{t.settings.account}</h2>
+          <dl className="settings__facts">
+            <dt>{t.settings.email}</dt>
+            <dd>{email || '…'}</dd>
+            {createdAt && (
+              <>
+                <dt>{t.settings.memberSince}</dt>
+                <dd>{new Date(createdAt).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })}</dd>
+              </>
             )}
-          </section>
+          </dl>
 
-          <section className="settings-section">
-            <h2>{t.settings.about}</h2>
-            <p className="gentle">
-              {t.settings.aboutBeforeLicense}
-              <a
-                className="text-link"
-                href="https://github.com/Stayuptildawn/routine-tracker/blob/main/LICENSE"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                AGPL-3.0
-              </a>
-              {t.settings.aboutAfterLicense}
-            </p>
-            <a
-              className="text-link"
-              href="https://github.com/Stayuptildawn/routine-tracker"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t.settings.sourceCode}
+          <input
+            type="password"
+            placeholder={t.settings.newPasswordPh}
+            aria-label={t.settings.newPasswordPh}
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            minLength={6}
+            autoComplete="new-password"
+          />
+          <input
+            type="password"
+            placeholder={t.settings.repeatPasswordPh}
+            aria-label={t.settings.repeatPasswordPh}
+            value={pw2}
+            onChange={(e) => setPw2(e.target.value)}
+            minLength={6}
+            autoComplete="new-password"
+            onKeyDown={(e) => e.key === 'Enter' && savePassword()}
+          />
+          <Button busy={pwBusy} onClick={savePassword} disabled={pw.length < 6 || pw !== pw2}>
+            {t.settings.savePassword}
+          </Button>
+          <p className="hint" role="status">
+            {pwMsg ?? (pw && pw2 && pw !== pw2 ? t.settings.pwMismatchYet : t.settings.invitedNote)}
+          </p>
+
+          {confirmSignOut ? (
+            <div className="stack stack--tight">
+              <p className="hint">{t.settings.signOutQ(email)}</p>
+              <div className="actions">
+                <Button variant="danger" onClick={signOut}>
+                  {t.settings.yesSignOut}
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmSignOut(false)}>
+                  {t.common.cancel}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={() => setConfirmSignOut(true)}>{t.settings.signOut}</Button>
+          )}
+        </section>
+
+        <section className="settings__section">
+          <h2>{t.settings.about}</h2>
+          <p className="hint">
+            {t.settings.aboutBeforeLicense}
+            <a href="https://github.com/Stayuptildawn/routine-tracker/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+              AGPL-3.0
             </a>
-          </section>
-        </div>
+            {t.settings.aboutAfterLicense}
+          </p>
+          <a href="https://github.com/Stayuptildawn/routine-tracker" target="_blank" rel="noopener noreferrer">
+            {t.settings.sourceCode}
+          </a>
+        </section>
       </div>
 
       {offerTranslate && (
-        <div className="install-help-backdrop" onClick={() => !translating && setOfferTranslate(false)}>
-          <div
-            className="install-help"
-            role="dialog"
-            aria-label={t.settings.translateContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="install-title">{t.settings.translateContent}</p>
-            <p className="install-body">
-              {translated !== null ? t.settings.translateContentDone(translated) : t.settings.translateContentNote}
-            </p>
-            {translated === null ? (
-              <div className="install-actions">
-                <button
-                  className="start-session"
-                  disabled={translating}
-                  onClick={async () => {
-                    setTranslating(true)
-                    try {
-                      setTranslated(await translateSeededContent(lang))
-                    } finally {
-                      setTranslating(false)
-                    }
-                  }}
-                >
-                  {translating ? '…' : t.settings.translateNow}
-                </button>
-                <button className="link install-later" onClick={() => setOfferTranslate(false)}>
-                  {t.settings.translateSkip}
-                </button>
-              </div>
-            ) : (
-              <button className="start-session" onClick={() => setOfferTranslate(false)}>
-                {t.common.close}
-              </button>
-            )}
-          </div>
-        </div>
+        <Dialog title={t.settings.translateContent} onClose={() => !translating && setOfferTranslate(false)}>
+          <p className="hint">{translated !== null ? t.settings.translateContentDone(translated) : t.settings.translateContentNote}</p>
+          {translated === null ? (
+            <div className="actions">
+              <Button
+                variant="primary"
+                busy={translating}
+                onClick={async () => {
+                  setTranslating(true)
+                  try {
+                    setTranslated(await translateSeededContent(lang))
+                  } finally {
+                    setTranslating(false)
+                  }
+                }}
+              >
+                {t.settings.translateNow}
+              </Button>
+              <Button variant="ghost" onClick={() => setOfferTranslate(false)} disabled={translating}>
+                {t.settings.translateSkip}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="primary" onClick={() => setOfferTranslate(false)}>
+              {t.common.close}
+            </Button>
+          )}
+        </Dialog>
       )}
-    </div>
+    </Sheet>
   )
 }

@@ -8,6 +8,7 @@ import {
 } from '../lib/pwaInstall'
 import { t } from '../i18n'
 import Icon from '../components/Icon'
+import { Button } from '../components/ui'
 
 const DISMISS_KEY = 'pwa-install-dismissed'
 
@@ -32,40 +33,41 @@ export default function InstallPrompt() {
     if (outcome === 'accepted') dismiss()
   }
 
-  return (
-    <div className="install-card">
-      <p className="install-title"><Icon name="install" /> {t.install.installFirst}</p>
+  const later = (
+    <Button variant="ghost" size="sm" onClick={dismiss}>
+      {t.install.maybeLater}
+    </Button>
+  )
 
+  return (
+    <section className="card auth__install">
+      <h2>
+        <Icon name="install" /> {t.install.installFirst}
+      </h2>
       {platform === 'ios' ? (
         <>
-          <p className="install-body">{t.install.iosBody}</p>
-          <button className="link install-later" onClick={dismiss}>
-            {t.install.maybeLater}
-          </button>
+          <p className="hint">{t.install.iosBody}</p>
+          {later}
         </>
       ) : canPrompt ? (
         // Android with Chrome's install event ready: one tap does it.
         <>
-          <p className="install-body">{t.install.androidOneTapBody}</p>
-          <div className="install-actions">
-            <button className="start-session" onClick={install}>
+          <p className="hint">{t.install.androidOneTapBody}</p>
+          <div className="actions">
+            <Button variant="primary" onClick={install}>
               {t.install.installApp}
-            </button>
-            <button className="link install-later" onClick={dismiss}>
-              {t.install.maybeLater}
-            </button>
+            </Button>
+            {later}
           </div>
         </>
       ) : (
         // Android without the event (Firefox, Samsung Internet, or Chrome
         // before it offers the prompt): tell them where the menu item lives.
         <>
-          <p className="install-body">{t.install.androidMenuBody}</p>
-          <button className="link install-later" onClick={dismiss}>
-            {t.install.maybeLater}
-          </button>
+          <p className="hint">{t.install.androidMenuBody}</p>
+          {later}
         </>
       )}
-    </div>
+    </section>
   )
 }

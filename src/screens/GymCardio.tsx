@@ -242,7 +242,7 @@ export default function GymCardio({ cardio, setCardio, week, cardioBase, onSaveB
             : t.cardio.nothingYet
         }
       >
-        <div className="cluster cardio__plan-head">
+        <div className="cluster">
           <strong className="cardio__phase">{t.cardio.phaseWeek(t.cardioPlan.phases[target.phase] ?? target.phase)}</strong>
           <span className="meta push-end">{t.cardio.aim(target.km, target.sessions)}</span>
         </div>

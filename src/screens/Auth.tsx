@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { enterDemo } from '../lib/demo'
 import { t } from '../i18n'
 import InstallPrompt from './InstallPrompt'
+import { Button, Notice } from '../components/ui'
 
 type Mode = 'signin' | 'signup' | 'reset'
 
@@ -48,14 +49,22 @@ export default function Auth() {
     setBusy(false)
   }
 
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError(null)
+    setSent(false)
+  }
+
   return (
     <div className="auth">
       <h1>{t.auth.title}</h1>
       <InstallPrompt />
-      <form onSubmit={submit}>
+      <form className="stack" onSubmit={submit}>
         <input
           type="email"
           placeholder={t.auth.emailPh}
+          aria-label={t.auth.emailPh}
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -64,44 +73,37 @@ export default function Auth() {
           <input
             type="password"
             placeholder={t.auth.passwordPh}
+            aria-label={t.auth.passwordPh}
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
           />
         )}
-        <button type="submit" disabled={busy}>
+        <Button type="submit" variant="primary" block busy={busy}>
           {mode === 'signin' ? t.auth.signIn : mode === 'signup' ? t.auth.createAccount : t.auth.sendResetLink}
-        </button>
+        </Button>
       </form>
 
-      {sent && mode === 'reset' && (
-        <div className="notice good">{t.auth.resetSent}</div>
-      )}
-      {sent && mode === 'signup' && (
-        <div className="notice good">{t.auth.confirmSent}</div>
-      )}
-      {error && <div className="notice">{error}</div>}
-      {strayEmailLink && !sent && !error && <div className="notice">{t.auth.linkOtherBrowser}</div>}
+      {sent && mode === 'reset' && <Notice tone="good">{t.auth.resetSent}</Notice>}
+      {sent && mode === 'signup' && <Notice tone="good">{t.auth.confirmSent}</Notice>}
+      {error && <Notice tone="error">{error}</Notice>}
+      {strayEmailLink && !sent && !error && <Notice>{t.auth.linkOtherBrowser}</Notice>}
 
-      {mode === 'signin' && (
-        <button className="link" onClick={() => { setMode('reset'); setError(null); setSent(false) }}>
-          {t.auth.forgotPassword}
-        </button>
-      )}
-      <button
-        className="link"
-        onClick={() => {
-          setMode(mode === 'signin' ? 'signup' : 'signin')
-          setError(null)
-          setSent(false)
-        }}
-      >
-        {mode === 'signin' ? t.auth.toSignUp : t.auth.toSignIn}
-      </button>
-      <button className="link demo-link" onClick={enterDemo}>
-        {t.demo.tryDemo}
-      </button>
+      <div className="stack stack--tight auth__links">
+        {mode === 'signin' && (
+          <Button variant="ghost" size="sm" onClick={() => switchMode('reset')}>
+            {t.auth.forgotPassword}
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}>
+          {mode === 'signin' ? t.auth.toSignUp : t.auth.toSignIn}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={enterDemo}>
+          {t.demo.tryDemo}
+        </Button>
+      </div>
     </div>
   )
 }

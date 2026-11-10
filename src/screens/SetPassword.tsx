@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n'
+import { Button, Notice } from '../components/ui'
 
 // Shown when someone arrives via a recovery/invite link with a session but
 // no usable password. They set one here (typed twice), then land in the app.
@@ -31,11 +32,13 @@ export default function SetPassword({ onDone }: { onDone: () => void }) {
   return (
     <div className="auth">
       <h1>{t.setPassword.title}</h1>
-      <p className="gentle">{t.setPassword.subtitle}</p>
-      <form onSubmit={submit}>
+      <p className="hint">{t.setPassword.subtitle}</p>
+      <form className="stack" onSubmit={submit}>
         <input
           type="password"
           placeholder={t.setPassword.newPasswordPh}
+          aria-label={t.setPassword.newPasswordPh}
+          autoComplete="new-password"
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           required
@@ -45,16 +48,18 @@ export default function SetPassword({ onDone }: { onDone: () => void }) {
         <input
           type="password"
           placeholder={t.setPassword.repeatPasswordPh}
+          aria-label={t.setPassword.repeatPasswordPh}
+          autoComplete="new-password"
           value={pw2}
           onChange={(e) => setPw2(e.target.value)}
           required
           minLength={6}
         />
-        <button type="submit" disabled={busy || pw.length < 6 || pw !== pw2}>
-          {busy ? '…' : t.setPassword.submit}
-        </button>
+        <Button type="submit" variant="primary" block busy={busy} disabled={pw.length < 6 || pw !== pw2}>
+          {t.setPassword.submit}
+        </Button>
       </form>
-      {error && <div className="notice">{error}</div>}
+      {error && <Notice tone="error">{error}</Notice>}
     </div>
   )
 }

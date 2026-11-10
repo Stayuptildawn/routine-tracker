@@ -12,6 +12,7 @@
   --surface: #fffdf8;
   --surface-2: #ebe4d6; /* fields, tracks, quiet fills */
   --surface-3: #ddd4c2; /* hover on a quiet fill */
+  --raised: #fffdf8; /* the selected option on a quiet track */
   --border: #e5dccb; /* hairlines between rows and around cards */
   --border-strong: #8f8470; /* outlines of things you can type in or tick */
 
@@ -96,6 +97,7 @@
     --surface: #221d18;
     --surface-2: #2e2721;
     --surface-3: #3b322a;
+    --raised: #4a3f34;
     --border: #38302a;
     --border-strong: #7a6e60;
     --text: #efe9df;
@@ -127,6 +129,7 @@
   --surface: #221d18;
   --surface-2: #2e2721;
   --surface-3: #3b322a;
+  --raised: #4a3f34;
   --border: #38302a;
   --border-strong: #7a6e60;
   --text: #efe9df;

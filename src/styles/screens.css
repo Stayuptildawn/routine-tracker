@@ -879,3 +879,119 @@ span.cell:not(.cell--off, .cell--done, .cell--partial, .cell--skipped) {
   padding-inline-start: var(--sp-5);
   font-size: var(--fs-sm);
 }
+
+/* ---------- reflect ---------- */
+/* what the AI noticed: set like a note, not like a control */
+.reflection {
+  gap: var(--sp-2);
+  border-inline-start: 4px solid var(--accent-strong);
+}
+
+.reflection__body {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+}
+
+/* ---------- ai log ---------- */
+.log-item--undone {
+  opacity: 0.6;
+}
+
+.log-item__said {
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+/* answers read as prose, not as an action line */
+.log-item__answer {
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* ---------- reminders ---------- */
+.reminder {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+  padding-block: var(--sp-3);
+}
+
+.reminders__add {
+  align-self: flex-start;
+}
+
+.reminders__cleared {
+  padding-block: var(--sp-1);
+}
+
+.reminders__cleared-text {
+  color: var(--text-dim);
+  text-decoration: line-through;
+  text-decoration-color: var(--border-strong);
+}
+
+/* ---------- settings ---------- */
+.settings {
+  gap: var(--sp-6);
+}
+
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  max-width: 28rem;
+}
+
+.settings__section > input,
+.settings__section > select,
+.settings__section .field,
+.settings__section .field select,
+.settings__section > .seg:not(.seg--inline) {
+  align-self: stretch;
+}
+
+.settings__grow {
+  flex: 1;
+}
+
+.settings__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-1) var(--sp-4);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.settings__facts dt {
+  color: var(--text-dim);
+}
+
+.settings__facts dd {
+  margin: 0;
+}
+
+/* ---------- sign-in ---------- */
+.auth {
+  max-width: 22.5rem;
+  margin: 14vh auto 0;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  text-align: center;
+}
+
+.auth h1 {
+  font-size: var(--fs-xl);
+}
+
+.auth__links {
+  align-items: center;
+}
+
+.auth__install {
+  text-align: start;
+  align-items: flex-start;
+}

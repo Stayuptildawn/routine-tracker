@@ -349,7 +349,7 @@ export default function Session({ session, plans, onExit, closing }: Props) {
                       const draft = draftFor(set)
                       const ph = placeholderFor(set)
                       return (
-                        <div key={set.id} className={done ? 'set-row set-row--done' : 'set-row'}>
+                        <div key={set.id} className="set-row">
                           <span className="set-row__num">{set.set_number}</span>
                           {done ? (
                             <span className="set-row__logged mono">
