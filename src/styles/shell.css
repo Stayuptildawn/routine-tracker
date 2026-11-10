@@ -1,0 +1,198 @@
+/* ---------- app shell: content column + navigation ---------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: var(--content-w);
+  margin: 0 auto;
+}
+
+.content {
+  flex: 1;
+  padding: calc(var(--sp-4) + env(safe-area-inset-top)) max(var(--sp-4), env(safe-area-inset-right))
+    calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--sp-6)) max(var(--sp-4), env(safe-area-inset-left));
+  /* nothing may ever push the page into horizontal scroll */
+  overflow-x: clip;
+  min-width: 0;
+}
+
+/* screens live in hidden-toggled divs (App.tsx keeps them mounted); the
+   animation replays each time one comes back from display:none. Deliberately
+   faint - tab switches happen dozens of times a day */
+.content > div:not([hidden]) {
+  animation: screen-in 180ms var(--ease-out);
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* every screen is one column with one rhythm */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.screen-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.screen-head__back {
+  align-self: flex-start;
+  margin-inline-start: calc(-1 * var(--sp-2));
+}
+
+.screen-head__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.screen-head__titles {
+  min-width: 0;
+}
+
+.screen-head__actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  /* the icons hang into the gutter so their glyphs line up with the content edge */
+  margin-inline-end: calc(-1 * var(--sp-2));
+}
+
+/* full-page states before the app is ready */
+.center-note {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  color: var(--text-dim);
+  padding: var(--sp-5);
+  text-align: center;
+}
+
+/* demo mode: honest little pill with the way out. In the page flow, not
+   floating - a fixed badge sat on top of tappable rows the whole session */
+.demo-badge {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0 auto var(--sp-3);
+  padding-inline-start: var(--sp-3);
+  background: var(--accent-soft);
+  font-size: var(--fs-sm);
+  border-radius: var(--r-full);
+}
+
+/* ---------- navigation: bottom bar on phones, left rail when wide ---------- */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--content-w);
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 20;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tabbar-h);
+  color: var(--text-dim);
+  border-radius: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.tab .icon {
+  font-size: 1.3rem;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-current='page'] {
+  color: var(--accent);
+}
+
+.tab:active {
+  transform: scale(0.97);
+}
+
+/* phones reach Settings from the top of every screen; the bar is for the
+   four destinations only (a fifth target next to them is mis-tap territory) */
+.tab--settings {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .app {
+    flex-direction: row;
+    max-width: 960px;
+    gap: var(--sp-6);
+  }
+
+  .tabbar {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    order: -1; /* rail sits before the content */
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--sp-1);
+    width: 6.5rem;
+    height: 100dvh;
+    padding: var(--sp-6) var(--sp-2);
+    border-top: none;
+    border-inline-end: 1px solid var(--border);
+    background: transparent;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    border-radius: var(--r-md);
+  }
+
+  .tab:hover {
+    background: var(--surface-2);
+  }
+
+  .tab--settings {
+    display: flex;
+    margin-top: auto; /* sits at the bottom of the rail */
+  }
+
+  /* the rail carries Settings here */
+  .screen-head__settings {
+    display: none;
+  }
+
+  .content {
+    max-width: 46rem;
+    padding: var(--sp-6) var(--sp-4) var(--sp-7);
+  }
+
+  .toast {
+    bottom: var(--sp-5);
+  }
+}

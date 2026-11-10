@@ -41,7 +41,7 @@ const NEXT_STATUS: Record<string, LogStatus> = {
   skipped: 'pending',
 }
 
-export default function Week({ visible }: { visible: boolean }) {
+export default function Week({ visible }: { visible: boolean; onOpenSettings: () => void }) {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [logs, setLogs] = useState<TaskLog[]>([])
   const [loaded, setLoaded] = useState(false)

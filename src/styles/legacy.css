@@ -1,74 +1,7 @@
-/* ---------- app shell ---------- */
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-  max-width: 680px;
-  margin: 0 auto;
-}
 
-.content {
-  flex: 1;
-  padding: var(--sp-4) var(--sp-4) calc(var(--sp-7) + var(--sp-6));
-  /* nothing may ever push the page into horizontal scroll */
-  overflow-x: clip;
-  min-width: 0;
-}
-
-/* demo mode: honest little pill with the way out. In the page flow, not
-   floating - a fixed badge sat on top of tappable rows the whole session. */
-.demo-badge {
-  display: flex;
-  width: fit-content;
-  align-items: center;
-  gap: var(--sp-2);
-  margin: 0 auto var(--sp-4);
-  padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
-  background: var(--accent-soft);
-  color: var(--text);
-  font-size: 0.8rem;
-  white-space: nowrap;
-  border: 1px solid var(--surface-3);
-  border-radius: 999px;
-  box-shadow: 0 2px 12px rgb(0 0 0 / 0.18);
-}
 
 .demo-link {
   margin-top: var(--sp-3);
-}
-
-/* screens live in hidden-toggled divs (App.tsx keeps them mounted); the
-   animation replays each time one comes back from display:none. Deliberately
-   faint - tab switches happen dozens of times a day */
-.content > div:not([hidden]) {
-  animation: screen-in 180ms var(--ease-out);
-}
-
-@keyframes screen-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-
-/* first fetch: real content fades in when it replaces the skeleton (an
-   animation runs when its element first mounts). Opacity-only, not the
-   screen-in slide: on a tab switch the parent's screen-in already slides
-   the whole screen, and a second transform here would make content drift
-   further than the headers around it. A plain fade compounds invisibly. */
-.upnext,
-.reminders-card,
-.routine-list,
-.week-routine,
-.gym-day,
-.ai-item,
-.reminder-add,
-.reminder-group,
-.cleared-section,
-.reflection-card,
-.reflect-bars,
-.reflect-notes {
-  animation: content-in 200ms var(--ease-out);
 }
 
 @keyframes content-in {
@@ -77,28 +10,10 @@
   }
 }
 
-.center-note {
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
-  color: var(--text-dim);
-  padding: var(--sp-5);
-  text-align: center;
-}
-
 .gentle {
   color: var(--text-dim);
   font-size: var(--fs-sm);
   margin: var(--sp-1) 0 var(--sp-4);
-}
-
-.eyebrow {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin: 0 0 var(--sp-2);
 }
 
 .link {
@@ -138,91 +53,6 @@
   cursor: default;
 }
 
-/* ---------- navigation: bottom bar → left rail ---------- */
-.tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 680px;
-  display: flex;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 20;
-}
-
-.tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: var(--sp-2) 0 var(--sp-2);
-  color: var(--text-dim);
-  border-radius: 0;
-}
-
-.tab:hover {
-  color: var(--text);
-  background: var(--surface-2);
-}
-
-.tab.active {
-  color: var(--accent);
-}
-
-.tab-icon {
-  font-size: 1.15rem;
-}
-
-.tab-label {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-}
-
-/* settings entry points: rail button on desktop, the Now-header gear on
-   phones. Deliberately NOT in the mobile tab bar - that bar is for the five
-   destinations, and a settings target next to them is mis-tap territory. */
-.settings-rail {
-  display: none;
-}
-
-.now-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-3); /* keep the gear well clear of the composer buttons */
-}
-
-.now-head-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-}
-
-/* install affordance for signed-in mobile users, same fill as the composer
-   send button; sits just left of the settings gear */
-.install-fab {
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  font-weight: 700;
-  font-size: var(--fs-sm);
-  padding: var(--sp-1) var(--sp-3);
-  border-radius: var(--r-sm);
-  white-space: nowrap;
-}
-
-.install-fab:hover {
-  filter: brightness(1.06);
-}
-
-.install-fab:active {
-  filter: brightness(0.94);
-}
-
 .install-help-backdrop {
   position: fixed;
   inset: 0;
@@ -245,22 +75,6 @@
   border-radius: var(--r-md);
 }
 
-.settings-inline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.75rem; /* thumb floor - it measured 32x32 */
-  min-height: 2.75rem;
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--r-sm);
-  font-size: 1rem;
-  opacity: 0.85;
-}
-
-.settings-inline:hover {
-  background: var(--surface-2);
-}
-
 .week-routine.paused {
   opacity: 0.55;
 }
@@ -272,34 +86,6 @@
 .energy-btn.activate {
   font-weight: 700;
   color: var(--text);
-}
-
-@media (min-width: 900px) {
-  .settings-inline {
-    display: none; /* the rail button covers desktop */
-  }
-
-  .settings-rail {
-    display: block;
-    margin-top: auto; /* sits at the bottom of the left rail */
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    color: var(--text-dim);
-    padding: var(--sp-2);
-    white-space: nowrap;
-    border-radius: var(--r-sm);
-  }
-
-  /* the icon sits inline with the label, at text size */
-  .settings-rail .tab-icon {
-    font-size: inherit;
-    margin-right: var(--sp-1);
-  }
-
-  .settings-rail:hover {
-    color: var(--text);
-    background: var(--surface-2);
-  }
 }
 
 /* ---------- settings screen ---------- */
@@ -422,43 +208,6 @@
   width: auto;
 }
 
-@media (min-width: 900px) {
-  .app {
-    flex-direction: row;
-    max-width: 1080px;
-    gap: var(--sp-6);
-  }
-
-  .tabbar {
-    position: sticky;
-    top: 0;
-    bottom: auto;
-    left: auto;
-    transform: none;
-    order: -1; /* rail sits left of the content */
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: var(--sp-1);
-    width: 108px;
-    height: 100dvh;
-    padding: var(--sp-6) var(--sp-2);
-    border-top: none;
-    border-right: 1px solid var(--border);
-    background: transparent;
-  }
-
-  .tab {
-    flex: 0 0 auto;
-    padding: var(--sp-3) 0;
-    border-radius: var(--r-sm);
-  }
-
-  .content {
-    padding: var(--sp-6) var(--sp-5) var(--sp-7);
-    max-width: 920px;
-  }
-}
-
 /* ---------- auth ---------- */
 .auth {
   max-width: 360px;
@@ -534,132 +283,6 @@
   padding: var(--sp-2) 0;
 }
 
-/* ---------- composer (the front door) ---------- */
-.composer {
-  display: flex;
-  gap: var(--sp-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-3);
-  align-items: stretch;
-  box-shadow: var(--shadow);
-  transition: border-color var(--speed) var(--ease);
-}
-
-.composer:focus-within {
-  border-color: var(--accent);
-}
-
-.composer textarea {
-  flex: 1;
-  border: none;
-  resize: none;
-  background: transparent;
-  outline: none;
-}
-
-.composer textarea::placeholder {
-  color: var(--text-dim);
-}
-
-.composer-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  justify-content: center;
-}
-
-.composer .send {
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  padding: var(--sp-2) var(--sp-4);
-  min-height: 2.75rem;
-  font-weight: 700;
-}
-
-.composer .send:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-
-.composer .send:active:not(:disabled) {
-  filter: brightness(0.94);
-}
-
-.composer .send:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.composer .voice {
-  background: var(--surface-2);
-  padding: var(--sp-1) var(--sp-4);
-  min-height: 2.75rem; /* thumb floor - it measured 31px tall */
-}
-
-.composer .voice:hover {
-  background: var(--surface-3);
-}
-
-.composer .voice.listening {
-  background: var(--accent-soft);
-  outline: 2px solid var(--accent);
-}
-
-.notice {
-  margin-top: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--surface-2);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--text-dim);
-  white-space: pre-line; /* query answers can be multi-line */
-}
-
-/* good news ("check your email") must not look like the error box under it */
-.notice.good {
-  background: var(--good-soft);
-  border: 1px solid var(--good);
-  color: var(--text);
-}
-
-/* ---------- suggestion chips ---------- */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  align-items: center;
-  margin-top: var(--sp-3);
-}
-
-.chips-label {
-  font-size: var(--fs-sm);
-  color: var(--text-dim);
-}
-
-.chip {
-  background: var(--accent-soft);
-  color: var(--text);
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-full);
-  font-size: var(--fs-sm);
-  border: 1px solid transparent;
-}
-
-.chip:hover {
-  border-color: var(--accent);
-}
-
-.chip.active {
-  border-color: var(--accent);
-  font-weight: 700;
-}
-
-.chip.dismiss {
-  background: var(--surface-2);
-  color: var(--text-dim);
-}
-
 .plan-card .plan-row {
   margin: 0 0 var(--sp-2);
 }
@@ -686,10 +309,6 @@
 
 .ai-stats {
   display: block;
-}
-
-.chip.dismiss:hover {
-  border-color: var(--neutral);
 }
 
 /* ---------- energy ---------- */
@@ -737,168 +356,11 @@
   border-color: var(--accent);
 }
 
-/* ---------- up next (deterministic, no AI) ---------- */
-.upnext {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  width: 100%;
-  text-align: left;
-  margin: var(--sp-4) 0; /* clear air above and below - never glued to the reminders card */
-  padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 8px);
-  background: var(--accent-soft);
-  border: 1px solid transparent;
-  border-radius: var(--r-md);
-}
-
-.upnext:hover {
-  border-color: var(--accent);
-}
-
-.upnext-label {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.upnext-task {
-  font-weight: 700;
-}
-
-.upnext-go {
-  margin-left: auto;
-  color: var(--accent);
-  font-weight: 700;
-}
-
-/* ---------- routine cards + the progress rail ---------- */
-.routine-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--sp-3);
-  margin-top: var(--sp-4);
-  align-items: start;
-}
-
-@media (min-width: 900px) {
-  .routine-list {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: var(--sp-4);
-  }
-
-  /* finished routines become slim full-width strips at the bottom */
-  .routine.complete {
-    grid-column: 1 / -1;
-    padding-top: var(--sp-2);
-    padding-bottom: var(--sp-2);
-  }
-}
-
-.routine {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--sp-4) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 8px);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-/* the signature: an amber wick that fills as the routine completes */
-.rail {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--surface-3);
-}
-
-.rail-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--accent);
-  border-radius: 0 0 var(--r-full) var(--r-full);
-  /* scaleY, not height: the fill moves every time a task is tapped and
-     transform stays off the layout path (progress set inline as scaleY) */
-  transform-origin: top;
-  transition: transform 420ms var(--ease);
-}
-
-.routine.complete {
-  opacity: 0.72;
-  padding-top: var(--sp-3);
-  padding-bottom: var(--sp-3);
-}
-
-.routine.complete h2 {
-  margin: 0;
-  color: var(--good);
-}
-
-.routine.complete .rail-fill {
-  background: var(--good);
-}
-
-.routine h2 {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-}
-
 .routine-progress {
   font-family: var(--font-body);
   font-weight: 400;
   color: var(--text-dim);
   font-size: var(--fs-sm);
-}
-
-.start-btn {
-  margin-left: auto;
-  font-family: var(--font-body);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  background: var(--accent-soft);
-  color: var(--text);
-  padding: var(--sp-1) var(--sp-3);
-  min-height: 2.75rem; /* thumb floor - it measured 27px tall */
-  border-radius: var(--r-full);
-  border: 1px solid transparent;
-}
-
-.start-btn:hover {
-  border-color: var(--accent);
-}
-
-.task {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: var(--sp-2) 0;
-  border-top: 1px solid var(--border);
-}
-
-.task-label {
-  flex: 1;
-  min-width: 0; /* a long label wraps; Done/Skip never leave the row */
-  font-size: var(--fs-base);
-  transition: color var(--speed) var(--ease);
-}
-
-.task.done .task-label {
-  color: var(--good);
-}
-
-.task.skipped .task-label {
-  color: var(--neutral);
 }
 
 .task-buttons {
@@ -938,35 +400,6 @@
   font-weight: 700;
 }
 
-/* ---------- time anchors ---------- */
-.anchor-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  font-family: var(--font-body);
-  font-weight: 400;
-  font-size: var(--fs-xs);
-  color: var(--accent);
-  white-space: nowrap;
-}
-
-/* conic ring fills as the anchor approaches; full = it's time */
-.anchor-ring {
-  width: 14px;
-  height: 14px;
-  border-radius: var(--r-full);
-  display: inline-block;
-  position: relative;
-}
-
-.anchor-ring::after {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border-radius: var(--r-full);
-  background: var(--surface);
-}
-
 .anchor-row {
   display: flex;
   align-items: center;
@@ -986,14 +419,6 @@
   margin: 0;
 }
 
-/* ---------- nudges ---------- */
-.nudge-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  margin-top: var(--sp-5);
-}
-
 /* ---------- reflection card ---------- */
 .reflection-card {
   background: var(--surface);
@@ -1005,113 +430,11 @@
   box-shadow: var(--shadow);
 }
 
-.reflection-card .eyebrow {
-  margin-bottom: var(--sp-1);
-}
-
 .reflection-body {
   margin: 0;
   font-family: var(--font-display);
   font-size: var(--fs-md);
   line-height: 1.55;
-}
-
-/* ---------- answer sheet: a question asked in the composer ----------
-   bottom sheet on phones (thumb reach), a centered card on wider screens */
-.answer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
-  transition: opacity var(--speed-panel) var(--ease-panel);
-}
-
-.answer-sheet {
-  width: 100%;
-  max-width: 34rem;
-  max-height: 80dvh;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md) var(--r-md) 0 0;
-  box-shadow: var(--shadow);
-  padding: var(--sp-5) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
-  transition: transform var(--speed-panel) var(--ease-panel);
-  /* the answer is content the user may want to copy */
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-@starting-style {
-  .answer-backdrop {
-    opacity: 0;
-  }
-  .answer-sheet {
-    transform: translateY(24px);
-  }
-}
-
-.answer-backdrop[data-closing] {
-  opacity: 0;
-  transition-duration: var(--speed-exit);
-  pointer-events: none;
-}
-
-.answer-backdrop[data-closing] .answer-sheet {
-  transform: translateY(24px);
-  transition-duration: var(--speed-exit);
-}
-
-.answer-question {
-  margin: 0 0 var(--sp-3);
-  font-style: italic;
-  color: var(--text-dim);
-}
-
-.answer-text {
-  margin: 0 0 var(--sp-3);
-  font-size: var(--fs-md);
-  line-height: 1.55;
-  white-space: pre-line;
-}
-
-.answer-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--sp-3);
-  margin-top: var(--sp-4);
-}
-
-.answer-foot .gentle {
-  margin: 0;
-  font-size: var(--fs-sm);
-}
-
-.answer-foot .link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-}
-
-.answer-foot .save {
-  min-height: 2.75rem;
-  min-width: 6rem;
-}
-
-@media (min-width: 640px) {
-  .answer-backdrop {
-    align-items: center;
-    padding: var(--sp-4);
-  }
-  .answer-sheet {
-    border-radius: var(--r-md);
-    padding-bottom: var(--sp-4);
-  }
 }
 
 /* answers in the AI log read as prose, not an action line */
@@ -1177,10 +500,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.player-top .eyebrow {
-  margin: 0;
 }
 
 /* exit / close on a full-screen overlay: the one way out, so it gets a real
@@ -2104,65 +1423,6 @@
   font-size: var(--fs-sm);
 }
 
-/* ---------- toast ---------- */
-.toast {
-  position: fixed;
-  bottom: calc(var(--sp-7) + var(--sp-5));
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(92vw, 620px);
-  background: var(--surface);
-  border: 1px solid var(--accent);
-  border-radius: var(--r-md);
-  padding: var(--sp-3) var(--sp-4);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  box-shadow: var(--shadow);
-  z-index: 30;
-  /* transition, not keyframes: undo toasts can be replaced mid-flight and
-     transitions retarget smoothly where keyframes would restart from zero */
-  transition: opacity var(--speed-panel) var(--ease-out),
-    transform var(--speed-panel) var(--ease-out);
-}
-
-@starting-style {
-  .toast {
-    opacity: 0;
-    transform: translate(-50%, 8px);
-  }
-}
-
-.toast[data-closing] {
-  opacity: 0;
-  transform: translate(-50%, 8px);
-  transition-duration: var(--speed-exit);
-  pointer-events: none;
-}
-
-.toast-lines {
-  flex: 1;
-  font-size: var(--fs-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.toast button {
-  background: var(--accent-soft);
-  padding: var(--sp-2) var(--sp-3);
-}
-
-.toast button:hover {
-  outline: 1px solid var(--accent);
-}
-
-.toast .toast-close {
-  background: none;
-  color: var(--text-dim);
-  padding: var(--sp-1);
-}
-
 /* ---------- week grid ---------- */
 .week-routine {
   background: var(--surface);
@@ -2778,23 +2038,6 @@
   min-height: 2.75rem;
 }
 
-.badge {
-  padding: 2px var(--sp-3);
-  border-radius: var(--r-full);
-  background: var(--accent-soft);
-  color: var(--text);
-  font-weight: 700;
-}
-
-.badge.undone {
-  background: var(--surface-2);
-}
-
-.badge.confirmed {
-  background: var(--good-soft);
-  color: var(--good);
-}
-
 /* ---------- reminders ---------- */
 .reminders .back {
   display: inline-flex;
@@ -2875,10 +2118,6 @@
   color: var(--accent);
 }
 
-.task-label .due-pill {
-  margin-left: var(--sp-2);
-}
-
 .reminder .task-buttons {
   padding-top: 2px;
 }
@@ -2940,49 +2179,6 @@
   min-height: 2.75rem;
   padding: 2px var(--sp-2);
   font-size: var(--fs-xs);
-}
-
-.reminders-empty {
-  margin: var(--sp-2) 0 0;
-}
-
-.reminders-card {
-  /* no rail, but keep the rail-matched inset so text lines up with
-     the routine cards below - misaligned text reads as broken layout */
-  padding-left: calc(var(--sp-4) + 8px);
-}
-
-/* empty = one quiet strip, not a whole silent card */
-.reminders-card.empty {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  padding-top: var(--sp-3);
-  padding-bottom: var(--sp-3);
-  opacity: 0.85;
-}
-
-.reminders-card.empty h2 {
-  margin: 0;
-}
-
-.reminders-card.empty .reminders-empty {
-  margin: 0;
-  flex: 1;
-}
-
-.reminders-card.empty .see-all {
-  margin: 0;
-  padding: 0;
-}
-
-.reminders-card .see-all {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  padding-left: 0;
-  margin-top: var(--sp-2);
 }
 
 /* ---------- reflect ---------- */
@@ -3051,9 +2247,6 @@
 .training-history {
   margin-top: var(--sp-3);
 }
-.training-history .reflection-card .eyebrow + .reflection-body {
-  margin-bottom: var(--sp-3);
-}
 .training-history .reflection-card .training-body {
   margin: 0;
 }
@@ -3110,52 +2303,8 @@
   white-space: nowrap;
 }
 
-/* ---------- skeletons (calm pulse, no shimmer) ---------- */
-.skel {
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  animation: skel-pulse 1.8s ease-in-out infinite;
-}
-
-.skel-card {
-  border-radius: var(--r-md);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: var(--sp-4);
-  margin-top: var(--sp-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-
-.skel-line {
-  height: 0.95rem;
-}
-
-.skel-line.w40 {
-  width: 40%;
-}
-
-.skel-line.w60 {
-  width: 60%;
-}
-
-.skel-line.w80 {
-  width: 80%;
-}
-
 .skel-block {
   height: 72px;
-}
-
-@keyframes skel-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
 }
 
 /* ---------- injuries (Workout tab) ---------- */

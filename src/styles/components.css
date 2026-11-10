@@ -586,7 +586,7 @@
   transform: rotate(90deg);
 }
 
-.disclosure__toggle[aria-expanded='true'] .disclosure__chevron {
+[aria-expanded='true'] > .disclosure__chevron {
   transform: none;
 }
 

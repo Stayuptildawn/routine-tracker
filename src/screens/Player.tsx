@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useOverlay } from '../lib/overlay'
 import { t } from '../i18n'
 import type { Task, TaskLog } from '../lib/types'
 import Icon from '../components/Icon'
+import { Button, Sheet } from '../components/ui'
 
 interface PlayerProps {
   routineName: string
@@ -25,9 +25,6 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
   // which task to show next; falls back to the first pending one
   const [preferredId, setPreferredId] = useState<string | null>(focusTaskId ?? null)
 
-  // Escape and the installed-PWA back button close the player like the exit link
-  const trapRef = useOverlay<HTMLDivElement>(onExit)
-
   const pending = tasks.filter((task) => !handled(logs, task))
   const current = pending.find((task) => task.id === preferredId) ?? pending[0]
   const doneCount = tasks.length - pending.length
@@ -41,55 +38,42 @@ export default function Player({ routineName, tasks, logs, focusTaskId, onStatus
   }
 
   return (
-    <div
-      ref={trapRef}
-      className="player"
-      data-closing={closing || undefined}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t.player.aria(routineName)}
+    <Sheet
+      title={t.player.progress(routineName, Math.min(doneCount + 1, tasks.length), tasks.length)}
+      label={t.player.aria(routineName)}
+      onClose={onExit}
+      closeLabel={t.player.exit}
+      closing={closing}
+      progress={doneCount / tasks.length}
     >
-      <div className="player-rail" aria-hidden="true">
-        <div className="player-rail-fill" style={{ transform: `scaleX(${doneCount / tasks.length})` }} />
-      </div>
-      <div className="player-inner">
-        <div className="player-top">
-          <span className="eyebrow">
-            {t.player.progress(routineName, Math.min(doneCount + 1, tasks.length), tasks.length)}
-          </span>
-          <button className="link" onClick={onExit}>
-            {t.player.exit}
-          </button>
-        </div>
-
-        {current ? (
-          <>
-            <div className="player-task" key={current.id}>
-              {current.label}
-            </div>
-            <div className="player-buttons">
-              <button className="player-done" onClick={() => tap('done')}>
-                {t.common.done}
-              </button>
-              <button className="player-skip" onClick={() => tap('skipped')}>
-                {t.common.skip}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="player-task complete">
-              <Icon name="check" /><br />
-              {t.player.handled(routineName)}
-            </div>
-            <div className="player-buttons">
-              <button className="player-done" onClick={onExit}>
-                {t.common.close}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+      {current ? (
+        <>
+          <div className="player__task" key={current.id}>
+            {current.label}
+          </div>
+          <div className="actions actions--stretch sheet__foot">
+            <Button variant="primary" size="lg" onClick={() => tap('done')}>
+              {t.common.done}
+            </Button>
+            <Button size="lg" onClick={() => tap('skipped')}>
+              {t.common.skip}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="player__task player__task--done">
+            <Icon name="check" />
+            <br />
+            {t.player.handled(routineName)}
+          </div>
+          <div className="actions actions--stretch sheet__foot">
+            <Button variant="primary" size="lg" onClick={onExit}>
+              {t.common.close}
+            </Button>
+          </div>
+        </>
+      )}
+    </Sheet>
   )
 }

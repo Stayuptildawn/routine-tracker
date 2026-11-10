@@ -101,7 +101,7 @@ interface MonthlyReflection {
   body: string
 }
 
-export default function Reflect({ visible }: { visible: boolean }) {
+export default function Reflect({ visible }: { visible: boolean; onOpenSettings: () => void; onOpenLog: () => void }) {
   const [days, setDays] = useState<DayStat[]>([])
   const [reflection, setReflection] = useState<Reflection | null>(null)
   const [training, setTraining] = useState<TrainingReview | null>(null) // latest weekly AI training review

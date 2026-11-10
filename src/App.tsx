@@ -23,15 +23,17 @@ import Settings from './screens/Settings'
 import type { Theme } from './screens/Settings'
 import Icon from './components/Icon'
 import type { IconName } from './components/Icon'
+import { Button } from './components/ui'
 
-// 'reminders' is a sub-view of Now (reached via "See all"), not a sixth tab
-type Tab = 'now' | 'week' | 'gym' | 'history' | 'reflect' | 'reminders'
+// 'reminders' and 'history' (the AI log) are sub-views, not tabs: Reminders
+// opens from Today, the log from Today's message box or from Reflect
+type Tab = 'now' | 'week' | 'gym' | 'reflect' | 'reminders' | 'history'
+type MainTab = 'now' | 'week' | 'gym' | 'reflect'
 
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
+const TABS: { id: MainTab; label: string; icon: IconName }[] = [
   { id: 'now', label: t.app.tabToday, icon: 'sun' },
   { id: 'week', label: t.app.tabWeek, icon: 'calendar' },
   { id: 'gym', label: t.app.tabWorkout, icon: 'dumbbell' },
-  { id: 'history', label: t.app.tabAiLog, icon: 'bot' },
   { id: 'reflect', label: t.app.tabReflect, icon: 'leaf' },
 ]
 
@@ -73,6 +75,9 @@ export default function App() {
   const [ready, setReady] = useState(false)
   const [seeding, setSeeding] = useState(true)
   const [tab, setTab] = useState<Tab>('now')
+  // which tab the AI log was opened from, so Back returns there
+  const [logFrom, setLogFrom] = useState<MainTab>('now')
+  const parentTab: MainTab = tab === 'reminders' ? 'now' : tab === 'history' ? logFrom : tab
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
   // saving a language reloads the app; this flag brings the user back to
   // Settings instead of dropping them on the Now tab
@@ -90,20 +95,35 @@ export default function App() {
   }
 
   // installed-PWA back (Android button, iOS swipe): open overlays close
-  // themselves via useOverlay; this fallback returns to Now, and always
-  // swallows the press so back never leaves the app
+  // themselves via useOverlay; this fallback leaves a sub-view for its tab,
+  // then returns to Today, and always swallows the press so back never
+  // leaves the app
   const tabRef = useRef(tab)
   tabRef.current = tab
+  const parentRef = useRef(parentTab)
+  parentRef.current = parentTab
   useEffect(() => {
     armBackGuard()
     return onBackButton(() => {
-      if (tabRef.current !== 'now') {
-        setTab('now')
+      const current = tabRef.current
+      if (current !== 'now') {
+        setTab(current === parentRef.current ? 'now' : parentRef.current)
         window.scrollTo(0, 0)
       }
       return true
     })
   }, [])
+
+  function go(next: Tab) {
+    setTab(next)
+    window.scrollTo(0, 0)
+  }
+
+  function openLog(from: MainTab) {
+    setLogFrom(from)
+    go('history')
+  }
+  const openSettings = () => setSettingsOpen(true)
 
   useEffect(() => {
     if (theme === 'auto') {
@@ -209,61 +229,51 @@ export default function App() {
         {isDemo && (
           <aside className="demo-badge" role="status">
             {t.demo.badge}
-            <button className="link" onClick={exitDemo}>
+            <Button variant="ghost" size="sm" onClick={exitDemo}>
               {t.demo.exit}
-            </button>
+            </Button>
           </aside>
         )}
         <div hidden={tab !== 'now'}>
           <Now
             visible={tab === 'now'}
-            onOpenReminders={() => setTab('reminders')}
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenLog={() => setTab('history')}
+            onOpenReminders={() => go('reminders')}
+            onOpenSettings={openSettings}
+            onOpenLog={() => openLog('now')}
           />
         </div>
         <div hidden={tab !== 'reminders'}>
-          <Reminders visible={tab === 'reminders'} onBack={() => setTab('now')} />
+          <Reminders visible={tab === 'reminders'} onBack={() => go('now')} onOpenSettings={openSettings} />
         </div>
         <div hidden={tab !== 'week'}>
-          <Week visible={tab === 'week'} />
+          <Week visible={tab === 'week'} onOpenSettings={openSettings} />
         </div>
         <div hidden={tab !== 'gym'}>
-          <Gym visible={tab === 'gym'} />
+          <Gym visible={tab === 'gym'} onOpenSettings={openSettings} />
         </div>
         <div hidden={tab !== 'history'}>
-          <History visible={tab === 'history'} />
+          <History visible={tab === 'history'} onBack={() => go(logFrom)} onOpenSettings={openSettings} />
         </div>
         <div hidden={tab !== 'reflect'}>
-          <Reflect visible={tab === 'reflect'} />
+          <Reflect visible={tab === 'reflect'} onOpenSettings={openSettings} onOpenLog={() => openLog('reflect')} />
         </div>
       </main>
       <nav className="tabbar" aria-label={t.app.mainNav}>
-        {TABS.map((tb) => {
-          const current = tab === tb.id || (tab === 'reminders' && tb.id === 'now')
-          return (
+        {TABS.map((tb) => (
           <button
             key={tb.id}
-            className={current ? 'tab active' : 'tab'}
-            aria-current={current ? 'page' : undefined}
-            onClick={() => {
-              setTab(tb.id)
-              window.scrollTo(0, 0)
-            }}
+            type="button"
+            className="tab"
+            aria-current={parentTab === tb.id ? 'page' : undefined}
+            onClick={() => go(tb.id)}
           >
-            <span className="tab-icon"><Icon name={tb.icon} /></span>
-            <span className="tab-label">{tb.label}</span>
+            <Icon name={tb.icon} />
+            {tb.label}
           </button>
-          )
-        })}
-        <button
-          className="settings-rail"
-          onClick={() => setSettingsOpen(true)}
-          title={t.common.settings}
-          aria-label={t.common.settings}
-        >
-          <span className="tab-icon"><Icon name="settings" /></span>
-          <span className="tab-label">{t.common.settings}</span>
+        ))}
+        <button type="button" className="tab tab--settings" onClick={openSettings}>
+          <Icon name="settings" />
+          {t.common.settings}
         </button>
       </nav>
       {settings.mounted && (

@@ -7,7 +7,7 @@ import type { AiAction } from '../lib/types'
 import ConfirmButton from '../components/ConfirmButton'
 import Skeleton from '../components/Skeleton'
 
-export default function History({ visible }: { visible: boolean }) {
+export default function History({ visible }: { visible: boolean; onBack: () => void; onOpenSettings: () => void }) {
   const [items, setItems] = useState<AiAction[]>([])
   const [counts, setCounts] = useState<{ kept: number; undone: number } | null>(null)
   const [loaded, setLoaded] = useState(false)

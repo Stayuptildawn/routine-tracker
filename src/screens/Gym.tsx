@@ -52,7 +52,7 @@ function weekFromStart(start: string): number {
   return Math.max(1, Math.floor(days / 7) + 1)
 }
 
-export default function Gym({ visible }: { visible: boolean }) {
+export default function Gym({ visible }: { visible: boolean; onOpenSettings: () => void }) {
   const [logs, setLogs] = useState<WorkoutLog[]>([])
   const [plans, setPlans] = useState<WorkoutPlan[]>([])
   const [block, setBlock] = useState<TrainingBlock | null>(null)

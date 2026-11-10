@@ -8,6 +8,8 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './styles/legacy.css'
 import './styles/components.css'
+import './styles/shell.css'
+import './styles/screens.css'
 import './lib/pwaInstall' // register the beforeinstallprompt capture as early as possible
 import { armViewportFix } from './lib/viewportFix'
 

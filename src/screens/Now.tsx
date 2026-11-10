@@ -5,13 +5,14 @@ import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretRes
 import { AiLimitError, interpretMessage, pendingTaps, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
 import { describeDue, pendingOrder, shortTime } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
-import { getNudgeState, enableNudges, disableNudges } from '../lib/push'
-import { usePresence, useOverlay } from '../lib/overlay'
+import { getNudgeState, enableNudges } from '../lib/push'
+import { usePresence } from '../lib/overlay'
 import { t, locale } from '../i18n'
 import Player from './Player'
 import Skeleton from '../components/Skeleton'
-import InstallButton from './InstallButton'
 import Icon from '../components/Icon'
+import { Button, Card, Dialog, EmptyState, ErrorState, IconButton, ListRow, Notice, ProgressBar, ScreenHeader, Segmented, cx } from '../components/ui'
+import type { ChoiceOption } from '../components/ui'
 import { MAX_LEN } from '../lib/limits'
 
 const TIER_BY_ENERGY: Record<Energy, string[]> = {
@@ -54,41 +55,49 @@ function AnswerSheet({
   onOpenLog: () => void
   closing?: boolean
 }) {
-  const trapRef = useOverlay<HTMLDivElement>(onClose)
   return (
-    <div className="answer-backdrop" data-closing={closing || undefined} onClick={onClose}>
-      <div
-        ref={trapRef}
-        className="answer-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="answer-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="eyebrow" id="answer-title">
+    <Dialog
+      title={
+        <>
           <Icon name="message" /> {t.now.answerTitle}
+        </>
+      }
+      onClose={onClose}
+      closing={closing}
+      className="selectable"
+    >
+      <p className="hint answer__question">“{answer.question}”</p>
+      {answer.lines.map((line, i) => (
+        <p key={i} className="answer__text">
+          {line}
         </p>
-        <p className="answer-question">“{answer.question}”</p>
-        {answer.lines.map((line, i) => (
-          <p key={i} className="answer-text">
-            {line}
-          </p>
-        ))}
-        <div className="answer-foot">
-          <span className="gentle">
-            {t.now.answerSaved} ·{' '}
-            <button className="link" onClick={onOpenLog}>
-              {t.now.openLog}
-            </button>
-          </span>
-          <button className="save" onClick={onClose}>
-            {t.common.close}
-          </button>
-        </div>
+      ))}
+      <div className="actions">
+        <span className="hint">{t.now.answerSaved}</span>
+        <Button variant="ghost" size="sm" onClick={onOpenLog}>
+          {t.now.openLog}
+        </Button>
+        <Button variant="primary" className="push-end" onClick={onClose}>
+          {t.common.close}
+        </Button>
       </div>
-    </div>
+    </Dialog>
   )
 }
+
+interface NoticeState {
+  tone: 'info' | 'warn' | 'error'
+  text: string
+}
+
+const ENERGY_OPTIONS: ChoiceOption<Energy>[] = [
+  { value: 'low', label: t.now.energyLow, icon: 'battery-low' },
+  { value: 'medium', label: t.now.energyMedium, icon: 'battery-medium' },
+  { value: 'high', label: t.now.energyHigh, icon: 'zap' },
+]
+
+// the offer to switch nudges on shows once; after that it lives in Settings
+const NUDGE_PROMPT_KEY = 'nudge-prompt-dismissed'
 
 export default function Now({
   visible,
@@ -109,7 +118,13 @@ export default function Now({
   // text shared into the PWA prefills the composer - reviewed, never auto-sent
   const [message, setMessage] = useState(() => consumeSharedText() ?? '')
   const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<NoticeState | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const loadedRef = useRef(false)
+  // routines the user opened or closed by hand; the rest follow "up next"
+  const [openOverride, setOpenOverride] = useState<Record<string, boolean>>({})
+  const [nudgePromptOff, setNudgePromptOff] = useState(() => localStorage.getItem(NUDGE_PROMPT_KEY) === '1')
+  const composerRef = useRef<HTMLTextAreaElement>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [undo, setUndo] = useState<UndoState | null>(null)
   // the undo toast keeps its last content while the exit transition plays
@@ -154,6 +169,14 @@ export default function Now({
       supabase.from('daily_state').select('energy').eq('date', today).maybeSingle(),
       supabase.from('reminders').select('*').in('status', ['auto', 'reassigned']),
     ])
+    // a failed first load must not pass for an empty day; a failed refresh
+    // keeps what is already on screen
+    if (routinesRes.error) {
+      if (!loadedRef.current) setLoadError(true)
+      return
+    }
+    setLoadError(false)
+    loadedRef.current = true
     setRoutines((routinesRes.data as Routine[]) ?? [])
     const logMap = new Map(((logsRes.data as TaskLog[]) ?? []).map((l) => [l.task_id, l]))
     // taps still waiting on a bad connection win over the server's older answer
@@ -216,7 +239,7 @@ export default function Now({
       if ((await setTaskStatus(task.id, next)) === 'saved') load()
     } catch (err) {
       // the server refused it (not a connection problem): show the truth
-      setNotice(t.now.somethingWrong((err as { message?: string }).message ?? String(err)))
+      setNotice({ tone: 'error', text: t.now.somethingWrong((err as { message?: string }).message ?? String(err)) })
       load()
     }
   }
@@ -229,9 +252,9 @@ export default function Now({
     try {
       const result = await interpretMessage(text)
       if (result === 'queued') {
-        setNotice(t.now.offlineQueued)
+        setNotice({ tone: 'info', text: t.now.offlineQueued })
       } else if (result.error) {
-        setNotice(t.now.somethingWrong(result.error))
+        setNotice({ tone: 'error', text: t.now.somethingWrong(result.error) })
       } else {
         setMessage('')
         setSuggestions(result.suggestions)
@@ -241,12 +264,16 @@ export default function Now({
         if (result.applied.length > 0 && result.ai_action_id) {
           setUndo({ aiActionId: result.ai_action_id, response: result })
         } else if (result.applied.length === 0 && result.suggestions.length === 0 && !result.answers?.length) {
-          setNotice(t.now.noMatch)
+          setNotice({ tone: 'info', text: t.now.noMatch })
         }
         load()
       }
     } catch (err) {
-      setNotice(err instanceof AiLimitError ? t.now.aiDailyLimit : t.now.cantReachAi(String(err)))
+      setNotice(
+        err instanceof AiLimitError
+          ? { tone: 'warn', text: t.now.aiDailyLimit }
+          : { tone: 'error', text: t.now.cantReachAi(String(err)) },
+      )
     } finally {
       setBusy(false)
     }
@@ -270,7 +297,7 @@ export default function Now({
       (window as unknown as Record<string, unknown>).SpeechRecognition ??
       (window as unknown as Record<string, unknown>).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      setNotice(t.now.voiceUnsupported)
+      setNotice({ tone: 'info', text: t.now.voiceUnsupported })
       return
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -336,21 +363,42 @@ export default function Now({
     return { routine: section.routine, task, eta }
   })()
 
+  // the message box grows with what is typed and shrinks back when sent
+  useEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    if (message) el.style.height = `${el.scrollHeight}px`
+    el.style.overflowY = el.scrollHeight > el.clientHeight + 1 ? 'auto' : 'hidden'
+  }, [message])
+
+  async function turnOnNudges() {
+    const result = await enableNudges()
+    if (result === 'on') setNudges('on')
+    else if (result === 'denied') setNotice({ tone: 'warn', text: t.now.notifBlocked })
+  }
+
+  function dismissNudgePrompt() {
+    localStorage.setItem(NUDGE_PROMPT_KEY, '1')
+    setNudgePromptOff(true)
+  }
+
+  // reminders that are due (today or earlier) stay on this screen in full;
+  // the rest are one tap away
+  const dueReminders = reminders.filter((r) => r.due_date && r.due_date <= today).slice(0, 4)
+  const now = new Date()
+
   return (
-    <div className="now">
-      <div className="now-head">
-        <p className="eyebrow">
-          {new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
-        <div className="now-head-actions">
-          <InstallButton />
-          <button className="settings-inline" onClick={onOpenSettings} title={t.common.settings} aria-label={t.common.settings}>
-            <Icon name="settings" />
-          </button>
-        </div>
-      </div>
+    <div className="screen today">
+      <ScreenHeader
+        eyebrow={now.toLocaleDateString(locale, { weekday: 'long' })}
+        title={now.toLocaleDateString(locale, { day: 'numeric', month: 'long' })}
+        onOpenSettings={onOpenSettings}
+      />
+
       <div className="composer">
         <textarea
+          ref={composerRef}
           value={message}
           maxLength={MAX_LEN.message}
           onChange={(e) => setMessage(e.target.value)}
@@ -361,134 +409,127 @@ export default function Now({
             }
           }}
           placeholder={t.now.composerPh}
-          rows={2}
+          aria-label={t.now.composerPh}
+          rows={1}
         />
-        <div className="composer-buttons">
-          <button className="send" onClick={send} disabled={busy || !message.trim()}>
-            {busy ? '…' : t.now.send}
-          </button>
-          <button
-            className={listening ? 'voice listening' : 'voice'}
-            onClick={() => (listening ? recognitionRef.current?.stop() : startVoice())}
-            title={t.now.voiceInput}
-            aria-label={t.now.voiceInput}
-          >
-            <Icon name="mic" />
-          </button>
-        </div>
+        {/* empty: the way to the log of past messages; typing: Send takes its place */}
+        {!message.trim() && <IconButton icon="clock" label={t.history.title} onClick={onOpenLog} />}
+        <IconButton
+          icon="mic"
+          label={t.now.voiceInput}
+          aria-pressed={listening}
+          onClick={() => (listening ? recognitionRef.current?.stop() : startVoice())}
+        />
+        {message.trim() && <IconButton icon="arrow-up" variant="primary" label={t.now.send} onClick={send} disabled={busy} />}
       </div>
 
-      {notice && <div className="notice">{notice}</div>}
+      {notice && (
+        <Notice tone={notice.tone} onDismiss={() => setNotice(null)}>
+          {notice.text}
+        </Notice>
+      )}
 
       {suggestions.length > 0 && (
-        <div className="chips">
-          <span className="chips-label">{t.now.didYouMean}</span>
+        <div className="cluster">
+          <span className="hint">{t.now.didYouMean}</span>
           {suggestions.map((s) => (
-            <button key={s.task_id} className="chip" onClick={() => confirmSuggestion(s)}>
+            <button key={s.task_id} type="button" className="chip" onClick={() => confirmSuggestion(s)}>
               <Icon name={s.status === 'skipped' ? 'skip' : 'check'} /> {s.label}
             </button>
           ))}
-          <button className="chip dismiss" onClick={() => setSuggestions([])}>
-            <Icon name="x" /> {t.now.no}
-          </button>
+          <Button variant="ghost" size="sm" icon="x" onClick={() => setSuggestions([])}>
+            {t.now.no}
+          </Button>
         </div>
       )}
 
-      <div className="energy-row">
-        <span className="energy-label">{t.now.energyToday}</span>
-        {(['low', 'medium', 'high'] as Energy[]).map((level) => (
-          <button
-            key={level}
-            className={energy === level ? 'energy-btn active' : 'energy-btn'}
-            aria-pressed={energy === level}
-            onClick={() => pickEnergy(level)}
-          >
-            {level === 'low' ? (
-              <><Icon name="battery-low" /> {t.now.energyLow}</>
-            ) : level === 'medium' ? (
-              <><Icon name="battery-medium" /> {t.now.energyMedium}</>
-            ) : (
-              <><Icon name="zap" /> {t.now.energyHigh}</>
-            )}
-          </button>
-        ))}
+      <div className="field field--inline today__energy">
+        <span className="field__label">{t.now.energyToday}</span>
+        <Segmented options={ENERGY_OPTIONS} value={energy} onChange={pickEnergy} label={t.now.energyToday} />
       </div>
-      {energy === 'low' && (
-        <p className="gentle">{t.now.lowEnergyNote}</p>
-      )}
+      {energy === 'low' && <p className="hint">{t.now.lowEnergyNote}</p>}
+
+      {loadError && !loaded && <ErrorState onRetry={load} />}
 
       {loaded && upNext && (
-        <button
-          className="upnext"
-          onClick={() => setPlaying({ routineId: upNext.routine.id, focusTaskId: upNext.task.id })}
-        >
-          <span className="upnext-label">{t.now.upNext}</span>
-          <span className="upnext-task">{upNext.task.label}</span>
-          <span className="routine-progress">
-            {upNext.routine.name}
+        <Card tone="feature" className="upnext">
+          <p className="eyebrow upnext__label">
+            {t.now.upNext} · {upNext.routine.name}
             {upNext.eta ? ` · ${upNext.eta}` : ''}
-          </span>
-          <span className="upnext-go" aria-hidden="true"><Icon name="play" /></span>
-        </button>
+          </p>
+          <p className="upnext__task">{upNext.task.label}</p>
+          <div className="actions">
+            <Button variant="primary" className="upnext__done" onClick={() => tapStatus(upNext.task, 'done')}>
+              {t.common.done}
+            </Button>
+            <Button onClick={() => tapStatus(upNext.task, 'skipped')}>{t.common.skip}</Button>
+            <IconButton
+              icon="play"
+              variant="filled"
+              label={t.now.startTitle}
+              onClick={() => setPlaying({ routineId: upNext.routine.id, focusTaskId: upNext.task.id })}
+            />
+          </div>
+        </Card>
       )}
 
-      {loaded && (
-        <section className={reminders.length === 0 ? 'routine reminders-card empty' : 'routine reminders-card'}>
-          <h2>
-            {t.now.remindersTitle}
-            {reminders.length > 0 && <span className="routine-progress">{reminders.length}</span>}
-          </h2>
-          {reminders.slice(0, 4).map((r) => {
-            const due = r.due_date ? describeDue(r.due_date, today) : null
-            return (
-              <div key={r.id} className="task">
-                <span className="task-label">
-                  {r.raw_text}
-                  {due && (
-                    <span className={due.overdue ? 'due-pill overdue' : 'due-pill'}>
-                      <Icon name={due.overdue ? 'hourglass' : 'calendar'} />{' '}
-                      {due.label}
+      {loaded && dueReminders.length > 0 && (
+        <Card
+          title={t.now.remindersTitle}
+          meta={reminders.length}
+          action={
+            <Button variant="ghost" size="sm" onClick={onOpenReminders}>
+              {reminders.length > dueReminders.length ? t.now.seeAll(reminders.length) : t.now.open}
+            </Button>
+          }
+        >
+          <div className="rows">
+            {dueReminders.map((r) => {
+              const due = describeDue(r.due_date!, today)
+              return (
+                <div key={r.id} className="row">
+                  <div className="row__main">
+                    {r.raw_text}{' '}
+                    <span className={due.overdue ? 'badge badge--accent' : 'badge'}>
+                      <Icon name={due.overdue ? 'hourglass' : 'calendar'} /> {due.label}
                       {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
                     </span>
-                  )}
-                </span>
-                <div className="task-buttons">
-                  <button className="do" onClick={() => clearReminder(r)}>
+                  </div>
+                  <Button size="sm" onClick={() => clearReminder(r)}>
                     {t.common.done}
-                  </button>
+                  </Button>
                 </div>
-              </div>
-            )
-          })}
-          {reminders.length === 0 && <p className="gentle reminders-empty">{t.now.nothingOnHold}</p>}
-          <button className="link see-all" onClick={onOpenReminders}>
-            {reminders.length > 4 ? t.now.seeAll(reminders.length) : t.now.open}
-          </button>
-        </section>
+              )
+            })}
+          </div>
+        </Card>
       )}
 
-      {!loaded ? (
-        <Skeleton cards={3} />
-      ) : (
-        <div className="routine-list">
+      {!loaded && !loadError && <Skeleton cards={3} />}
+
+      {loaded && sections.length > 0 && (
+        <div className="stack">
           {sections.map(({ routine, tasks, doneCount, complete: allHandled, anchorDiff }) => {
             const showRing = routine.id === activeAnchorId && anchorDiff !== null
             const ringPct = showRing ? Math.round(((ANCHOR_WINDOW - Math.min(Math.abs(anchorDiff), ANCHOR_WINDOW)) / ANCHOR_WINDOW) * 100) : 0
+            // open by default: the routine "up next" belongs to, and one whose time is near
+            const open = openOverride[routine.id] ?? (!allHandled && (routine.id === upNext?.routine.id || routine.id === activeAnchorId))
             return (
-              <section key={routine.id} className={allHandled ? 'routine complete' : 'routine'}>
-                <div className="rail" aria-hidden="true">
-                  <div
-                    className="rail-fill"
-                    style={{ transform: `scaleY(${doneCount / tasks.length})` }}
-                  />
-                </div>
-                <h2>
-                  {routine.name}
-                  <span className="routine-progress">
-                    {allHandled ? <Icon name="check" /> : ` ${doneCount}/${tasks.length}`}
-                  </span>
+              <section key={routine.id} className={cx('card routine', allHandled && 'routine--done')}>
+                <div className="routine__head">
+                  <h2 className="routine__title">
+                    <button
+                      type="button"
+                      className="routine__toggle"
+                      aria-expanded={open}
+                      onClick={() => setOpenOverride((prev) => ({ ...prev, [routine.id]: !open }))}
+                    >
+                      <Icon name="chevron-down" className="disclosure__chevron" />
+                      <span className="routine__name">{routine.name}</span>
+                    </button>
+                  </h2>
                   {showRing && (
-                    <span className="anchor-chip" title={t.now.anchoredAround(routine.anchor_time?.slice(0, 5) ?? '')}>
+                    <span className="badge badge--accent" title={t.now.anchoredAround(routine.anchor_time?.slice(0, 5) ?? '')}>
                       <span
                         className="anchor-ring"
                         style={{ background: `conic-gradient(var(--accent) ${ringPct}%, var(--surface-3) 0)` }}
@@ -497,78 +538,64 @@ export default function Now({
                       {fmtEta(anchorDiff!)}
                     </span>
                   )}
+                  <span className="meta">{allHandled ? <Icon name="check" /> : `${doneCount}/${tasks.length}`}</span>
                   {!allHandled && (
-                    <button
-                      className="start-btn"
-                      onClick={() => setPlaying({ routineId: routine.id })}
-                      title={t.now.startTitle}
-                    >
-                      <Icon name="play" /> {t.now.start}
-                    </button>
+                    <IconButton icon="play" label={`${t.now.start}: ${routine.name}`} onClick={() => setPlaying({ routineId: routine.id })} />
                   )}
-                </h2>
-                {!allHandled &&
-                  tasks.map((task) => {
-                    const status = logs.get(task.id)?.status ?? 'pending'
-                    return (
-                      <div key={task.id} className={`task ${status}`}>
-                        <span className="task-label">{task.label}</span>
-                        <div className="task-buttons">
+                </div>
+                <ProgressBar value={doneCount / tasks.length} tone="good" />
+                {open && (
+                  <div className="rows">
+                    {tasks.map((task) => {
+                      const status = logs.get(task.id)?.status ?? 'pending'
+                      return (
+                        <div key={task.id} className={`row task task--${status}`}>
                           <button
-                            className={status === 'done' ? 'do active' : 'do'}
+                            type="button"
+                            className="check"
+                            aria-pressed={status === 'done'}
+                            aria-label={`${t.common.done}: ${task.label}`}
                             onClick={() => tapStatus(task, 'done')}
                           >
-                            {t.common.done}
+                            <span className="check__box">{(status === 'done' || status === 'partial') && <Icon name="check" />}</span>
                           </button>
+                          <span className="row__main">{task.label}</span>
                           <button
-                            className={status === 'skipped' ? 'skip active' : 'skip'}
+                            type="button"
+                            className="btn btn--ghost btn--sm task__skip"
+                            aria-pressed={status === 'skipped'}
                             onClick={() => tapStatus(task, 'skipped')}
                           >
                             {t.common.skip}
                           </button>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
+                )}
               </section>
             )
           })}
         </div>
       )}
 
-      {loaded && sections.length === 0 && (
-        <p className="gentle">{t.now.nothingScheduled}</p>
+      {loaded && sections.length === 0 && <EmptyState icon="leaf">{t.now.nothingScheduled}</EmptyState>}
+
+      {loaded && dueReminders.length === 0 && (
+        <ListRow
+          icon="bell"
+          label={t.now.remindersTitle}
+          meta={reminders.length > 0 ? reminders.length : t.now.nothingOnHold}
+          onClick={onOpenReminders}
+        />
       )}
 
-      {loaded && (nudges === 'on' || nudges === 'off') && (
-        <p className="gentle nudge-row">
-          {nudges === 'on' ? (
-            <>
-              <Icon name="bell" /> {t.now.nudgesOn}
-              <button
-                className="link"
-                onClick={async () => {
-                  await disableNudges()
-                  setNudges('off')
-                }}
-              >
-                {t.now.turnOff}
-              </button>
-            </>
-          ) : (
-            <button
-              className="link"
-              onClick={async () => {
-                const result = await enableNudges()
-                if (result === 'on') setNudges('on')
-                else if (result === 'denied')
-                  setNotice(t.now.notifBlocked)
-              }}
-            >
-              <Icon name="bell" /> {t.now.enableNudges}
-            </button>
-          )}
-        </p>
+      {loaded && nudges === 'off' && !nudgePromptOff && (
+        <Notice icon="bell" onDismiss={dismissNudgePrompt}>
+          <Button variant="ghost" size="sm" onClick={turnOnNudges}>
+            {t.now.enableNudges}
+          </Button>
+        </Notice>
       )}
 
       {player.mounted &&
@@ -594,8 +621,8 @@ export default function Now({
           const u = undo ?? lastUndo.current
           if (!u) return null
           return (
-            <div className="toast" data-closing={toast.closing || undefined}>
-              <div className="toast-lines">
+            <div className="toast" role="status" data-closing={toast.closing || undefined}>
+              <div className="toast__body">
                 {u.response.applied.map((a, i) => {
                   const d = describeAction(a)
                   return (
@@ -605,10 +632,10 @@ export default function Now({
                   )
                 })}
               </div>
-              <button onClick={runUndo}>{t.common.undo}</button>
-              <button className="toast-close" onClick={() => setUndo(null)} aria-label={t.common.dismiss}>
-                <Icon name="x" />
-              </button>
+              <Button variant="ghost" size="sm" onClick={runUndo}>
+                {t.common.undo}
+              </Button>
+              <IconButton icon="x" label={t.common.dismiss} onClick={() => setUndo(null)} />
             </div>
           )
         })()}

@@ -63,7 +63,7 @@ export function shortTime(time: string): string {
   return time.slice(0, 5)
 }
 
-export default function Reminders({ visible, onBack }: { visible: boolean; onBack: () => void }) {
+export default function Reminders({ visible, onBack }: { visible: boolean; onBack: () => void; onOpenSettings: () => void }) {
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loaded, setLoaded] = useState(false)
