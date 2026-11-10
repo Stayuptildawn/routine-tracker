@@ -1,5 +1,5 @@
 // Hardware/gesture back inside the installed PWA (Android back button, iOS
-// edge swipe): close the topmost overlay, else fall back to the Now tab, and
+// edge swipe): close the topmost overlay, else fall back to the Today tab, and
 // never leave the app. Browser tabs are untouched - the guard only arms in
 // standalone display mode, so the real back button keeps working there.
 //

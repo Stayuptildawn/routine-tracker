@@ -23,7 +23,6 @@ export const en = {
   common: {
     save: 'Save',
     cancel: 'Cancel',
-    edit: 'edit',
     Edit: 'Edit',
     add: 'Add',
     done: 'Done',
@@ -48,7 +47,6 @@ export const en = {
     tabToday: 'Today',
     tabWeek: 'Week',
     tabWorkout: 'Workout',
-    tabAiLog: 'AI Log',
     tabReflect: 'Reflect',
     mainNav: 'Main',
   },
@@ -93,12 +91,8 @@ export const en = {
       'Tap the ⋮ menu at the top right of your browser, then “Install app” (some browsers call it “Add to Home screen”). Open it from there and sign in, it runs full screen and can send you gentle nudges.',
     maybeLater: 'maybe later',
     installApp: 'Install app',
-    // Now-tab button + help sheet
-    install: 'Install',
-    helpTitle: 'Add this app to your home screen',
+    // Settings entry
     helpTail: ' It then runs full screen and can send you gentle nudges.',
-    gotIt: 'Got it',
-    helpAria: 'How to install',
   },
 
   now: {
@@ -136,7 +130,6 @@ export const en = {
     minutes: (n: number) => `${n} min`,
     nothingScheduled: 'Nothing scheduled right now. That’s allowed.',
     nudgesOn: 'Nudges on',
-    turnOff: 'turn off',
     enableNudges: 'Enable gentle nudges',
     notifBlocked: 'Notifications are blocked for this site — enable them in browser settings first.',
     answerTitle: 'Answer',
@@ -149,7 +142,6 @@ export const en = {
     subtitle: 'A record, not a scorecard. Blanks are neutral. Tap any past day to cycle done / skipped / blank.',
     dayNames: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     dayNamesShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
-    paused: ' paused',
     pausedGroup: (n: number) => `Paused (${n})`,
     activate: 'Activate',
     pause: 'Pause',
@@ -191,14 +183,12 @@ export const en = {
     other: 'Other',
     doneBadge: 'Done',
     dismissedBadge: 'Dismissed',
-    hideCleared: 'Hide cleared',
     cleared: (n: number) => `Cleared (${n})`,
     nothingPending: 'Nothing pending. Say “remind me to…” on the Today tab to add one.',
   },
 
   gym: {
     title: 'Workout',
-    strength: 'Strength',
     cardio: 'Cardio',
     tabTrain: 'Train',
     tabPlan: 'Plan',
@@ -431,7 +421,6 @@ export const en = {
     sessionLabel: 'Session',
     moveUp: 'Move up',
     moveDown: 'Move down',
-    remove: 'Remove',
     removeTitle: 'Remove (undoable until Save)',
     wk: (k: string) => `wk ${k}`,
     setsX: 'sets ×',

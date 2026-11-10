@@ -80,7 +80,7 @@ export default function App() {
   const parentTab: MainTab = tab === 'reminders' ? 'now' : tab === 'history' ? logFrom : tab
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) ?? 'auto')
   // saving a language reloads the app; this flag brings the user back to
-  // Settings instead of dropping them on the Now tab
+  // Settings instead of dropping them on the Today tab
   const [settingsOpen, setSettingsOpen] = useState(() => sessionStorage.getItem('reopen-settings') === '1')
   useEffect(() => {
     sessionStorage.removeItem('reopen-settings')

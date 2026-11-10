@@ -282,6 +282,15 @@ function cmp(a: unknown, b: unknown): number {
   return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0
 }
 
+// Column defaults the real database fills in on insert. Without them a row
+// made in the demo (a new task, routine or reminder) lacks fields the screens
+// read without checking, and the app would crash on the next render.
+const INSERT_DEFAULTS: Record<string, () => Row> = {
+  tasks: () => ({ scheduled_days: [1, 2, 3, 4, 5, 6, 7], tier: 'standard' }),
+  routines: () => ({ active: true, category: null, anchor_time: null }),
+  reminders: () => ({ updated_at: new Date().toISOString() }),
+}
+
 class DemoQuery {
   private table: string
   private op: 'select' | 'insert' | 'update' | 'upsert' | 'delete' = 'select'
@@ -424,6 +433,7 @@ class DemoQuery {
           const row: Row = {
             id: crypto.randomUUID(),
             created_at: new Date().toISOString(),
+            ...INSERT_DEFAULTS[this.table]?.(),
             ...v,
           }
           rows.push(row)

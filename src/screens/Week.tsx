@@ -237,8 +237,10 @@ export default function Week({ visible, onOpenSettings }: { visible: boolean; on
               <tr>
                 <td />
                 {DAY_NAMES.map((d, i) => (
-                  <th key={d} scope="col" className={weekDates[i] === today ? 'is-today' : undefined}>
-                    {d}
+                  <th key={d} scope="col" aria-label={d} className={weekDates[i] === today ? 'is-today' : undefined}>
+                    {/* phones get the two-letter name: seven full names don't fit seven narrow columns in every language */}
+                    <span className="week-table__day">{d}</span>
+                    <span className="week-table__day week-table__day--short">{t.week.dayNamesShort[i]}</span>
                   </th>
                 ))}
               </tr>

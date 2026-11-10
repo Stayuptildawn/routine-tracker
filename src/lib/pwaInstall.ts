@@ -45,7 +45,7 @@ export async function triggerInstall(): Promise<'accepted' | 'dismissed' | null>
 }
 
 // Manual steps for when there's no install event to fire (always on iOS,
-// sometimes on Android). Shared so the login card and the Now-tab button agree.
+// sometimes on Android). Shared so the login card and the Settings entry agree.
 export const IOS_INSTALL_STEPS = t.install.iosSteps
 export const ANDROID_INSTALL_STEPS = t.install.androidSteps
 

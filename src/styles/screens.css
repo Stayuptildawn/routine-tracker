@@ -384,10 +384,22 @@ span.cell:not(.cell--off, .cell--done, .cell--partial, .cell--skipped) {
   }
 }
 
+.week-table__day--short {
+  display: none;
+}
+
 @media (max-width: 480px) {
   .week-table thead th {
     width: 2rem;
     letter-spacing: 0;
+  }
+
+  .week-table__day:not(.week-table__day--short) {
+    display: none;
+  }
+
+  .week-table__day--short {
+    display: inline;
   }
 }
 
