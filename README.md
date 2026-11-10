@@ -17,16 +17,16 @@ Self-hosted, free to run, no subscription.
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/now.jpg" width="32%" alt="The Now tab: one message box, energy pills, and the day's routines">
-  <img src="docs/screenshots/workout.jpg" width="32%" alt="The Workout tab: a 6-week training block grid and weekly volume bars">
-  <img src="docs/screenshots/reflect.jpg" width="32%" alt="The Reflect tab: an AI-written note about the week and daily bars">
+  <img src="docs/screenshots/today.jpg" width="32%" alt="The Today tab: one message box, the energy switch, an Up next card with a Done button, and the morning routine as a checklist">
+  <img src="docs/screenshots/workout.jpg" width="32%" alt="The Workout tab: the next session with one Start button, above the 6-week training block grid">
+  <img src="docs/screenshots/reflect.jpg" width="32%" alt="The Reflect tab: two AI-written notes about the week, above the daily bars">
 </p>
 
 ## Try it first
 
 The quickest way to get it is to open the
 [demo](https://stayuptildawn.github.io/routine-tracker/?demo) and type
-something into the box on the Now tab, the way you'd say it to a friend:
+something into the box at the top of Today, the way you'd say it to a friend:
 
 > *"took my meds, drank water and benched 80 for 5"*
 
@@ -120,12 +120,14 @@ menus.
 |---|---|
 | **One message box** | Plain language in, check-offs, sets, cardio, reminders and energy out. Past days too: *"did the dishes yesterday"* lands on yesterday's row. Voice input works. |
 | **Confidence, not guesses** | Sure actions apply with undo, the maybes come back as one-tap chips, and anything it's unsure about does nothing at all. |
-| **Questions about your data** | The answer pops up on the Now tab and stays in the AI log, built only from a summary of your own rows. |
+| **Questions about your data** | The answer pops up on Today and stays in the AI log, built only from a summary of your own rows. |
 | **Routines that adapt** | Tasks have tiers (core, standard, bonus). On a low day you only see the core. |
 | **Time anchors** | A routine set to "around 8:00" floats to the top near its time with a little countdown ring, a time-blindness aid, not an alarm. |
-| **Routine player** | One task at a time, full screen, two big buttons, for the days when a list is already too much. An **Up next** strip picks the one task that makes most sense right now. |
+| **Up next** | One card at the top of Today picks the task that makes most sense right now, with its own Done and Skip. Only the routine you're in is open, the others wait as one line each. |
+| **Routine player** | One task at a time, full screen, two big buttons, for the days when a list is already too much. |
 | **Training blocks** | 6-week PPL then Upper/Lower, rep-wave periodization, an injury-safe execution cue on every exercise. One tap generates the whole block. |
 | **Session player** | Every set with last time's numbers pre-filled, and the safety cue pinned under the exercise name. |
+| **Four Workout views** | Train (the next session and the block), Plan, Progress and Cardio, so doing, planning and looking back each get a screen of their own. |
 | **Volume picture** | Hard sets per muscle per week, plus a *"Last 4 weeks"* ranking that tags your most and least trained muscle. |
 | **Suggested plan changes** | One set more or fewer on a specific exercise, with the reason in real numbers. Folded into a list, applied with one tap. |
 | **Injury reports** | Upcoming sets get lighter, swapped or taken out depending on how bad it is, cardio included. **Healed** puts back exactly what changed. |
@@ -156,12 +158,16 @@ menus.
 
 **Routines.**
 
-- Routines can be **paused** from the week view: hidden from the day, the AI
-  and the nudges, history intact, one tap to bring them back.
+- Every routine has an **editor** of its own (Edit, on the Week tab): name,
+  anchor time, tasks, which days, which tier.
+- Routines can be **paused** from that editor: hidden from the day, the AI
+  and the nudges, history intact. Paused ones fold into a small group at the
+  bottom of Week, one tap to bring them back.
 - Optional **push nudges**: if a routine's anchor passes and its core tasks
   are still pending, you get one gentle notification (*"Morning routine is
   ready when you are"*), at most once per routine per day.
-- Past days can be corrected from the week grid.
+- Past days can be corrected from the week table, the whole week is one
+  table with the day names stuck to the top.
 - Taps work offline, and that includes the annoying in-between case: one bar
   of signal outside the house, where the phone swears it's online but nothing
   actually gets through. I kept losing Done taps there, the task would just
@@ -208,7 +214,7 @@ menus.
 - Half an hour before the nightly reflection, one push reminds you to log
   anything still floating around.
 - One-tap CSV export of tasks, workouts, training sets, cardio, recovery
-  check-ins and reminders.
+  check-ins and reminders, under **Your data** in Settings.
 
 **The basics.**
 
@@ -217,17 +223,28 @@ menus.
 - In the installed app the back button closes whatever is open, then returns
   to the day, and never throws you out.
 - No browser popups anywhere, destructive taps confirm in-app.
-- Settings for theme (auto, light, dark), language, timezone and the cardio
-  switch.
+- Settings is one tap away from every screen: theme (auto, light, dark),
+  language, notifications and timezone, the cardio switch, installing the
+  app, your data and your account.
+- If something can't load, the screen says so and offers **Try again**. It
+  used to just look like an empty day.
 
 </details>
 
 <p align="center">
   <img src="docs/screenshots/session.jpg" width="24%" alt="The session player: sets with last time's numbers pre-filled and a safety cue">
   <img src="docs/screenshots/checkin.jpg" width="24%" alt="After a session: an optional recovery check-in per muscle, three quick questions">
-  <img src="docs/screenshots/week.jpg" width="24%" alt="The Week tab: a done/skipped grid per routine, a record, not a scorecard">
+  <img src="docs/screenshots/week.jpg" width="24%" alt="The Week tab: one table of done and skipped marks per routine, a record, not a scorecard">
   <img src="docs/screenshots/ailog.jpg" width="24%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
 </p>
+
+<p align="center">
+  <img src="docs/screenshots/today-dark.jpg" width="24%" alt="The Today tab in the dark theme">
+  <img src="docs/screenshots/routine-editor.jpg" width="24%" alt="The routine editor: name, anchor time, pause, and each task with its tier and days">
+  <img src="docs/screenshots/cardio.jpg" width="24%" alt="The Cardio view: the week's target with a progress bar, quick logging and the daily bars">
+</p>
+
+<p align="center"><sub>All screenshots are the demo, with its sample data.</sub></p>
 
 ## How it works
 
@@ -370,12 +387,15 @@ sign up" in the Supabase Auth settings, so strangers can't use your AI quota.
 ```
 routine-tracker/
 ├── src/
-│   ├── screens/          # Now, Week, Gym (Workout), Reflect, Session, Settings...
+│   ├── screens/          # Now (Today), Week, Gym (Workout), Reflect, Session,
+│   │                     #   Settings...
 │   ├── lib/              # the logic: blocks, flex sessions, injuries, volume
 │   │                     #   tuning, offline queue, demo fake backend
 │   ├── i18n/             # one typed file per language (en.ts is the source)
 │   ├── components/       # icons, skeletons, the in-app confirm button
-│   └── index.css         # the whole design system, one file
+│   │   └── ui/           # the shared parts: Button, Segmented, Chips, Card,
+│   │                     #   Sheet, Dialog, Notice...
+│   └── styles/           # tokens, base, components, shell, screens
 ├── supabase/
 │   ├── migrations/       # 0001 upward, run in order
 │   └── functions/
@@ -393,13 +413,37 @@ routine-tracker/
 ## Design
 
 The UI follows its own bedtime advice (dim lights, no screens): a warm,
-low-blue "lamplight" palette, one amber accent, sage green for done. The body
-font is Atkinson Hyperlegible, which was designed by the Braille Institute for
-maximum legibility.
+low-blue "lamplight" palette, one amber accent, sage green for done. There's
+a light theme (paper) and a dark one (lamplight), and Auto follows your
+device.
 
-Every icon is a hand-rolled inline SVG (no icon font, no emoji in the
-chrome), so they look the same on every device and follow the theme colors
-instead of whatever your OS ships.
+The app grew one feature at a time, and at some point every screen was a long
+stack of cards that all looked equally important. On my phone the first task
+of the day started below the fold, under a message box, an energy picker and
+a reminders card! So I rebuilt the whole interface around a few rules:
+
+- **Four tabs, one job each.** Today is for doing, Week is the record,
+  Workout is training, Reflect is looking back. Settings sits at the top
+  right of every screen, and the AI log opens from the little clock in the
+  message box.
+- **One amber button per screen.** Whatever the next step is (*Done*, *Start
+  session*, *Save*) gets the only filled button, everything else is outlined
+  or plain text.
+- **Things you set once live in Settings.** Notifications, installing the app
+  and the CSV exports moved out of the screens you open every day.
+- **Readable first.** Text colors are picked to pass WCAG AA contrast in both
+  themes, nothing is set smaller than 12px, pinch zoom works, and pop-ups
+  keep keyboard focus inside and close on Escape.
+
+Under it sits a small design system in three layers: tokens (colors, type,
+spacing), then about a dozen shared parts in `src/components/ui`, then the
+screens. No screen styles a button of its own, which is how the old version
+ended up with one pill doing six different jobs.
+
+The body font is Atkinson Hyperlegible, which was designed by the Braille
+Institute for maximum legibility. Every icon is a hand-rolled inline SVG (no
+icon font, no emoji in the chrome), so they look the same on every device and
+follow the theme colors instead of whatever your OS ships.
 
 ## Stack
 
@@ -408,7 +452,8 @@ Edge Functions, pg_cron) behind it, Gemini Flash-Lite for the AI, Web Push for
 nudges, and GitHub Pages for hosting.
 
 No chart libraries, no drag-and-drop libraries, no CSS framework. The bars are
-plain divs and the whole design system is one CSS file.
+plain divs and the design system is plain CSS, five small files in
+`src/styles`.
 
 Exercise-name autocomplete uses a trimmed extract (names and muscle groups
 only, about 9 KB gzipped, loaded on demand) of the MIT-licensed

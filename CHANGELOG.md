@@ -4,6 +4,52 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## Unreleased (redesign, on the `redesign` branch)
+
+The whole interface rebuilt on a small design system. Every feature is still
+there and does what it did; what changed is where things live and how they
+look.
+
+### Changed
+- **Four tabs: Today, Week, Workout, Reflect.** "Now" is called Today. The AI
+  log is no longer a tab: it opens from the clock icon in the message box, or
+  from a row at the bottom of Reflect.
+- **Settings is at the top right of every screen** on phones (it used to be
+  reachable from one screen only), and on the side rail on desktop.
+- **Today.** The message box is one line until you use it. *Up next* has its
+  own Done and Skip. Each task is a tick circle with a quiet Skip at the end
+  of the row. Only the routine you're in is open; the others are one line
+  each and open on tap. Reminders that are due stay on screen, the rest is
+  one row.
+- **Week** is one table with the day names stuck to the top. Editing a routine
+  opens on a screen of its own; paused routines fold into a group at the
+  bottom.
+- **Workout** has four views: Train (next session, block grid, flexible
+  session, coach's note, injuries), Plan (the plan and its editor), Progress
+  (volume picture, suggested changes, lifts logged from the message box) and
+  Cardio.
+- **Moved to Settings:** the nudges switch (was a link at the bottom of
+  Today), Install app (was a button in the Today header) and the CSV exports
+  (were under Reflect). The offer to turn nudges on shows once on Today.
+- **Dates read "Mon, Nov 9"** in the workout and cardio lists instead of
+  2026-11-09.
+- New look: warmer paper, one amber button per screen, round tick boxes,
+  chips for answers, the same Save and Cancel everywhere.
+
+### Fixed
+- **A failed first load now says so**, with Try again, on Today, Week,
+  Workout, Reminders and the AI log. It used to look like an empty screen
+  ("Nothing scheduled right now").
+- **Pinch zoom works.** It was switched off for the whole app.
+- **Contrast.** Amber links, the green done state and the grey skipped state
+  were below WCAG AA in the light theme; all text colors pass now. Nothing is
+  smaller than 12px (some chart labels were 8px).
+- **Pop-ups behave like the full-screen views:** the install help, the
+  translate offer and "apply to this block too?" trap keyboard focus and
+  close on Escape or the back button. Escape closes only the top one.
+- **Demo:** adding a task from the routine editor no longer crashes to a blank
+  page.
+
 ## 2026-11-05 (security)
 
 Fixes from a full security audit. Nothing here was known to be exploited.
