@@ -3,10 +3,10 @@
 <p align="center"><em>A routine tracker that works with your brain, whatever it's like.</em></p>
 
 <p align="center">
-You just type (or say) <em>"ran 5k and did my morning routine"</em><br>
+You type (or say) <em>"ran 5k and did my morning routine"</em><br>
 and it ticks the right boxes for you.<br>
-Built gentle enough for ADHD brains, which makes it lighter for every brain.<br>
-Self-hosted, free to run, no subscription.
+I built it gentle enough for an ADHD brain, which made it lighter for any brain.<br>
+You host it yourself, it's free to run, and there's no subscription.
 </p>
 
 <p align="center"><sub>React · Supabase · Gemini · installable PWA · 11 languages · AGPL-3.0</sub></p>
@@ -24,23 +24,23 @@ Self-hosted, free to run, no subscription.
 
 ## Try it first
 
-The quickest way to get it is to open the
+Before reading anything else, just open the
 [demo](https://stayuptildawn.github.io/routine-tracker/?demo) and type
 something into the box at the top of Today, the way you'd say it to a friend:
 
 > *"took my meds, drank water and benched 80 for 5"*
 
-Even the demo has a stand-in for the AI, so simple phrasings (task names,
-*"bench 60kg 3x8"*, *"ran 5k in 25 min"*, *"remind me to..."*) really apply,
-with undo and the AI log working. Nothing leaves your browser.
+The demo has no server behind it, so a small stand-in plays the AI. It gets
+the simple phrasings (task names, *"bench 60kg 3x8"*, *"ran 5k in 25 min"*,
+*"remind me to..."*) and those really apply, with undo and the AI log
+working. Nothing leaves your browser.
 
 ## Why I built this
 
-I was managing my routines in Google Docs, and honestly it was painful. It was
-unresponsive on my phone, and every small update meant scrolling around a big
-table hunting for the right cell. That is way too much work for just being
-spontaneous, and it asks for exactly the kind of focused effort that routines
-are supposed to take out of your day.
+I used to manage my routines in Google Docs, and honestly it was painful. It
+was unresponsive on my phone, and every small update meant scrolling around a
+big table hunting for the right cell. That's way too much work for something
+that is supposed to take work out of your day.
 
 The apps made for this are mostly behind a paywall. The good ADHD planners
 charge around [$3 to $12 per month](https://habi.app/insights/best-adhd-planner-apps/),
@@ -85,11 +85,11 @@ menus.
 - **Shrinks the day when you're low.** *"low energy today"* switches to the
   core minimum, and finishing that still counts as a full win.
 - **Answers questions about your own record.** *"how consistent have I been
-  with meds?"*, *"what's my best bench?"*, and it says so when the answer
-  isn't in your data instead of guessing a number.
+  with meds?"*, *"what's my best bench?"*, and when the answer isn't in your
+  data it says so instead of guessing a number.
 - **Remembers things for you.** *"remind me to call the bank tomorrow at
   5pm"* becomes a reminder with a due time and a push at that hour.
-- **Runs your training.** Six-week blocks, a session player with last time's
+- **Runs your training.** Six-week blocks, a session screen with last time's
   numbers pre-filled, recovery check-ins, and plan changes it suggests from
   your own volume and feedback, applied only when you tap Apply.
 - **Works around injuries.** Tell it your knee hurts, see exactly what would
@@ -114,6 +114,41 @@ menus.
   70% of actions kept. Every miss is visible and one tap from undone, which
   beats a model you have to babysit.
 
+## A look around
+
+There are four tabs, and each one has one job.
+
+- **Today** is for doing. The message box sits at the top, then an **Up
+  next** card with the one task that makes most sense right now and its own
+  Done button. Under it the routine you're in is open as a checklist, and the
+  other routines wait as one line each (*"Leave House 0/6"*) until you tap
+  them.
+- **Week** is the record. One table, the days across the top, a mark for
+  done and a neutral dash for skipped. Tap a past day to fix it. Edit, next to
+  each routine's name, opens that routine on a screen of its own.
+- **Workout** is training, split into four views: **Train** (the next
+  session and the block), **Plan**, **Progress** and **Cardio**.
+- **Reflect** is looking back: what the AI noticed this week, the daily
+  bars, and a chart you can stretch from the last 24 hours up to 12 months.
+
+**Settings** is the gear at the top right of every screen, and the **AI
+log** opens from the little clock in the message box.
+
+<p align="center">
+  <img src="docs/screenshots/session.jpg" width="24%" alt="A training session: sets with last time's numbers pre-filled and a safety cue under the exercise name">
+  <img src="docs/screenshots/checkin.jpg" width="24%" alt="After a session: an optional recovery check-in per muscle, three quick questions answered with chips">
+  <img src="docs/screenshots/week.jpg" width="24%" alt="The Week tab: one table of done and skipped marks per routine, a record, not a scorecard">
+  <img src="docs/screenshots/ailog.jpg" width="24%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/today-dark.jpg" width="24%" alt="The Today tab in the dark theme">
+  <img src="docs/screenshots/routine-editor.jpg" width="24%" alt="The routine editor: name, anchor time, pause, and each task with its tier and days">
+  <img src="docs/screenshots/cardio.jpg" width="24%" alt="The Cardio view: the week's target with a progress bar, quick logging and the daily bars">
+</p>
+
+<p align="center"><sub>All screenshots are the demo, with its sample data.</sub></p>
+
 ## Features
 
 | Feature | What it does |
@@ -123,11 +158,10 @@ menus.
 | **Questions about your data** | The answer pops up on Today and stays in the AI log, built only from a summary of your own rows. |
 | **Routines that adapt** | Tasks have tiers (core, standard, bonus). On a low day you only see the core. |
 | **Time anchors** | A routine set to "around 8:00" floats to the top near its time with a little countdown ring, a time-blindness aid, not an alarm. |
-| **Up next** | One card at the top of Today picks the task that makes most sense right now, with its own Done and Skip. Only the routine you're in is open, the others wait as one line each. |
+| **Up next** | One card at the top of Today picks the task that makes most sense right now, with its own Done and Skip. |
 | **Routine player** | One task at a time, full screen, two big buttons, for the days when a list is already too much. |
 | **Training blocks** | 6-week PPL then Upper/Lower, rep-wave periodization, an injury-safe execution cue on every exercise. One tap generates the whole block. |
-| **Session player** | Every set with last time's numbers pre-filled, and the safety cue pinned under the exercise name. |
-| **Four Workout views** | Train (the next session and the block), Plan, Progress and Cardio, so doing, planning and looking back each get a screen of their own. |
+| **Session screen** | Every set with last time's numbers pre-filled, and the safety cue pinned under the exercise name. |
 | **Volume picture** | Hard sets per muscle per week, plus a *"Last 4 weeks"* ranking that tags your most and least trained muscle. |
 | **Suggested plan changes** | One set more or fewer on a specific exercise, with the reason in real numbers. Folded into a list, applied with one tap. |
 | **Injury reports** | Upcoming sets get lighter, swapped or taken out depending on how bad it is, cardio included. **Healed** puts back exactly what changed. |
@@ -166,8 +200,6 @@ menus.
 - Optional **push nudges**: if a routine's anchor passes and its core tasks
   are still pending, you get one gentle notification (*"Morning routine is
   ready when you are"*), at most once per routine per day.
-- Past days can be corrected from the week table, the whole week is one
-  table with the day names stuck to the top.
 - Taps work offline, and that includes the annoying in-between case: one bar
   of signal outside the house, where the phone swears it's online but nothing
   actually gets through. I kept losing Done taps there, the task would just
@@ -177,7 +209,7 @@ menus.
 **Training.**
 
 - **Flexible sessions.** Fewer gym days than planned is fine, weekly volume
-  matters more than the exact split. The composer builds an upper, lower or
+  matters more than the exact split. The tool builds an upper, lower or
   full-body day (or a whole short week) from what your week still needs.
 - After a session, an optional **recovery check-in** per muscle: how it
   recovered, how hard it worked, how the amount felt. Those answers feed the
@@ -196,11 +228,11 @@ menus.
   report or heal an injury.
 - Off-plan lifts count: *"hammer curls 14kg 3x12"* gets tagged with its
   muscle group and shows up in the volume picture instead of disappearing.
-- A **cardio view** with quick logging, weekly distance and pace. If your
+- A **Cardio view** with quick logging, weekly distance and pace. If your
   watch already tracks all of that, like mine does, switch **Cardio logging**
-  off in Settings. The cardio view, its chart and CSV disappear, the composer
-  stops logging runs, and the coach stops commenting on cardio it can't see.
-  Nothing is deleted.
+  off in Settings. The Cardio view, its chart and CSV disappear, the message
+  box stops logging runs, and the coach stops commenting on cardio it can't
+  see. Nothing is deleted.
 - The plan is fully yours to edit, sets × reps per phase as plain fields.
   Exercise names autocomplete from a 1,289-exercise database and fill in the
   muscle group for you. Nothing saves until you press Save.
@@ -223,28 +255,13 @@ menus.
 - In the installed app the back button closes whatever is open, then returns
   to the day, and never throws you out.
 - No browser popups anywhere, destructive taps confirm in-app.
-- Settings is one tap away from every screen: theme (auto, light, dark),
-  language, notifications and timezone, the cardio switch, installing the
-  app, your data and your account.
+- Settings holds the theme (auto, light, dark), language, notifications and
+  timezone, the cardio switch, installing the app, your data and your
+  account.
 - If something can't load, the screen says so and offers **Try again**. It
   used to just look like an empty day.
 
 </details>
-
-<p align="center">
-  <img src="docs/screenshots/session.jpg" width="24%" alt="The session player: sets with last time's numbers pre-filled and a safety cue">
-  <img src="docs/screenshots/checkin.jpg" width="24%" alt="After a session: an optional recovery check-in per muscle, three quick questions">
-  <img src="docs/screenshots/week.jpg" width="24%" alt="The Week tab: one table of done and skipped marks per routine, a record, not a scorecard">
-  <img src="docs/screenshots/ailog.jpg" width="24%" alt="The AI action log: every message, what it did, one-tap undo, and a running accuracy score">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/today-dark.jpg" width="24%" alt="The Today tab in the dark theme">
-  <img src="docs/screenshots/routine-editor.jpg" width="24%" alt="The routine editor: name, anchor time, pause, and each task with its tier and days">
-  <img src="docs/screenshots/cardio.jpg" width="24%" alt="The Cardio view: the week's target with a progress bar, quick logging and the daily bars">
-</p>
-
-<p align="center"><sub>All screenshots are the demo, with its sample data.</sub></p>
 
 ## How it works
 
@@ -274,7 +291,7 @@ your open reminders, and asks Gemini for a structured list of actions. The
 day's tasks go straight into the prompt as candidates, which at personal scale
 works better than embeddings and costs basically nothing. If a planned
 training session is open today, logged sets fill that session's planned sets,
-so the message box and the session player write the same rows.
+so the message box and the session screen write the same rows.
 
 Questions go one step further. The simple ones (*"when did I last..."*,
 *"what's pending?"*) are answered straight from the database. For anything
@@ -423,9 +440,7 @@ of the day started below the fold, under a message box, an energy picker and
 a reminders card! So I rebuilt the whole interface around a few rules:
 
 - **Four tabs, one job each.** Today is for doing, Week is the record,
-  Workout is training, Reflect is looking back. Settings sits at the top
-  right of every screen, and the AI log opens from the little clock in the
-  message box.
+  Workout is training, Reflect is looking back.
 - **One amber button per screen.** Whatever the next step is (*Done*, *Start
   session*, *Save*) gets the only filled button, everything else is outlined
   or plain text.
@@ -491,11 +506,11 @@ is where the free tiers would actually break, in order:
 
 Every table is locked to its owner by the database itself (Postgres Row
 Level Security), so even if I made a mistake in the code and asked for
-everyone's data, the database would still only return yours. The key inside the app is public on
-purpose, that's how Supabase works, and it opens nothing without you being
-logged in. The secrets that matter (the AI key, the admin key, the push keys)
-stay on the server. Before sign-in the database answers nothing at all, and
-the demo runs on a fake in your browser.
+everyone's data, the database would still only return yours. The key inside
+the app is public on purpose, that's how Supabase works, and it opens nothing
+without you being logged in. The secrets that matter (the AI key, the admin
+key, the push keys) stay on the server. Before sign-in the database answers
+nothing at all, and the demo runs on a fake in your browser.
 
 When you ask a question, the server builds a short summary of your own rows
 and that summary is the only thing the AI sees. There's a test that puts
@@ -505,9 +520,9 @@ Google's.
 
 This is a personal project I host myself, and no security company has
 audited it. I did run an automated security audit in November 2026 and fixed
-what it found. Some background jobs run with higher access and rely on my code to
-stay scoped to the right person, and GitHub Pages doesn't let me set a couple
-of extra security headers I'd add on my own server.
+what it found. Some background jobs run with higher access and rely on my
+code to stay scoped to the right person, and GitHub Pages doesn't let me set
+a couple of extra security headers I'd add on my own server.
 
 **Can it read my workouts from Apple Health or my watch?**
 
@@ -523,9 +538,9 @@ pain goes to a physio or a doctor.
 
 **Can I add my language?**
 
-Yes. Copy `src/i18n/en.ts`, translate the values and
-register it in `src/i18n/index.ts`. Every pack is typed against the English
-one, so TypeScript tells you about anything you missed.
+Yes. Copy `src/i18n/en.ts`, translate the values and register it in
+`src/i18n/index.ts`. Every pack is typed against the English one, so
+TypeScript tells you about anything you missed.
 
 ## About me
 
