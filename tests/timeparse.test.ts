@@ -12,6 +12,7 @@ import {
   normalizeDueTime,
   parseAbsoluteTime,
   parseBpm,
+  parseDueDate,
   parseRelativeDay,
   parseRelativeMinutes,
 } from '../supabase/functions/_shared/timeparse'
@@ -101,6 +102,75 @@ describe('parseRelativeDay / mentionsYesterday', () => {
     expect(parseRelativeDay('no day named')).toBeNull()
     expect(mentionsYesterday('I did the dishes yesterday')).toBe(true)
     expect(mentionsYesterday('I did the dishes')).toBe(false)
+  })
+})
+
+// Every message here was really sent on 2026-11-01 or 2026-11-11 and was
+// saved with no date, or the wrong one.
+describe('parseDueDate', () => {
+  const SUN = '2026-11-01' // a Sunday
+  const WED = '2026-11-11' // a Wednesday
+
+  it('reads the short ways of writing tomorrow', () => {
+    expect(parseDueDate('Remind me to go to uni tmrw', WED)).toBe('2026-11-12')
+    expect(parseDueDate('call mum tommorow', WED)).toBe('2026-11-12')
+    expect(parseDueDate('do it today', WED)).toBe(WED)
+    expect(parseDueDate('buy bananas', WED)).toBeNull()
+  })
+  it('resolves a weekday name to the next such day', () => {
+    expect(parseDueDate('Pay the TASA on monday', SUN)).toBe('2026-11-02')
+    expect(parseDueDate('call the bank by Friday', WED)).toBe('2026-11-13')
+    expect(parseDueDate('gym on wed', WED)).toBe('2026-11-18') // said on a Wednesday: next week's
+    expect(parseDueDate('llamar al banco el viernes', WED)).toBe('2026-11-13')
+  })
+  it('does not read ordinary words as days', () => {
+    expect(parseDueDate('buy sun cream', WED)).toBeNull()
+    expect(parseDueDate('I sat on the mon cheri box', WED)).toBeNull()
+    expect(parseDueDate('buy 1/2 kg of rice', WED)).toBeNull()
+    expect(parseDueDate('Pay the €19.30 fee', WED)).toBeNull()
+  })
+  it('reads calendar dates, rolling a past one into next year', () => {
+    expect(parseDueDate('3 Nov, 18:15: the fingerprint appointment at Alcobendas.', SUN)).toBe('2026-11-03')
+    expect(parseDueDate('Remind me at 3 Nov, 18:15: the fingerprint appointment', SUN)).toBe('2026-11-03')
+    expect(parseDueDate('dentist on November 20th', SUN)).toBe('2026-11-20')
+    expect(parseDueDate('el 3 de diciembre', SUN)).toBe('2026-12-03')
+    expect(parseDueDate('renew passport 15 Jan', SUN)).toBe('2027-01-15')
+    expect(parseDueDate('file it by 25/11', SUN)).toBe('2026-11-25')
+    expect(parseDueDate('due 2026-12-24', SUN)).toBe('2026-12-24')
+    expect(parseDueDate('pay rent on the 15th', WED)).toBe('2026-11-15')
+    expect(parseDueDate('pay rent on the 5th', WED)).toBe('2026-12-05')
+    expect(parseDueDate('party on 31 Feb', SUN)).toBeNull()
+  })
+  it('lets the date beat the weekday written in front of it', () => {
+    expect(parseDueDate('- Tuesday 10 Nov: the same for Brito.', SUN)).toBe('2026-11-10')
+    expect(parseDueDate('- Monday 9 Nov: follow up with Asunción', SUN)).toBe('2026-11-09')
+  })
+  it('takes the first day named', () => {
+    expect(parseDueDate('- Tomorrow (2 Nov): pay the fee', SUN)).toBe('2026-11-02')
+    expect(parseDueDate('on friday book the flights for 5 Dec', WED)).toBe('2026-11-13')
+    expect(parseDueDate('By 20 Nov: the letter should arrive, file it by 25/11', SUN)).toBe('2026-11-20')
+  })
+  it('reads day counts and other languages', () => {
+    expect(parseDueDate('check the oven in 3 days', WED)).toBe('2026-11-14')
+    expect(parseDueDate('review in 2 weeks', WED)).toBe('2026-11-25')
+    expect(parseDueDate('next week call the landlord', WED)).toBe('2026-11-18')
+    expect(parseDueDate('pasado mañana ir al banco', WED)).toBe('2026-11-13')
+    expect(parseDueDate('comprar pan mañana', WED)).toBe('2026-11-12')
+    expect(parseDueDate('comprar pan esta mañana', WED)).toBe(WED)
+    expect(parseDueDate('فردا صبح', WED)).toBe('2026-11-12')
+  })
+})
+
+describe('parseAbsoluteTime without "at"', () => {
+  it('reads a bare clock time', () => {
+    expect(parseAbsoluteTime('3 Nov, 18:15: the fingerprint appointment')).toBe('18:15')
+    expect(parseAbsoluteTime('dentist tomorrow 5pm')).toBe('17:00')
+    expect(parseAbsoluteTime('dentist tomorrow 9:30 am')).toBe('09:30')
+  })
+  it('does not take a day of the month or a price for the hour', () => {
+    expect(parseAbsoluteTime('Remind me at 3 Nov, 18:15: the fingerprint appointment')).toBe('18:15')
+    expect(parseAbsoluteTime('remind me at 3 Nov')).toBeNull()
+    expect(parseAbsoluteTime('pay the €19.30 fee')).toBeNull()
   })
 })
 

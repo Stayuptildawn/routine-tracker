@@ -40,6 +40,13 @@ export function pendingOrder(a: Reminder, b: Reminder): number {
   return b.created_at.localeCompare(a.created_at)
 }
 
+/** The order Today reads them in: what is due (oldest first), then the ones
+ *  with no date (a shopping list lives here), then what is still ahead. */
+export function todayOrder(today: string): (a: Reminder, b: Reminder) => number {
+  const rank = (r: Reminder) => (!r.due_date ? 1 : r.due_date <= today ? 0 : 2)
+  return (a, b) => rank(a) - rank(b) || pendingOrder(a, b)
+}
+
 /** "12 Jul, 14:32" — when a reminder was cleared (its last status change). */
 function clearedWhen(iso: string): string {
   return new Date(iso).toLocaleString(locale, {

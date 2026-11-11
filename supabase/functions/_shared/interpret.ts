@@ -22,7 +22,7 @@ import {
   normalizeDueTime,
   parseAbsoluteTime,
   parseBpm,
-  parseRelativeDay,
+  parseDueDate,
   parseRelativeMinutes,
 } from './timeparse.ts'
 
@@ -31,6 +31,33 @@ import {
 // below. Model chain + fallthrough rules live in gemini.ts.
 const APPLY_THRESHOLD = 0.9
 const SUGGEST_THRESHOLD = 0.6
+// A pasted to-do list or a shopping list is one reminder per item, so the cap
+// has to clear a real list. Identical copies are dropped before they count.
+const MAX_ACTIONS = 25
+
+const words = (s: string) => s.toLowerCase().match(/[\p{L}\d]{3,}/gu) ?? []
+
+/** The part of the message a reminder's date words should be read from.
+ *  One reminder: the whole message. A list on several lines: the reminder's
+ *  own line, found through the words that occur on one line only - and when
+ *  those words point at different lines, nothing, because a date must never
+ *  be borrowed from a neighbouring item. Several reminders on a single line
+ *  ("buy milk and eggs tmrw") share the day, unless the model already gave
+ *  one of them a day of its own. */
+function reminderScope(message: string, reminderText: string, reminderCount: number, anyDated: boolean): string | null {
+  if (reminderCount <= 1) return message
+  const lines = message.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  if (lines.length < 2) return anyDated ? null : message
+  const lineWords = lines.map((l) => new Set(words(l)))
+  const hits = new Set<number>()
+  for (const w of new Set(words(reminderText))) {
+    const on = lineWords.flatMap((set, i) => (set.has(w) ? [i] : []))
+    if (on.length === 1) hits.add(on[0])
+  }
+  return hits.size === 1 ? lines[[...hits][0]] : null
+}
+
+const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const responseSchema = {
   type: 'OBJECT',
@@ -152,6 +179,12 @@ export async function interpretAndApply(
     .order('created_at', { ascending: false })
     .limit(30)
 
+  // the next two weeks spelled out, so a weekday name is looked up, not computed
+  const calendar = Array.from({ length: 14 }, (_, i) => {
+    const day = addDays(date, i)
+    return `${WEEKDAY_NAMES[(weekday - 1 + i) % 7]} ${day}${i === 0 ? ' (today)' : i === 1 ? ' (tomorrow)' : ''}`
+  }).join(', ')
+
   const prompt = `You are the input parser for an AuDHD-friendly routine tracker.
 Parse the user's message into zero or more actions. The message may contain several intents at once.
 The user's app language is ${LANGUAGE_NAMES[lang]}; task labels and reminders below are usually in
@@ -187,18 +220,28 @@ ${cardioTracked
   body (fresh|okay|heavy) and/or amount (could_take_more|right|stretch|over_the_line).`
   : `- log_cardio: NEVER emit it - this user tracks runs/walks/cycling on their watch. A cardio
   mention can still match a task via check_task.`}
-- create_reminder: future to-dos ("remind me to...", "I need to..."). Put the cleaned-up task in
-  reminder_text and pick the best category. Set confidence for the category choice.
-  Emit exactly ONE create_reminder per distinct to-do — never several copies of the same item.
-  If the message names a deadline ("by Friday", "tomorrow", "on the 15th"), set due_date as
-  yyyy-mm-dd resolved against today: ${date} (ISO weekday ${weekday}, 1=Mon). Omit if no date.
-  If it names a clock time ("at 5pm", "at 17:30"), ALWAYS set due_time as HH:MM (24h); a bare
-  time means due_date is today.
+- create_reminder: future to-dos ("remind me to...", "I need to...", "buy milk"). Put the
+  cleaned-up task in reminder_text and pick the best category. Set confidence for the category
+  choice. Never emit two copies of the same to-do.
+  LISTS: a message can hold many to-dos - lines, bullets, or items joined by commas / "and".
+  Emit one create_reminder for EVERY item, each with its own date and time. A shopping list
+  becomes one reminder per thing to buy, each starting with its verb: "buy milk, eggs and
+  bread" -> "Buy milk", "Buy eggs", "Buy bread". One to-do with two verbs on the same thing
+  ("text and call the lawyer") stays one reminder.
+  WHEN: if the message says when ("by Friday", "tomorrow", "tmrw", "on monday", "3 Nov",
+  "on the 15th", "next week"), ALWAYS set due_date as yyyy-mm-dd, read off this calendar
+  instead of calculating: ${calendar}.
+  A date with no year is the next time that date comes; due_date is never before today.
+  Leave the when-words out of reminder_text. Omit due_date only if no day is named.
+  If it names a clock time ("at 5pm", "at 17:30", "18:15"), ALWAYS set due_time as HH:MM
+  (24h); a time with no day means due_date is today.
   If it names a RELATIVE time ("in 10 mins", "in two hours"), ALWAYS set due_in_minutes to
   the number of minutes from now (integer) — do NOT compute a clock time yourself.
   Examples: "drink water at 14:20" -> {type:"create_reminder", reminder_text:"Drink water",
   due_date:"${date}", due_time:"14:20"}; "drink water in 10 mins" ->
-  {type:"create_reminder", reminder_text:"Drink water", due_in_minutes:10}.
+  {type:"create_reminder", reminder_text:"Drink water", due_in_minutes:10};
+  "remind me to go to uni tmrw" -> {type:"create_reminder", reminder_text:"Go to uni",
+  due_date:"${addDays(date, 1)}"}.
 - complete_reminder: the user says a held reminder happened or is no longer needed
   ("bought the sunscreen", "forget the dentist thing"). Set reminder_id from the open
   reminders list and reminder_status: "done" (it happened) or "dismissed" (not needed).
@@ -269,7 +312,13 @@ User message: "${text}"`
   }
 
   const seenReminders = new Set<string>()
-  const reminderActionCount = (parsed.actions ?? []).filter((a: any) => a.type === 'create_reminder').length
+  // distinct reminders in this reply (the lite models repeat themselves), and
+  // whether any of them came with a day or time of its own
+  const reminderActions = (parsed.actions ?? []).filter((a: any) => a.type === 'create_reminder')
+  const reminderActionCount = new Set(reminderActions.map((a: any) => String(a.reminder_text ?? '').trim().toLowerCase())).size
+  const anyReminderDated = reminderActions.some(
+    (a: any) => a.due_date || normalizeDueTime(a.due_time) || normalizeDueInMinutes(a.due_in_minutes) !== null,
+  )
   // the caller's local clock; old clients don't send it, so it's resolved
   // lazily from the user's stored timezone the first time it's needed
   let nowTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(time ?? '') ? (time as string) : ''
@@ -296,13 +345,15 @@ User message: "${text}"`
     const m = typeof raw === 'string' ? raw.match(UUID) : null
     return m ? m[0].toLowerCase() : raw
   }
-  for (const rawAction of (parsed.actions ?? []).slice(0, 10)) {
+  let handled = 0
+  for (const rawAction of parsed.actions ?? []) {
     const action = { ...rawAction }
     if (action.task_id !== undefined) action.task_id = salvageId(action.task_id)
     if (action.reminder_id !== undefined) action.reminder_id = salvageId(action.reminder_id)
     const actKey = JSON.stringify(action)
     if (seenActions.has(actKey)) continue
     seenActions.add(actKey)
+    if (++handled > MAX_ACTIONS) break
     const confidence = typeof action.confidence === 'number' ? action.confidence : 1
 
     if (action.type === 'check_task') {
@@ -456,24 +507,23 @@ User message: "${text}"`
       seenReminders.add(dupeKey)
       const category = action.category ?? 'Other'
       const routineId = routineByName.get(category.toLowerCase()) ?? null
-      let dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') ? action.due_date : null
+      // a reminder is never due in the past: a date behind today is a model
+      // slip (wrong year, wrong week) and is read again from the words below
+      let dueDate = /^\d{4}-\d{2}-\d{2}$/.test(action.due_date ?? '') && action.due_date >= date ? action.due_date : null
       // tolerate sloppy model output: "9:30", "17:30:00", numbers as strings
       let dueTime = normalizeDueTime(action.due_time)
       let dueInMin = normalizeDueInMinutes(action.due_in_minutes)
       // deterministic fallback: when the model named no time/date but the
       // message plainly does, parse it here so "in 10 mins" / "at 5pm" /
-      // "tomorrow" never gets lost (only when this is the message's single
-      // reminder - no ambiguity about which one the phrase belongs to)
-      if (reminderActionCount === 1) {
+      // "tmrw" / "on monday" / "3 Nov" never gets lost. In a list, each
+      // reminder is read from its own line only.
+      const scope = reminderScope(asciiText, reminderText, reminderActionCount, anyReminderDated)
+      if (scope) {
         if (!dueTime && dueInMin === null) {
-          dueInMin = parseRelativeMinutes(asciiText)
-          if (dueInMin === null) dueTime = parseAbsoluteTime(asciiText)
+          dueInMin = parseRelativeMinutes(scope)
+          if (dueInMin === null) dueTime = parseAbsoluteTime(scope)
         }
-        if (!dueDate && dueInMin === null) {
-          const day = parseRelativeDay(asciiText)
-          if (day === 'tomorrow') dueDate = addDays(date, 1)
-          else if (day === 'today') dueDate = date
-        }
+        if (!dueDate && dueInMin === null) dueDate = parseDueDate(scope, date)
       }
       // "in 10 mins": the model reports the offset, the clock math happens here
       if (!dueTime && dueInMin !== null) {

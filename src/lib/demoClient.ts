@@ -8,6 +8,7 @@
 import { localDate, isoWeekday } from './types'
 import { exitDemo } from './demo'
 import { t, lang } from '../i18n'
+import { parseDueDate } from '../../supabase/functions/_shared/timeparse'
 
 type Row = Record<string, unknown>
 type Db = Record<string, Row[]>
@@ -587,14 +588,11 @@ function demoInterpret(text: string): {
       if (abs[3] === 'am' && h === 12) h = 0
       dueTime = `${String(h).padStart(2, '0')}:${abs[2] ?? '00'}`
     }
-    if (!dueDate) {
-      if (/\btomorrow\b/.test(lower)) {
-        const d = new Date()
-        d.setDate(d.getDate() + 1)
-        dueDate = localDate(d)
-      } else if (dueTime) dueDate = today
-    }
-    const raw = reminderM[1].replace(/\s+(in\s+\d+\s*min\w*|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?|tomorrow)\b/gi, '').trim()
+    // the day comes from the same parser the real function falls back on
+    if (!dueDate) dueDate = parseDueDate(lower, today) ?? (dueTime ? today : null)
+    const raw = reminderM[1]
+      .replace(/\s+(in\s+\d+\s*min\w*|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?|tomorrow|tmrw|today|tonight|(on|by|next)\s+\w+day)\b/gi, '')
+      .trim()
     const row: Row = {
       id: crypto.randomUUID(),
       user_id: DEMO_USER.id,

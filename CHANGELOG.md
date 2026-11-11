@@ -4,6 +4,27 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-11-11 (reminders)
+
+### Changed
+- **Reminders stay on Today, dated or not.** The card under *Up next* used to
+  appear only for reminders due today or earlier, so a list of things to buy
+  (no date) was one row at the bottom of the page. Now the first six open
+  reminders are always there: what is due, then the undated ones, then what is
+  still ahead. The single row is left only for when nothing is open.
+- **A list in one message is one reminder per item.** A pasted to-do list, or
+  *"buy milk, eggs and bread"*, used to come out as one reminder (a five-line
+  list once saved only its first line). Each item now gets its own, with its
+  own date, and a message can hold 25 actions, up from 10.
+
+### Fixed
+- **Reminders keep their date.** *"go to uni tmrw"* and *"pay the TASA on
+  monday"* were saved with no date, and *"at 3 Nov, 18:15"* went in as today
+  at 03:00. The day is now read from the words whenever the AI leaves it out:
+  tmrw, weekday names, "next week", "in 3 days", "3 Nov", "the 15th", "by
+  25/11", in English, Spanish, French and German. A time written without
+  "at" (*"18:15"*, *"5pm"*) counts too, and a date in the past is never kept.
+
 ## 2026-11-11 (fixes)
 
 ### Fixed

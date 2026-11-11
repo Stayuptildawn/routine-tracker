@@ -137,10 +137,10 @@ describe('model-output hygiene', () => {
     expect(res.applied[0]).toMatchObject({ task_id: id, label: 'Water plants' })
   })
 
-  it('caps a runaway action list at 10', async () => {
+  it('caps a runaway action list at 25', async () => {
     const db = makeDb()
     gemini.reply = {
-      actions: Array.from({ length: 12 }, (_, i) => ({
+      actions: Array.from({ length: 30 }, (_, i) => ({
         type: 'create_reminder',
         reminder_text: `Errand number ${i}`,
         category: 'Other',
@@ -148,8 +148,17 @@ describe('model-output hygiene', () => {
       })),
     }
     const res = await run(db, 'a flood of reminders')
-    expect(res.applied).toHaveLength(10)
-    expect(db.rows('reminders')).toHaveLength(11) // 10 new + 1 seeded
+    expect(res.applied).toHaveLength(25)
+    expect(db.rows('reminders')).toHaveLength(26) // 25 new + 1 seeded
+  })
+
+  it('keeps a whole shopping list - repeats do not eat into the cap', async () => {
+    const db = makeDb()
+    const item = (name: string) => ({ type: 'create_reminder', reminder_text: `Buy ${name}`, category: 'Other', confidence: 0.9 })
+    const names = ['milk', 'eggs', 'bread', 'rice', 'bananas', 'coffee', 'butter', 'onions', 'garlic', 'pasta', 'soap', 'tea']
+    gemini.reply = { actions: [...names.map(item), ...names.map(item)] }
+    const res = await run(db, `buy ${names.join(', ')}`)
+    expect(res.applied.map((a) => a.text)).toEqual(names.map((n) => `Buy ${n}`))
   })
 
   it('surfaces a whole-chain Gemini failure as an error, touching nothing', async () => {
@@ -190,6 +199,73 @@ describe('deterministic time handling', () => {
     }
     const res = await run(db, 'remind me to email the lawyer tomorrow at 5pm')
     expect(res.applied[0]).toMatchObject({ due_time: '17:00', due_date: '2026-07-18' })
+  })
+
+  // the three below were sent for real and saved with no date (or 03:00 today)
+  it('dates "tmrw" and "on monday" when the model names no day', async () => {
+    const db = makeDb()
+    gemini.reply = { actions: [{ type: 'create_reminder', reminder_text: 'Go to uni', category: 'Other', confidence: 0.9 }] }
+    expect((await run(db, 'Remind me to go to uni tmrw')).applied[0]).toMatchObject({ due_date: '2026-07-18', due_time: null })
+    gemini.reply = { actions: [{ type: 'create_reminder', reminder_text: 'Pay the TASA', category: 'Other', confidence: 0.9 }] }
+    expect((await run(db, 'Pay the TASA on monday')).applied[0]).toMatchObject({ due_date: '2026-07-20', due_time: null })
+  })
+
+  it('reads "at 3 Nov, 18:15" as a date and a time, not three in the morning', async () => {
+    const db = makeDb()
+    gemini.reply = {
+      actions: [{ type: 'create_reminder', reminder_text: 'Fingerprint appointment at Alcobendas', category: 'Other', confidence: 0.95 }],
+    }
+    const res = await run(db, 'Remind me at 3 Nov, 18:15: the fingerprint appointment at Alcobendas.')
+    expect(res.applied[0]).toMatchObject({ due_date: '2026-11-03', due_time: '18:15' })
+  })
+
+  it('throws out a date the model put in the past and reads the words instead', async () => {
+    const db = makeDb()
+    gemini.reply = {
+      actions: [{ type: 'create_reminder', reminder_text: 'Call the bank', category: 'Other', due_date: '2025-07-18', confidence: 0.9 }],
+    }
+    const res = await run(db, 'call the bank tomorrow')
+    expect(res.applied[0]).toMatchObject({ due_date: '2026-07-18' })
+  })
+
+  it('dates each item of a pasted list from its own line, never a neighbour’s', async () => {
+    const db = makeDb()
+    const reminder = (reminder_text: string) => ({ type: 'create_reminder', reminder_text, category: 'Other', confidence: 0.9 })
+    gemini.reply = {
+      actions: [
+        reminder('Pay the 19.30 euro fee and keep stamped copies'),
+        reminder('Fingerprint appointment at Alcobendas'),
+        reminder('Follow up with Asunción'),
+        reminder('Follow up with Brito'), // its words point at two lines: left undated
+      ],
+    }
+    const res = await run(
+      db,
+      [
+        'Coming up',
+        '- Tomorrow: pay the €19.30 fee and keep the stamped copies.',
+        '- Tuesday 21 Jul, 18:15: the fingerprint appointment at Alcobendas.',
+        '- Monday 27 Jul: follow up with Asunción if she hasn’t replied.',
+        '- Tuesday 28 Jul: the same for Brito.',
+      ].join('\n'),
+    )
+    expect(res.applied.map((a) => [a.due_date, a.due_time])).toEqual([
+      ['2026-07-18', null],
+      ['2026-07-21', '18:15'],
+      ['2026-07-27', null],
+      [null, null],
+    ])
+  })
+
+  it('shares the day across a one-line list, unless the model dated an item itself', async () => {
+    const db = makeDb()
+    const reminder = (reminder_text: string, extra = {}) => ({ type: 'create_reminder', reminder_text, category: 'Other', confidence: 0.9, ...extra })
+    gemini.reply = { actions: [reminder('Buy milk'), reminder('Buy eggs')] }
+    const shared = await run(db, 'buy milk and eggs tmrw')
+    expect(shared.applied.map((a) => a.due_date)).toEqual(['2026-07-18', '2026-07-18'])
+    gemini.reply = { actions: [reminder('Call mum', { due_date: '2026-07-18' }), reminder('Buy bread')] }
+    const own = await run(db, 'call mum tomorrow, buy bread')
+    expect(own.applied.map((a) => a.due_date)).toEqual(['2026-07-18', null])
   })
 
   it('backfills cardio numbers from the text when the model drops them', async () => {

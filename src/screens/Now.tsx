@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { localDate, isoWeekday } from '../lib/types'
 import type { Energy, Reminder, Routine, Suggestion, TaskLog, Task, InterpretResponse } from '../lib/types'
 import { AiLimitError, interpretMessage, pendingTaps, setTaskStatus, setReminderStatus, describeAction, undoAiAction } from '../lib/actions'
-import { describeDue, pendingOrder, shortTime } from './Reminders'
+import { describeDue, pendingOrder, shortTime, todayOrder } from './Reminders'
 import { consumeSharedText } from '../lib/shareTarget'
 import { getNudgeState, enableNudges } from '../lib/push'
 import { usePresence } from '../lib/overlay'
@@ -95,6 +95,9 @@ const ENERGY_OPTIONS: ChoiceOption<Energy>[] = [
   { value: 'medium', label: t.now.energyMedium, icon: 'battery-medium' },
   { value: 'high', label: t.now.energyHigh, icon: 'zap' },
 ]
+
+// how many open reminders Today lists before "See all"
+const TODAY_REMINDERS = 6
 
 // the offer to switch nudges on shows once; after that it lives in Settings
 const NUDGE_PROMPT_KEY = 'nudge-prompt-dismissed'
@@ -383,9 +386,10 @@ export default function Now({
     setNudgePromptOff(true)
   }
 
-  // reminders that are due (today or earlier) stay on this screen in full;
-  // the rest are one tap away
-  const dueReminders = reminders.filter((r) => r.due_date && r.due_date <= today).slice(0, 4)
+  // open reminders stay on this screen in full, dated or not - a shopping
+  // list has no date and still has to read at a glance. Past the first few,
+  // the rest are one tap away.
+  const shownReminders = [...reminders].sort(todayOrder(today)).slice(0, TODAY_REMINDERS)
   const now = new Date()
 
   return (
@@ -475,27 +479,32 @@ export default function Now({
         </Card>
       )}
 
-      {loaded && dueReminders.length > 0 && (
+      {loaded && shownReminders.length > 0 && (
         <Card
           title={t.now.remindersTitle}
           meta={reminders.length}
           action={
             <Button variant="ghost" size="sm" onClick={onOpenReminders}>
-              {reminders.length > dueReminders.length ? t.now.seeAll(reminders.length) : t.now.open}
+              {reminders.length > shownReminders.length ? t.now.seeAll(reminders.length) : t.now.open}
             </Button>
           }
         >
           <div className="rows">
-            {dueReminders.map((r) => {
-              const due = describeDue(r.due_date!, today)
+            {shownReminders.map((r) => {
+              const due = r.due_date ? describeDue(r.due_date, today) : null
               return (
                 <div key={r.id} className="row">
                   <div className="row__main">
-                    {r.raw_text}{' '}
-                    <span className={due.overdue ? 'badge badge--accent' : 'badge'}>
-                      <Icon name={due.overdue ? 'hourglass' : 'calendar'} /> {due.label}
-                      {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
-                    </span>
+                    {r.raw_text}
+                    {due && (
+                      <>
+                        {' '}
+                        <span className={due.overdue ? 'badge badge--accent' : 'badge'}>
+                          <Icon name={due.overdue ? 'hourglass' : 'calendar'} /> {due.label}
+                          {r.due_time ? ` · ${shortTime(r.due_time)}` : ''}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <Button size="sm" onClick={() => clearReminder(r)}>
                     {t.common.done}
@@ -583,13 +592,9 @@ export default function Now({
 
       {loaded && sections.length === 0 && <EmptyState icon="leaf">{t.now.nothingScheduled}</EmptyState>}
 
-      {loaded && dueReminders.length === 0 && (
-        <ListRow
-          icon="bell"
-          label={t.now.remindersTitle}
-          meta={reminders.length > 0 ? reminders.length : t.now.nothingOnHold}
-          onClick={onOpenReminders}
-        />
+      {/* nothing open: one quiet row keeps the way into Reminders */}
+      {loaded && reminders.length === 0 && (
+        <ListRow icon="bell" label={t.now.remindersTitle} meta={t.now.nothingOnHold} onClick={onOpenReminders} />
       )}
 
       {loaded && nudges === 'off' && !nudgePromptOff && (
