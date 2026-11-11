@@ -34,6 +34,12 @@
   opacity: 0.5;
 }
 
+/* busy is not unavailable: the spinner stays at full strength */
+.btn[aria-busy='true'],
+.icon-btn[aria-busy='true'] {
+  opacity: 1;
+}
+
 /* the one filled action of a view */
 .btn--primary {
   background: var(--accent-strong);

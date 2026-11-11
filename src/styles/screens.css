@@ -22,6 +22,36 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 
+/* waiting on the AI: a light runs along the bottom edge until the reply lands */
+.composer--busy {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--accent);
+}
+
+.composer--busy::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent-strong), transparent);
+  animation: composer-busy 1.3s ease-in-out infinite;
+}
+
+.composer--busy textarea {
+  color: var(--text-dim);
+}
+
+@keyframes composer-busy {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
 .composer textarea {
   flex: 1;
   align-self: stretch;

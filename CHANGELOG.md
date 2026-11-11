@@ -4,6 +4,19 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-11-11 (fixes)
+
+### Fixed
+- **The message box shows it is working.** After Send, the button turns into a
+  spinner and a light runs along the bottom of the box until the reply lands.
+  The redesign had dropped the old "…" on the Send button, so a slow answer
+  looked like nothing had happened.
+- **A cut-off reflection is never saved.** One week's "Noticed this week" card
+  read just "Job Search": the AI's reply had been cut short and went in as it
+  was. Replies are now read whole, a reply that ran out of room goes to the
+  next model, and a reflection that isn't two full sentences is retried once
+  and otherwise skipped, so the previous card stays.
+
 ## 2026-11-11 (redesign)
 
 The whole interface rebuilt on a small design system. Every feature is still

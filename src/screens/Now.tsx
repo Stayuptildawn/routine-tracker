@@ -396,7 +396,8 @@ export default function Now({
         onOpenSettings={onOpenSettings}
       />
 
-      <div className="composer">
+      {/* an answer can take several seconds: the box must show it is working */}
+      <div className={busy ? 'composer composer--busy' : 'composer'} aria-busy={busy || undefined}>
         <textarea
           ref={composerRef}
           value={message}
@@ -410,6 +411,7 @@ export default function Now({
           }}
           placeholder={t.now.composerPh}
           aria-label={t.now.composerPh}
+          readOnly={busy}
           rows={1}
         />
         {/* empty: the way to the log of past messages; typing: Send takes its place */}
@@ -420,7 +422,7 @@ export default function Now({
           aria-pressed={listening}
           onClick={() => (listening ? recognitionRef.current?.stop() : startVoice())}
         />
-        {message.trim() && <IconButton icon="arrow-up" variant="primary" label={t.now.send} onClick={send} disabled={busy} />}
+        {message.trim() && <IconButton icon="arrow-up" variant="primary" label={t.now.send} onClick={send} busy={busy} />}
       </div>
 
       {notice && (

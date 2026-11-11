@@ -31,6 +31,10 @@ const FORBIDDEN =
 
 const ask = async (prompt: string) => (await askGemini(prompt, { temperature: 0.6 })).text
 
+/** Two sentences were asked for. A fragment (a lone routine name, half a
+ *  clause) must never replace the card: too short, or no sentence ending. */
+const looksWhole = (body: string) => body.length >= 40 && /[.?!。？！؟]/.test(body)
+
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const MORNING_MIN = 9 * 60 // 09:00 local - the week-so-far card refreshes
@@ -257,9 +261,10 @@ Study Time the same 9am slot where 4 of its 5 completions happened?"`
 
       let body = await ask(prompt)
       if (!body) continue
-      if (FORBIDDEN.test(body)) {
-        body = await ask(prompt + `\n\nYour previous draft broke the rules (generic or banned wording). Rewrite it: specific names and numbers, no filler.`)
-        if (!body || FORBIDDEN.test(body)) continue
+      if (FORBIDDEN.test(body) || !looksWhole(body)) {
+        body = await ask(prompt + `\n\nYour previous draft broke the rules (generic or banned wording, or not two full sentences). Rewrite it: two complete sentences, specific names and numbers, no filler.`)
+        // still not right: keep whatever card is already there
+        if (!body || FORBIDDEN.test(body) || !looksWhole(body)) continue
       }
 
       await supabase

@@ -57,19 +57,23 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   /** filled = quiet fill behind the icon; primary = the amber fill. */
   variant?: 'plain' | 'filled' | 'primary'
   iconClassName?: string
+  /** Disables the button and swaps the icon for a spinner while work is under way. */
+  busy?: boolean
 }
 
 /** A 44px square target around a single icon. */
-export function IconButton({ icon, label, variant = 'plain', className, iconClassName, type = 'button', ...rest }: IconButtonProps) {
+export function IconButton({ icon, label, variant = 'plain', className, iconClassName, busy, disabled, type = 'button', ...rest }: IconButtonProps) {
   return (
     <button
       type={type}
       className={cx('icon-btn', variant !== 'plain' && `icon-btn--${variant}`, className)}
       aria-label={label}
       title={label}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
       {...rest}
     >
-      <Icon name={icon} className={iconClassName} />
+      {busy ? <span className="spinner" aria-hidden="true" /> : <Icon name={icon} className={iconClassName} />}
     </button>
   )
 }

@@ -24,6 +24,7 @@ async function callModel(
   prompt: string,
   generationConfig: Record<string, unknown>,
 ): Promise<ModelResult> {
+  const started = Date.now()
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -40,8 +41,22 @@ async function callModel(
       return { ok: false, fatal: !RETRYABLE.includes(res.status), error: `HTTP ${res.status}` }
     }
     const data = await res.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+    // slow answers are the usual reason the message box feels stuck - leave a
+    // trace, so the function log says which model took how long
+    const ms = Date.now() - started
+    if (ms > 4000) console.warn(`gemini ${model} took ${ms} ms`)
+    const candidate = data.candidates?.[0]
+    // a reply can arrive in several parts, and a thinking model puts its
+    // notes in parts flagged `thought`. Reading only the first part once
+    // saved a reflection that was just the two words "Job Search".
+    const text = ((candidate?.content?.parts ?? []) as { text?: string; thought?: boolean }[])
+      .filter((p) => !p.thought && typeof p.text === 'string')
+      .map((p) => p.text)
+      .join('')
+      .trim()
     if (!text) return { ok: false, fatal: false, error: 'empty reply' }
+    // ran out of tokens mid-sentence: half an answer is worse than the next model's whole one
+    if (candidate?.finishReason === 'MAX_TOKENS') return { ok: false, fatal: false, error: 'reply cut off' }
     return { ok: true, text }
   } catch (err) {
     // network errors are per-attempt, not per-key - the next model may work

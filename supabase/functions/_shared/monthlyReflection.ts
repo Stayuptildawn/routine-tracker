@@ -98,7 +98,8 @@ No exclamation marks, no emoji, no preamble - reply with the paragraph in
 ${LANGUAGE_NAMES[lang]} and nothing else.`
 
   let body = (await askGemini(prompt, { temperature: 0.5 })).text
-  if (!body) return false
+  // a fragment (the reply cut off after a few words) must not be saved as the month's summary
+  if (!body || body.length < 40) return false
   if (FORBIDDEN.test(body)) {
     body = (await askGemini(
       prompt + `\n\nYour previous draft broke the rules (generic or banned wording). Rewrite it: specific names and numbers, no filler.`,
