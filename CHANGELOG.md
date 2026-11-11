@@ -4,7 +4,7 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
-## Unreleased (redesign, on the `redesign` branch)
+## 2026-11-11 (redesign)
 
 The whole interface rebuilt on a small design system. Every feature is still
 there and does what it did; what changed is where things live and how they
