@@ -7,6 +7,9 @@ deployed alongside).
 ## 2026-11-11 (fixes)
 
 ### Fixed
+- **Slow AI replies.** The function log showed the first model in the chain
+  taking 7 to 8 seconds per call. The chain now starts with the pinned
+  Flash-Lite model that doesn't think first, and keeps the other as fallback.
 - **The message box shows it is working.** After Send, the button turns into a
   spinner and a light runs along the bottom of the box until the reply lands.
   The redesign had dropped the old "…" on the Send button, so a slow answer

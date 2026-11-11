@@ -5,9 +5,13 @@
 // nobody knew - and consolidated after two later call sites re-forgot the
 // 404 rule.
 
-// Fast-and-cheap first: heavier "latest" aliases run thinking passes that
-// blow the edge-function worker limit.
-export const GEMINI_MODELS = ['gemini-flash-lite-latest', 'gemini-2.5-flash-lite']
+// Fast first. The pinned 2.5 Flash-Lite does not think unless asked, so it
+// answers in a second or two. The "latest" alias moved on to a newer
+// Flash-Lite that always thinks a little, and on 2026-11-11 it was taking 7 to
+// 8 seconds per call (two calls for a question, so 15 seconds of waiting). It
+// stays as the fallback: when the pinned model is retired (404) or overloaded,
+// a slow answer still beats none.
+export const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-flash-lite-latest']
 
 const RETRYABLE = [503, 429, 404]
 
