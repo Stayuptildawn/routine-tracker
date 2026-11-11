@@ -134,6 +134,20 @@ insert into reminders (user_id, raw_text, final_category, status) values ('$uid'
   Assert 'refresh-coach rejects anonymous' ($anonCode -eq 401) "HTTP $anonCode"
   $rc = Invoke-RestMethod -Method Post -Uri "$base/functions/v1/refresh-coach" -Headers $hdrs -ContentType 'application/json' -Body '{}'
   Assert 'refresh-coach runs for the user' ($null -ne $rc.refreshed -and -not $rc.error) ($rc | ConvertTo-Json -Compress)
+
+  # 9. the day written the short way, and as a weekday name (both were once saved undated)
+  $r9 = Send-Msg 'remind me to go to uni tmrw'
+  $a9 = @(@($r9.applied) | Where-Object { $_.type -eq 'create_reminder' })
+  Assert 'tmrw reminder' ($a9.Count -eq 1 -and $a9[0].due_date -eq $now.AddDays(1).ToString('yyyy-MM-dd') -and -not $a9[0].due_time) ($a9 | ConvertTo-Json -Compress)
+  $monday = $now.AddDays(((1 - $isoWeekday + 6) % 7) + 1).ToString('yyyy-MM-dd')
+  $r9b = Send-Msg 'pay the fee on monday'
+  $a9b = @(@($r9b.applied) | Where-Object { $_.type -eq 'create_reminder' })
+  Assert 'on-monday reminder' ($a9b.Count -eq 1 -and $a9b[0].due_date -eq $monday) ($a9b | ConvertTo-Json -Compress)
+
+  # 10. a shopping list is one reminder per item
+  $r10 = Send-Msg 'buy milk, eggs and bread'
+  $a10 = @(@($r10.applied) | Where-Object { $_.type -eq 'create_reminder' })
+  Assert 'shopping list split per item' ($a10.Count -eq 3) ($a10 | ConvertTo-Json -Compress)
 } finally {
   Invoke-RestMethod -Method Delete -Uri "$base/auth/v1/admin/users/$uid" -Headers @{ apikey = $service; Authorization = "Bearer $service" } | Out-Null
   Write-Output 'throwaway user deleted (cascade cleans its rows)'
