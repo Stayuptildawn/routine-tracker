@@ -148,6 +148,19 @@ insert into reminders (user_id, raw_text, final_category, status) values ('$uid'
   $r10 = Send-Msg 'buy milk, eggs and bread'
   $a10 = @(@($r10.applied) | Where-Object { $_.type -eq 'create_reminder' })
   Assert 'shopping list split per item' ($a10.Count -eq 3) ($a10 | ConvertTo-Json -Compress)
+
+  # 11. asking again for a reminder that is already open must not tick it off
+  [void](Send-Msg 'remind me to call a friend')
+  $r11 = Send-Msg 'remind me to call a friend'
+  $a11 = @(@($r11.applied) | Where-Object { $_.type -eq 'complete_reminder' })
+  $open11 = Invoke-Sql "select count(*)::int as n from reminders where user_id = '$uid' and raw_text ilike '%friend%' and status in ('auto','reassigned')"
+  Assert 'asking twice keeps the reminder open' ($a11.Count -eq 0 -and @($open11)[0].n -ge 1) ($r11.applied | ConvertTo-Json -Compress)
+
+  # 12. the reminder is written in the app's language, whatever the message is in
+  $b12 = @{ text = 'remind me to water the plants'; date = $now.ToString('yyyy-MM-dd'); weekday = $isoWeekday; time = $now.ToString('HH:mm'); lang = 'es' } | ConvertTo-Json
+  $r12 = Invoke-RestMethod -Method Post -Uri "$base/functions/v1/interpret-message" -Headers $hdrs -ContentType 'application/json' -Body $b12
+  $a12 = @(@($r12.applied) | Where-Object { $_.type -eq 'create_reminder' })
+  Assert 'reminder saved in the app language' ($a12.Count -eq 1 -and $a12[0].text -match 'plantas' -and $a12[0].text -notmatch 'water') ($a12 | ConvertTo-Json -Compress)
 } finally {
   Invoke-RestMethod -Method Delete -Uri "$base/auth/v1/admin/users/$uid" -Headers @{ apikey = $service; Authorization = "Bearer $service" } | Out-Null
   Write-Output 'throwaway user deleted (cascade cleans its rows)'

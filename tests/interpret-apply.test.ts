@@ -301,6 +301,23 @@ describe('reminders', () => {
     expect(db.rows('reminders')[0].status).toBe('done')
   })
 
+  // seen live: "Call a friend" was open, "remind me to call a friend" ticked it off
+  it('never clears a reminder because the message asks to be reminded of it', async () => {
+    const db = makeDb()
+    const clear = { type: 'complete_reminder', reminder_id: 'rem1', reminder_status: 'done', confidence: 1 }
+    gemini.reply = { actions: [clear] }
+    for (const ask of ['remind me to buy sunscreen', 'Recuérdame comprar protector solar', 'یادم بنداز کرم ضد آفتاب بخرم']) {
+      const res = await run(db, ask)
+      expect(res.applied).toHaveLength(0)
+      expect(db.rows('reminders')[0].status).toBe('auto')
+    }
+    // a message that reports one thing and asks for another still clears the first
+    gemini.reply = { actions: [clear, { type: 'create_reminder', reminder_text: 'Call mum', category: 'Other', confidence: 0.9 }] }
+    const mixed = await run(db, 'bought the sunscreen, remind me to call mum')
+    expect(mixed.applied.map((a) => a.type)).toEqual(['complete_reminder', 'create_reminder'])
+    expect(db.rows('reminders')[0].status).toBe('done')
+  })
+
   it('answers a pending-reminders question, changing nothing but the log', async () => {
     const db = makeDb()
     gemini.reply = { actions: [{ type: 'query_reminders', confidence: 0.95 }] }

@@ -59,6 +59,12 @@ function reminderScope(message: string, reminderText: string, reminderCount: num
 
 const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+// "remind me ..." in every pack language. Seen live on 2026-11-11: with "Call
+// a friend" already open, "remind me to call a friend" came back from the
+// model as complete_reminder at confidence 1 and ticked the open one off.
+const ASKS_FOR_REMINDER =
+  /remind me|recu[eé]rdame|rappelle[- ]moi|rappelez[- ]moi|erinnere? mich|hatırlat|напомни|připome[nň]|یادم بنداز|یادآوری کن|ذك[ّ]?رني|提醒我|リマインド|思い出させて/iu
+
 const responseSchema = {
   type: 'OBJECT',
   properties: {
@@ -246,6 +252,9 @@ ${cardioTracked
   ("bought the sunscreen", "forget the dentist thing"). Set reminder_id from the open
   reminders list and reminder_status: "done" (it happened) or "dismissed" (not needed).
   Never invent reminder_ids; if nothing clearly matches, don't emit this action.
+  ONLY for something that already happened or was called off. A message that asks for a
+  reminder or names something still to do ("remind me to call a friend", "buy bananas",
+  "I need to...") is create_reminder, even when the same thing is already in the open list.
 - set_energy: statements about today's capacity/energy ("low energy today", "feeling great").
 - query_last_done: QUESTIONS about when a task last happened ("when did I last refill?").
   Match against the all-tasks list; nothing is written, an answer comes back.
@@ -551,6 +560,9 @@ User message: "${text}"`
       // status change only, never a delete - and fully undoable via prev_status
       const target = (pendingReminders ?? []).find((r: any) => r.id === action.reminder_id)
       if (!target || confidence < APPLY_THRESHOLD) continue // high bar: wrong clears are annoying
+      // asking to be reminded is never "it's done": when that is all the
+      // message does, the open reminder stays as it is
+      if (reminderActionCount === 0 && ASKS_FOR_REMINDER.test(text.normalize('NFC'))) continue
       const newStatus = action.reminder_status === 'dismissed' ? 'dismissed' : 'done'
       const { error } = await supabase
         .from('reminders')

@@ -24,6 +24,10 @@ deployed alongside).
   tmrw, weekday names, "next week", "in 3 days", "3 Nov", "the 15th", "by
   25/11", in English, Spanish, French and German. A time written without
   "at" (*"18:15"*, *"5pm"*) counts too, and a date in the past is never kept.
+- **Asking twice no longer ticks a reminder off.** With *"Call a friend"*
+  already open, *"remind me to call a friend"* marked it done. A message that
+  asks for a reminder now never clears one; only saying it happened, or that
+  it's off, does.
 
 ## 2026-11-11 (fixes)
 
