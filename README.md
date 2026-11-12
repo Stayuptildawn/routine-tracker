@@ -13,7 +13,7 @@ You host it yourself, it's free to run, and there's no subscription.
 
 <p align="center">
   <a href="https://stayuptildawn.github.io/routine-tracker/?demo"><strong>▶ Try the live demo</strong></a><br>
-  <sub>No account, no install. It runs entirely in your browser with a week of sample data.</sub>
+  <sub>No account, no install. It runs entirely in your browser with two months of sample data.</sub>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@ Before reading anything else, just open the
 [demo](https://stayuptildawn.github.io/routine-tracker/?demo) and type
 something into the box at the top of Today, the way you'd say it to a friend:
 
-> *"took my meds, drank water and benched 80 for 5"*
+> *"had breakfast, drank water and benched 80 for 5"*
 
 The demo has no server behind it, so a small stand-in plays the AI. It gets
 the simple phrasings (task names, *"bench 60kg 3x8"*, *"ran 5k in 25 min"*,
@@ -121,7 +121,7 @@ There are four tabs, and each one has one job.
 - **Today** is for doing. The message box sits at the top, then an **Up
   next** card with the one task that makes most sense right now and its own
   Done button. Under it the routine you're in is open as a checklist, and the
-  other routines wait as one line each (*"Leave House 0/6"*) until you tap
+  other routines wait as one line each (*"Bedtime Routine 0/5"*) until you tap
   them.
 - **Week** is the record. One table, the days across the top, a mark for
   done and a neutral dash for skipped. Tap a past day to fix it. Edit, next to
@@ -208,6 +208,12 @@ log** opens from the little clock in the message box.
 
 **Training.**
 
+- **A plan for your own week.** Pick how many days you can train, one to
+  six, and how long a session can be, and the week is laid out for you:
+  full-body days at one or two days, upper and lower from three, push, pull
+  and legs at six. It is the same thinking as the flexible session, used for
+  the standing plan. The six-day plan I built for myself is still there as
+  the ready-made option, and everything stays editable.
 - **Flexible sessions.** Fewer gym days than planned is fine, weekly volume
   matters more than the exact split. The tool builds an upper, lower or
   full-body day (or a whole short week) from what your week still needs.

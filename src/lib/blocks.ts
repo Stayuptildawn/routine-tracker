@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { localDate, isoWeekday } from './types'
 import type { WorkoutPlan } from './types'
 import { t } from '../i18n'
+import { starterSplits } from './starterPlan'
 
 /** "4 x 8-10" -> 4 sets. Anything unparseable (e.g. "Rest") -> 0. */
 export function setCount(scheme: string | undefined | null): number {
@@ -49,6 +50,22 @@ export function checkinAdjustments(rows: { muscle_group: string; amount: string 
   return adjustments
 }
 
+/** True when block `blockNumber` of the plan is still the bundled starter's
+ *  (all of its training days are there). Only then do the starter's own
+ *  words apply to it - "Block 1 — PPL", "Upper/Lower". */
+export function isStarterBlock(allPlans: WorkoutPlan[], blockNumber: number): boolean {
+  const splits = starterSplits(blockNumber)
+  const mine = new Set(allPlans.filter((p) => p.block === blockNumber).map((p) => p.split_day))
+  return splits.length > 0 && splits.every((s) => mine.has(s))
+}
+
+/** What a block started from this plan is called. A plan the user built or
+ *  wrote gets the plain "Block N": calling a three-day full-body plan
+ *  "Block 1 — PPL" would be naming it after someone else's split. */
+export function blockName(allPlans: WorkoutPlan[], blockNumber: number): string {
+  return (isStarterBlock(allPlans, blockNumber) && t.blocks.names[blockNumber]) || t.blocks.fallback(blockNumber)
+}
+
 /** Instantiate a block: every session and set, generated from the plan.
  *  adjustments (from recoveryAdjustments) tune set counts ±1 per muscle,
  *  never below 2 sets - shown to the user before this runs, never silent. */
@@ -66,7 +83,7 @@ export async function startBlock(
   const { data: block, error } = await supabase
     .from('training_blocks')
     .insert({
-      name: t.blocks.names[blockNumber] ?? t.blocks.fallback(blockNumber),
+      name: blockName(allPlans, blockNumber),
       block: blockNumber,
       start_date: localDate(monday),
       total_weeks: totalWeeks,

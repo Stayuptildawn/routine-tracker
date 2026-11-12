@@ -4,6 +4,77 @@ User-visible changes, newest first. Dates are the day they reached the
 deployed app (push to `main` deploys the frontend; edge functions are
 deployed alongside).
 
+## 2026-11-12 (workout plans)
+
+### Added
+- **Build a plan for the days you have.** Setting up Workout used to offer
+  two things: the six-day plan I wrote for myself, or a blank plan started
+  from one exercise. Now it asks how many days a week you can train (1 to 6)
+  and how long a session can be, and shows the week that adds up to as you
+  pick: full-body days at one or two days, upper/lower from three,
+  push/pull/legs at six, 3 to 6 sets a muscle, big lifts first, a different
+  lead exercise on the A and B days. *Create this plan* saves it; nothing
+  starts until you start the block. The six-day plan is still there as the
+  ready-made option, and the blank start too.
+- **A second plan next to the first.** Under the plan, *Build another plan*
+  saves a new one as its own block, so going from four days to three doesn't
+  mean editing the old plan apart. A plan no block is running on can be
+  deleted from the same place.
+- **This week's count on Up next.** *"2 of 4 sessions this week"*, flexible
+  sessions included.
+
+### Changed
+- **The flexible session tool reads as one thing at a time.** It was a fold
+  holding two tools stacked under each other, unlabelled pills, and a
+  proposal that ran on as one long list. Now one button opens it, a switch
+  picks *One session* or *Whole week*, every choice has a label, the week's
+  sets against target are small tags (green once a muscle is covered), and
+  each proposed day sits in its own panel with its set count. The proposal
+  follows the choices as you make them, so there is no separate "suggest"
+  step, and *Try another mix* is a button. Zero gym days is no longer offered.
+- **Build another plan** opens from a button into a card of its own, laid out
+  the same way: labelled choices, one panel per day. *Delete this plan* moved
+  into the plan it deletes.
+- **Buttons look like buttons.** The outlined button had the same look as a
+  text field: a box with a border on the card. It now has a quiet fill and a
+  short shadow, and the filled amber one a lit top edge. This is every
+  outlined button in the app, not only Workout.
+
+### Fixed
+- **A plan of your own is no longer called PPL.** Any block started from any
+  plan was named *"Block 1 — PPL"*, and the next one was announced as
+  *Upper/Lower*. Those names now go only to the ready-made plan they
+  describe; other plans get *"Block 1"*.
+- **The reduced-week tool knows how long your week is.** It always offered 0
+  to 6 gym days and said *"six days, the written plan already fits"*, also
+  for a three-day plan. It now offers up to the plan's own number of days.
+- **The Plan view opens on the session that is up next**, not on whichever
+  one followed the last freeform lift.
+
+## 2026-11-12 (starter data)
+
+### Changed
+- **A new account starts with routines most people have.** The first-login
+  routines were written around one person's days: medication in three places,
+  a five-step water routine, a keys-phone-wallet checklist every morning.
+  Today now opens on about fifteen tasks instead of thirty: *Morning Routine*,
+  *Daily Wellbeing* (a proper lunch, a real break, a walk), *Cleaning Routine*,
+  *Bedtime Routine*, and a *Weekly Reset* that only shows up at the weekend
+  (groceries, planning the week, budget and bills). The specific ones are
+  still there, paused, one tap away under Week: *Leave House*, *Take
+  Medication*, *Study Time*, *Deep Work*, *Language Learning*. Existing
+  accounts are not touched, and their routines still translate when the
+  language is switched.
+- **The demo has a life in it.** It used to hold one week of ticks and an
+  empty Workout tab under a coach's note about six weeks of training. Now it
+  carries two months of routine history, the starter plan in its third week
+  with every finished session logged (sets, weights, check-ins, the runs
+  after pull days), and the numbers in the AI's notes are the ones on the
+  Progress tab. Returning visitors get the new data on their next visit.
+- **The demo's stand-in reads task names more carefully.** It ticked any task
+  that shared a fragment with the message, so *"bought bread"* could tick a
+  reading task. A task is now recognised by a word only it has, said whole.
+
 ## 2026-11-11 (reminders)
 
 ### Changed

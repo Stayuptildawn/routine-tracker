@@ -75,6 +75,30 @@ export function Card({ title, meta, action, tone, className, children, ...rest }
   )
 }
 
+interface PanelProps {
+  title?: ReactNode
+  /** Quiet text at the end of the title row (a count). */
+  meta?: ReactNode
+  className?: string
+  children: ReactNode
+}
+
+/** A group inside a card - one day of a plan, one part of a tool - set
+ *  apart by a quiet fill instead of another outline. */
+export function Panel({ title, meta, className, children }: PanelProps) {
+  return (
+    <div className={cx('panel', className)}>
+      {(title || meta) && (
+        <div className="panel__head">
+          <h3>{title}</h3>
+          {meta && <span className="meta">{meta}</span>}
+        </div>
+      )}
+      {children}
+    </div>
+  )
+}
+
 interface DisclosureProps {
   label: ReactNode
   /** Controlled open state; leave out to let the component keep its own. */

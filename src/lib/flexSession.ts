@@ -34,7 +34,7 @@ export type FlexFocus = 'upper' | 'lower' | 'full'
 export type FlexLength = 'short' | 'full'
 
 // total hard sets that fit the slot (with warm-ups and rests, ~45 / ~75 min)
-const BUDGET: Record<FlexLength, number> = { short: 12, full: 18 }
+export const BUDGET: Record<FlexLength, number> = { short: 12, full: 18 }
 // past ~6 hard sets per muscle in one session the stimulus flattens off
 const PER_MUSCLE_CAP = 6
 // fewer than 2 sets isn't worth the equipment swap

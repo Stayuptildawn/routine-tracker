@@ -6,6 +6,8 @@ import { languages } from '../i18n'
 // task label from ANY pack maps deterministically to the target pack's
 // counterpart. Strings that match no pack (user-written or user-renamed
 // content) are simply absent from the maps - the translator never guesses.
+// Both seeds are read: the current one, and the one older accounts were
+// created with (seedLegacy), so their routines still translate.
 
 export interface ContentMaps {
   routineNames: Map<string, string>
@@ -27,12 +29,14 @@ export function buildContentMaps(targetId: string): ContentMaps {
   }
 
   for (const pack of Object.values(languages)) {
-    pack.seed.forEach((routine, i) => {
-      const tr = target.seed[i]
-      if (!tr) return
-      put(routineNames, routine.name, tr.name)
-      routine.tasks.forEach((task, j) => put(taskLabels, task.label, tr.tasks[j]?.label))
-    })
+    for (const key of ['seed', 'seedLegacy'] as const) {
+      pack[key].forEach((routine, i) => {
+        const tr = target[key][i]
+        if (!tr) return
+        put(routineNames, routine.name, tr.name)
+        routine.tasks.forEach((task, j) => put(taskLabels, task.label, tr.tasks[j]?.label))
+      })
+    }
     for (const [exercise, cue] of Object.entries(pack.cues)) {
       put(cueTexts, cue, target.cues[exercise])
     }

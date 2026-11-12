@@ -10,6 +10,14 @@
 //  - CSV column headers and filenames (stable, spreadsheet-friendly);
 //  - the PWA manifest (baked at build time).
 
+/** One seeded routine. tier: core|standard|bonus; days 1=Mon..7=Sun. */
+interface SeedRoutine {
+  name: string
+  category: string
+  active?: boolean
+  tasks: { label: string; tier: 'core' | 'standard' | 'bonus'; days?: number[] }[]
+}
+
 export const en = {
   /** Language name shown in a future language picker. */
   name: 'English',
@@ -243,7 +251,6 @@ export const en = {
       footnote: 'From your last 4 weeks and your check-ins. Applying changes the plan from this phase on; logged sets never change.',
     },
     setupTitle: 'Set up your training',
-    setupSubtitle: 'Two ways to begin — everything stays editable either way.',
     useStarter: '▶ Use the starter plan',
     settingUp: 'Setting up…',
     starterDesc:
@@ -275,6 +282,21 @@ export const en = {
     noLoggableNote: (names: string) =>
       `${names}: no exercise here has a set count, so it gets no sessions in the grid — the grid tracks loggable training days; rest days live in the plan itself.`,
     noFreeform: 'No freeform lifts logged yet.',
+    thisWeek: (done: number, planned: number) => `${done} of ${planned} sessions this week`,
+    builder: {
+      intro: 'Say how many days you can train and how long a session can be, and the week is laid out for you. Everything stays editable.',
+      daysLabel: 'Gym days a week',
+      create: 'Create this plan',
+      created: (n: number) => `Plan saved as Block ${n} — start it when you’re ready.`,
+      another: 'Build another plan',
+      anotherHint: 'It is saved as a new block next to the ones you have. Nothing is replaced.',
+      orStarter: '— or take the ready-made one —',
+      starterSixDays: 'Six sessions a week.',
+      push: 'Push',
+      pull: 'Pull',
+      legs: 'Legs',
+      deletePlan: (n: number) => `Delete Block ${n}’s plan`,
+    },
     flex: {
       title: 'Flexible session',
       sub: ' when the plan doesn’t fit the day',
@@ -287,29 +309,29 @@ export const en = {
       long: 'Full · ~75 min',
       generate: 'Suggest a session',
       generating: 'Working it out…',
-      weekSoFar: (parts: string) => `Sets this week vs. target: ${parts}`,
+      weekSoFar: 'Sets this week vs. target',
       needPart: (muscle: string, done: number, target: number) => `${muscle} ${done}/${target}`,
       maintenanceNote:
         'Your week’s targets are already covered — this is a light “keep it ticking” dose, not extra growth work.',
       nothingFits: 'No planned exercise matches this focus — add one to the plan first.',
       sets: (n: number) => `${n} sets`,
       startIt: '▶ Start this session',
-      anotherMix: 'try another mix',
-      discard: 'discard',
+      anotherMix: 'Try another mix',
       open: 'Open flexible sessions',
       past: (n: number) => `Past flexible sessions (${n})`,
       deleteConfirm: 'really delete?',
       deleteTitle: (name: string) => `Delete ${name} — its logged sets go too`,
       sessionName: (focus: string) => `${focus} · flex`,
-      orWeek: '— or lay out the whole week —',
+      modeSession: 'One session',
+      modeWeek: 'Whole week',
+      focusLabel: 'Focus',
+      lengthLabel: 'Session length',
       daysLabel: 'Gym days',
       dayHeading: (i: number, focus: string) => `Day ${i} — ${focus}`,
       weekWhy:
         'Laid out so each muscle is hit at least twice across the week where possible — at low day counts, frequency and full-body days protect more muscle than any split.',
       createWeek: (n: number) => `Create these ${n} sessions`,
-      weekNote6: 'Six days — the written plan already fits. Use the grid above.',
-      weekNote0:
-        'A zero week happens. Muscle survives a couple of quiet weeks, and easy cardio keeps the engine — come back with one full-body day when you can.',
+      weekNoteFits: 'That is every day the plan has — it already fits. Use the grid above.',
       weekSessionName: (focus: string, i: number, n: number) => `${focus} ${i}/${n} · flex`,
     },
   },
@@ -611,13 +633,14 @@ export const en = {
     reflection:
       'Mornings held steady this week — five of seven days, and the two misses were both late nights. The evidence says sleep, not discipline, is the lever.',
     trainingBody:
-      'Hard sets climbed from 38 to 52 per week across six weeks while cardio held near 8 km, and your check-ins kept reading “right”. The base is growing without strain.',
+      'Two weeks into the block and every session is logged: about 84 hard sets a week, cardio steady near 9 km, and check-ins mostly reading “right”. The base is growing without strain.',
     trainingAdvice:
       '- Flat DB Bench Press reached the top of its rep range twice — consider +2.5 kg next session.\n- Quads said “stretch” twice; try holding Leg Press volume steady this week.\n- Cardio trended up 9% — keep this week at the same distance before adding more.',
-    reminder1: '💊 Pick up the prescription refill',
+    reminder1: '📦 Drop off the parcel return',
     reminder2: 'Book a dentist appointment',
     reminder3: 'Scan and file the insurance letter',
-    aiExample1Text: 'took my meds and had water',
+    reminder4: '🎁 Find a birthday gift for a friend',
+    aiExample1Text: 'had breakfast and checked my calendar',
     aiExample2Text: 'ran 5k in 32 minutes, felt steady',
     askUnavailable:
       'In the live app the AI answers questions like this from your own data — routines, workouts, runs, reminders — and only ever yours. The demo has no server, so here it can only show where answers appear.',
@@ -688,6 +711,130 @@ export const en = {
   /** First-login seed content. tier: core|standard|bonus; days 1=Mon..7=Sun,
    *  omitted = daily; active: false = seeded paused (opt-in routines). */
   seed: [
+    {
+      name: 'Morning Routine',
+      category: 'daily',
+      tasks: [
+        { label: '💧 Drink water', tier: 'core' },
+        { label: '🛏 Make the bed', tier: 'standard' },
+        { label: '🚿 Bathroom / shower', tier: 'standard' },
+        { label: '🍳 Eat breakfast', tier: 'core' },
+        { label: '📅 Review calendar', tier: 'standard' },
+        { label: '🧘 Stretch for 5 minutes', tier: 'bonus' },
+      ],
+    },
+    {
+      name: 'Daily Wellbeing',
+      category: 'daily',
+      tasks: [
+        { label: '🥗 Eat a proper lunch', tier: 'core' },
+        { label: '☕ Take a real break', tier: 'standard' },
+        { label: '🚶 20-minute walk', tier: 'standard' },
+        { label: '📖 Read 10 pages', tier: 'bonus' },
+        { label: '💬 Message a friend or family', tier: 'bonus' },
+      ],
+    },
+    {
+      name: 'Cleaning Routine',
+      category: 'daily',
+      tasks: [
+        { label: '🍽 Dishes', tier: 'core' },
+        { label: '🧹 Wipe counters', tier: 'standard' },
+        { label: '🗑 Trash out', tier: 'standard', days: [1, 4] },
+        { label: '🧺 Laundry', tier: 'standard', days: [3, 6] },
+        { label: '🚿 Bathroom quick wipe', tier: 'bonus' },
+        { label: '🧹 Vacuum one room', tier: 'bonus' },
+      ],
+    },
+    {
+      name: 'Bedtime Routine',
+      category: 'daily',
+      tasks: [
+        { label: '🎒 Prepare tomorrow’s items', tier: 'core' },
+        { label: '📝 Write tomorrow’s top 3', tier: 'standard' },
+        { label: '📵 No screens (30 min before)', tier: 'standard' },
+        { label: '💡 Dim lights', tier: 'standard' },
+        { label: '😴 Consistent sleep time', tier: 'core' },
+      ],
+    },
+    {
+      name: 'Weekly Reset',
+      category: 'daily',
+      tasks: [
+        { label: '🛒 Grocery shopping', tier: 'standard', days: [6] },
+        { label: '🗓 Plan the week ahead', tier: 'core', days: [7] },
+        { label: '💸 Budget and bills', tier: 'standard', days: [7] },
+        { label: '🛌 Fresh bed sheets', tier: 'bonus', days: [7] },
+      ],
+    },
+    {
+      name: 'Leave House',
+      active: false,
+      category: 'daily',
+      tasks: [
+        { label: '🔑 Keys', tier: 'core' },
+        { label: '📱 Phone', tier: 'core' },
+        { label: '💳 Wallet / cards', tier: 'core' },
+        { label: '💧 Water bottle', tier: 'standard' },
+        { label: '🔌 Charger', tier: 'standard' },
+        { label: '🎒 Bag packed the night before', tier: 'standard' },
+        { label: '⏱ Left with 10 min buffer', tier: 'bonus' },
+      ],
+    },
+    {
+      name: 'Take Medication',
+      active: false,
+      category: 'daily',
+      tasks: [
+        { label: '💊 Morning dose', tier: 'core' },
+        { label: '🎒 Backup dose in bag', tier: 'standard' },
+        { label: '🔄 Refill check', tier: 'standard', days: [3, 6] },
+      ],
+    },
+    {
+      name: 'Study Time',
+      active: false,
+      category: 'focus',
+      tasks: [
+        { label: '🎯 Define session goal', tier: 'core' },
+        { label: '🍅 Pomodoro block 1 (25 min)', tier: 'core' },
+        { label: '🍅 Pomodoro block 2 (25 min)', tier: 'standard' },
+        { label: '☕ Break taken', tier: 'standard' },
+        { label: '📝 Reviewed / summarized', tier: 'bonus' },
+      ],
+    },
+    {
+      name: 'Deep Work',
+      active: false,
+      category: 'focus',
+      tasks: [
+        { label: '💻 Main project block', tier: 'core' },
+        { label: '📞 Weekly sync prep', tier: 'standard', days: [5] },
+        { label: '📞 Weekly sync call', tier: 'standard', days: [5] },
+        { label: '📝 Documentation', tier: 'standard' },
+        { label: '✅ Next action defined', tier: 'core' },
+      ],
+    },
+    {
+      name: 'Language Learning',
+      active: false,
+      category: 'focus',
+      tasks: [
+        { label: '📖 Structured study', tier: 'standard' },
+        { label: '🗣 Speaking practice', tier: 'standard' },
+        { label: '🗂 Vocabulary review', tier: 'core' },
+        { label: '🎧 Listening (podcast/show)', tier: 'bonus' },
+      ],
+    },
+    // Tracker-type routines: no daily tasks, they exist as reminder categories.
+    { name: 'Paperwork', category: 'tracker', tasks: [] },
+    { name: 'Errands', category: 'tracker', tasks: [] },
+  ] as SeedRoutine[],
+
+  /** The seed accounts were created with before the 2026-11 refresh. Nothing
+   *  seeds from it any more: it stays so the content translator
+   *  (lib/contentMaps.ts) still recognises those accounts’ routines. */
+  seedLegacy: [
     {
       name: 'Morning Routine',
       category: 'daily',
@@ -797,12 +944,7 @@ export const en = {
     // Tracker-type routines: no daily tasks, they exist as reminder categories.
     { name: 'Paperwork', category: 'tracker', tasks: [] },
     { name: 'Errands', category: 'tracker', tasks: [] },
-  ] as {
-    name: string
-    category: string
-    active?: boolean
-    tasks: { label: string; tier: 'core' | 'standard' | 'bonus'; days?: number[] }[]
-  }[],
+  ] as SeedRoutine[],
 }
 
 /** The shape every language pack must implement. */

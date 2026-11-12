@@ -529,17 +529,13 @@ span.cell:not(.cell--off, .cell--done, .cell--partial, .cell--skipped) {
   text-align: start;
 }
 
-/* "- or -" between two ways of doing the same thing */
-.gym__or {
-  text-align: center;
-}
-
 .gym__advice {
   white-space: pre-line; /* advice arrives as "- " lines */
 }
 
 .gym__entry .mono {
   color: var(--text-dim);
+  white-space: nowrap; /* "3 x 10" stays in one piece on a narrow phone */
 }
 
 /* the block at a glance: one row per session, one column per week */

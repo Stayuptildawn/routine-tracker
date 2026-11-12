@@ -3,19 +3,19 @@
 // from().select/insert/update/upsert/delete with eq/neq/in/gte/is/not/order/
 // limit/range/single/maybeSingle, auth, channels (no-op), functions.invoke
 // (canned reply) and the explore_buckets rpc (computed locally). Data lives
-// in localStorage under 'demo-db', seeded with a believable week of history.
+// in localStorage under 'demo-db', seeded with two believable months of
+// history (see demoSeed.ts).
 
 import { localDate, isoWeekday } from './types'
 import { exitDemo } from './demo'
 import { t, lang } from '../i18n'
 import { parseDueDate } from '../../supabase/functions/_shared/timeparse'
-
-type Row = Record<string, unknown>
-type Db = Record<string, Row[]>
+import { seed, isoNDaysAgo } from './demoSeed'
+import type { Row, Db } from './demoSeed'
 
 const DB_KEY = 'demo-db'
 // bump when seed() gains content - returning visitors reseed and see it
-const SEED_VERSION = '2'
+const SEED_VERSION = '3'
 
 // ---------- storage ----------
 
@@ -48,222 +48,6 @@ function saveDb() {
 function rowsFor(table: string): Row[] {
   const data = loadDb()
   return (data[table] ??= [])
-}
-
-// ---------- seed ----------
-
-function dateNDaysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return localDate(d)
-}
-
-function isoNDaysAgo(n: number, hour = 12): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  d.setHours(hour, 15, 0, 0)
-  return d.toISOString()
-}
-
-function seed(): Db {
-  const data: Db = {}
-  const routines: Row[] = []
-  const tasks: Row[] = []
-  const taskLogs: Row[] = []
-
-  t.seed.forEach((r, i) => {
-    const routineId = crypto.randomUUID()
-    routines.push({
-      id: routineId,
-      name: r.name,
-      category: r.category,
-      sort_order: i,
-      anchor_time: r.name === t.seed[0].name ? '08:00:00' : null,
-      active: r.active ?? true,
-      created_at: isoNDaysAgo(30),
-    })
-    r.tasks.forEach((task, j) => {
-      const taskId = crypto.randomUUID()
-      tasks.push({
-        id: taskId,
-        routine_id: routineId,
-        label: task.label,
-        sort_order: j,
-        tier: task.tier,
-        scheduled_days: task.days ?? [1, 2, 3, 4, 5, 6, 7],
-        created_at: isoNDaysAgo(30),
-      })
-      // a believable week: most core/standard tasks done on past days, the
-      // odd conscious skip, today partially done (deterministic, not random)
-      if (r.active === false) return
-      for (let ago = 6; ago >= 0; ago--) {
-        const day = new Date()
-        day.setDate(day.getDate() - ago)
-        const weekday = isoWeekday(day)
-        const days = task.days ?? [1, 2, 3, 4, 5, 6, 7]
-        if (!days.includes(weekday)) continue
-        const mix = (i * 31 + j * 17 + ago * 7) % 10
-        let status: string | null = null
-        if (ago === 0) {
-          // this morning: the first couple of tasks are already ticked
-          if (j < 2 && i === 0) status = 'done'
-        } else if (task.tier === 'bonus') {
-          if (mix < 4) status = 'done'
-        } else {
-          if (mix < 7) status = 'done'
-          else if (mix === 7) status = 'skipped'
-        }
-        if (status) {
-          taskLogs.push({
-            id: crypto.randomUUID(),
-            task_id: taskId,
-            date: dateNDaysAgo(ago),
-            status,
-            completed_via: 'manual',
-            notes: null,
-            logged_at: isoNDaysAgo(ago, 9 + ((j * 3) % 10)),
-            created_at: isoNDaysAgo(ago, 9),
-          })
-        }
-      }
-    })
-  })
-
-  data.routines = routines
-  data.tasks = tasks
-  data.task_logs = taskLogs
-
-  data.daily_state = [
-    { id: crypto.randomUUID(), date: dateNDaysAgo(1), energy: 'medium', created_at: isoNDaysAgo(1, 8) },
-  ]
-
-  data.reminders = [
-    {
-      id: crypto.randomUUID(),
-      raw_text: t.demo.reminder1,
-      ai_category: null,
-      ai_confidence: null,
-      final_category: t.seed[t.seed.length - 1].name, // Errands
-      routine_id: routines[routines.length - 1].id,
-      status: 'reassigned',
-      due_date: dateNDaysAgo(0),
-      due_time: '18:00:00',
-      created_at: isoNDaysAgo(2),
-      updated_at: isoNDaysAgo(2),
-    },
-    {
-      id: crypto.randomUUID(),
-      raw_text: t.demo.reminder2,
-      ai_category: 'Other',
-      ai_confidence: 0.9,
-      final_category: 'Other',
-      routine_id: null,
-      status: 'auto',
-      due_date: dateNDaysAgo(-3),
-      due_time: null,
-      created_at: isoNDaysAgo(1),
-      updated_at: isoNDaysAgo(1),
-    },
-    {
-      id: crypto.randomUUID(),
-      raw_text: t.demo.reminder3,
-      ai_category: null,
-      ai_confidence: null,
-      final_category: t.seed[t.seed.length - 2].name, // Paperwork
-      routine_id: routines[routines.length - 2].id,
-      status: 'reassigned',
-      due_date: null,
-      due_time: null,
-      created_at: isoNDaysAgo(4),
-      updated_at: isoNDaysAgo(4),
-    },
-  ]
-
-  data.cardio_logs = [
-    { kind: 'run', ago: 1, km: 6.2, min: 39, hr: 152, amount: 'right', effort: 'steady' },
-    { kind: 'walk', ago: 2, km: 3.1, min: 42, hr: null, amount: null, effort: 'easy' },
-    { kind: 'run', ago: 4, km: 5, min: 32, hr: 156, amount: 'right', effort: 'steady' },
-    { kind: 'run', ago: 8, km: 5, min: 33.5, hr: 158, amount: 'stretch', effort: 'pushed' },
-    { kind: 'walk', ago: 9, km: 2.5, min: 35, hr: null, amount: null, effort: null },
-    { kind: 'run', ago: 11, km: 4.2, min: 28, hr: 154, amount: 'right', effort: 'steady' },
-  ].map((c) => ({
-    id: crypto.randomUUID(),
-    session_id: null,
-    date: dateNDaysAgo(c.ago),
-    kind: c.kind,
-    distance_km: c.km,
-    minutes: c.min,
-    avg_hr: c.hr,
-    notes: null,
-    effort: c.effort,
-    body: null,
-    amount: c.amount,
-    created_at: isoNDaysAgo(c.ago, 18),
-  }))
-
-  data.workout_logs = [
-    { ago: 2, ex: 'Flat DB Bench Press', sets: [{ kg: 26, reps: 10 }, { kg: 26, reps: 9 }, { kg: 24, reps: 10 }] },
-    { ago: 2, ex: 'Seated Cable Row', sets: [{ kg: 55, reps: 12 }, { kg: 55, reps: 11 }] },
-    { ago: 5, ex: 'Leg Press', sets: [{ kg: 120, reps: 10 }, { kg: 120, reps: 10 }, { kg: 130, reps: 8 }] },
-  ].map((w) => ({
-    id: crypto.randomUUID(),
-    date: dateNDaysAgo(w.ago),
-    week_number: null,
-    split_day: null,
-    exercise: w.ex,
-    target_scheme: null,
-    sets: w.sets,
-    notes: null,
-    created_at: isoNDaysAgo(w.ago, 19),
-  }))
-
-  const monday = new Date()
-  monday.setDate(monday.getDate() - (isoWeekday() - 1))
-  data.reflections = [
-    { id: crypto.randomUUID(), week_start: localDate(monday), body: t.demo.reflection, created_at: isoNDaysAgo(0, 8) },
-  ]
-
-  data.training_reviews = [
-    {
-      id: crypto.randomUUID(),
-      week_start: localDate(monday),
-      body: t.demo.trainingBody,
-      advice: t.demo.trainingAdvice,
-      created_at: isoNDaysAgo(0, 8),
-    },
-  ]
-
-  data.ai_actions = [
-    {
-      id: crypto.randomUUID(),
-      raw_text: t.demo.aiExample1Text,
-      actions: [
-        { type: 'check_task', label: t.seed[0].tasks[2].label, status: 'done' },
-        { type: 'check_task', label: t.seed[0].tasks[3].label, status: 'done' },
-      ],
-      status: 'confirmed',
-      created_at: isoNDaysAgo(1, 9),
-    },
-    {
-      id: crypto.randomUUID(),
-      raw_text: t.demo.aiExample2Text,
-      actions: [
-        { type: 'log_cardio', kind: 'run', distance_km: 5, minutes: 32 },
-      ],
-      status: 'applied',
-      created_at: isoNDaysAgo(4, 18),
-    },
-  ]
-
-  data.workout_plans = []
-  data.training_blocks = []
-  data.planned_sessions = []
-  data.planned_sets = []
-  data.recovery_checkins = []
-  data.user_settings = []
-  data.push_subscriptions = []
-
-  return data
 }
 
 // ---------- query builder ----------
@@ -499,9 +283,11 @@ class DemoQuery {
 // ---------- rpc: explore_buckets, computed from the local tables ----------
 
 function truncate(iso: string, bucket: string): string {
-  // iso: full timestamp or yyyy-mm-dd; returns the bucket key Reflect expects
-  const date = iso.slice(0, 10)
-  if (bucket === 'hour') return iso.length > 10 ? iso.slice(0, 13) : date + 'T12'
+  // iso: full timestamp or yyyy-mm-dd; returns the bucket key Reflect expects:
+  // hours in UTC, days in the visitor's own calendar (an evening log must not
+  // slide into the next day west of Greenwich)
+  if (bucket === 'hour') return iso.length > 10 ? iso.slice(0, 13) : iso + 'T12'
+  const date = iso.length > 10 ? localDate(new Date(iso)) : iso
   if (bucket === 'day') return date
   if (bucket === 'week') {
     const d = new Date(date + 'T00:00:00')
@@ -547,6 +333,33 @@ function exploreBuckets(args: { metric: string; bucket: string; start_ts: string
 // 25 min at 152 bpm" and "remind me to ...". Real rows are written and a
 // real undo batch is recorded, so the whole apply/undo/AI-log loop is
 // demonstrable offline. Anything it can't place falls back to the explainer.
+
+const STOP_WORDS = new Set(['the', 'and', 'for', 'with', 'out', 'off', 'one', 'had', 'has', 'did', 'got', 'get', 'was', 'not', 'you', 'your', 'min', 'time'])
+const words = (s: string) => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+// scripts written without spaces: a label is one unbroken run, so it is looked
+// for inside the message instead of word by word
+const UNSPACED = /[぀-ヿ㐀-鿿]/
+/** `word` is `base` as it stands or with a plain ending: "dishes", "stretched"
+ *  - but "breakfast" is no form of "break", nor "ready" of "read". */
+const formOf = (word: string, base: string) =>
+  word === base || (base.length >= 4 && word.startsWith(base) && /^(s|es|d|ed|ing)$/.test(word.slice(base.length)))
+
+/** Which of today's task labels a message mentions. A label is recognised by
+ *  a word that belongs to it alone ("breakfast", not the "eat" two labels
+ *  share), said whole - so "bought bread" never ticks "Read 10 pages". */
+function labelMatcher(labels: string[], message: string): (label: string) => boolean {
+  const perLabel = labels.map(words)
+  const spoken = words(message)
+  return (label) =>
+    words(label).some((w) => {
+      if (STOP_WORDS.has(w) || /^\d+$/.test(w)) return false
+      // a word another label carries too says nothing about which one is meant
+      if (perLabel.filter((other) => other.some((x) => formOf(x, w) || formOf(w, x))).length > 1) return false
+      if (UNSPACED.test(w)) return w.length >= 2 && message.includes(w)
+      if (w.length < 3) return false
+      return spoken.some((word) => formOf(word, w))
+    })
+}
 
 function demoInterpret(text: string): {
   ai_action_id: string | null
@@ -655,11 +468,12 @@ function demoInterpret(text: string): {
     // task check-off by label: any seeded task whose label-words show up
     const weekday = isoWeekday()
     const activeRoutines = new Set(rowsFor('routines').filter((r) => r.active !== false).map((r) => r.id))
-    for (const task of rowsFor('tasks')) {
-      if (!activeRoutines.has(task.routine_id)) continue
-      if (!(task.scheduled_days as number[] | null)?.includes(weekday)) continue
-      const words = String(task.label).toLowerCase().split(/\s+/).filter((w) => w.length >= 3)
-      if (words.length === 0 || !words.some((w) => lower.includes(w))) continue
+    const todays = rowsFor('tasks').filter(
+      (task) => activeRoutines.has(task.routine_id) && (task.scheduled_days as number[] | null)?.includes(weekday),
+    )
+    const said = labelMatcher(todays.map((task) => String(task.label)), lower)
+    for (const task of todays) {
+      if (!said(String(task.label))) continue
       const logs = rowsFor('task_logs')
       let log = logs.find((l) => l.task_id === task.id && l.date === today)
       if (log) {
